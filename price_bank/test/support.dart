@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:price_bank/core/calc/pump_engine.dart';
 import 'package:price_bank/core/repo/seed.dart';
@@ -48,4 +49,14 @@ void expectNoDiffs(List<String> diffs) {
   if (diffs.isNotEmpty) {
     fail('${diffs.length} اختلاف:\n${diffs.take(40).join('\n')}');
   }
+}
+
+/// بارگذاری فونت واقعی برنامه در آزمون‌ها تا عرض متن‌ها مثل برنامه‌ی واقعی باشد.
+Future<void> loadAppFonts() async {
+  final loader = FontLoader('Vazirmatn');
+  for (final f in ['Regular', 'Medium', 'Bold']) {
+    final bytes = File('assets/fonts/Vazirmatn-$f.ttf').readAsBytesSync();
+    loader.addFont(Future.value(ByteData.sublistView(bytes)));
+  }
+  await loader.load();
 }

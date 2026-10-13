@@ -120,9 +120,12 @@ class _TopBar extends StatelessWidget {
         border: Border(bottom: BorderSide(color: t.colorScheme.outlineVariant)),
       ),
       child: Row(children: [
-        Text('بانک قیمت تجهیزات واحدهای نمک‌زدایی',
-            style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: t.colorScheme.primary)),
-        const Spacer(),
+        Expanded(
+          child: Text('بانک قیمت تجهیزات واحدهای نمک‌زدایی',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, color: t.colorScheme.primary)),
+        ),
         Tooltip(
           message: 'همه‌ی قیمت‌ها به این سال تعدیل می‌شوند (شاخص PPI و نرخ ارز همین سال).',
           child: Row(children: [

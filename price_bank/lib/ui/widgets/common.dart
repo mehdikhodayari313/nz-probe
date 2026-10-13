@@ -33,7 +33,8 @@ class PageHeader extends StatelessWidget {
                 Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
             ]),
           ),
-          Wrap(spacing: 8, runSpacing: 8, children: actions),
+          if (actions.isNotEmpty)
+            Flexible(child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.end, children: actions)),
         ],
       ),
     );
@@ -84,7 +85,7 @@ class SectionCard extends StatelessWidget {
                       Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
                   ]),
                 ),
-                if (trailing != null) trailing!,
+                if (trailing != null) Flexible(child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing!)),
               ]),
             ),
           Padding(padding: padding, child: child),

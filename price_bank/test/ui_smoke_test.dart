@@ -12,6 +12,7 @@ import 'package:price_bank/ui/pages/pump_detail_page.dart';
 import 'support.dart';
 
 void main() {
+  setUpAll(loadAppFonts);
   const labels = ['داشبورد', 'تجهیزات', 'تخمین و تعدیل', 'شاخص‌ها و ارز', 'ضرایب', 'پروژه‌ها و اسناد', 'تاریخچه', 'کاربران', 'تنظیمات'];
 
   Future<AppState> boot(WidgetTester tester, {bool withData = true}) async {
