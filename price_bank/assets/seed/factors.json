@@ -1,0 +1,559 @@
+{
+ "set": "PUMP_ROT",
+ "base_config": "FACTORS_ROT – ضرایب نرمال‌سازی (پیکربندی پایه: S-5، Seal Arr 1 / Plan 11 / Cat 2، موتور برقی، بدون NACE، Scope پایه)",
+ "factors": [
+  {
+   "group": "MAT",
+   "option": "I-1",
+   "provisional": 0.75,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه چدن، پروانه چدن؛ رینگ چدن؛ شفت فولاد کربنی"
+  },
+  {
+   "group": "MAT",
+   "option": "I-2",
+   "provisional": 0.8,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه چدن، پروانه برنز؛ رینگ برنز؛ شفت فولاد کربنی"
+  },
+  {
+   "group": "MAT",
+   "option": "S-1",
+   "provisional": 0.9,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه چدن؛ رینگ چدن؛ شفت فولاد کربنی"
+  },
+  {
+   "group": "MAT",
+   "option": "S-3",
+   "provisional": 0.95,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه نی‌رزیست (چدن آلیاژی نیکل‌دار)؛ رینگ نی‌رزیست؛ شفت AISI 4140"
+  },
+  {
+   "group": "MAT",
+   "option": "S-4",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه فولاد کربنی؛ رینگ چدن؛ شفت فولاد کربنی"
+  },
+  {
+   "group": "MAT",
+   "option": "S-5",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه فولاد کربنی؛ رینگ کروم ۱۲٪ سخت‌شده؛ شفت AISI 4140"
+  },
+  {
+   "group": "MAT",
+   "option": "S-6",
+   "provisional": 1.1,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه کروم ۱۲٪؛ رینگ کروم ۱۲٪ سخت‌شده؛ شفت کروم ۱۲٪"
+  },
+  {
+   "group": "MAT",
+   "option": "S-8",
+   "provisional": 1.25,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه فولاد ضدزنگ 316؛ رینگ 316 با روکش سخت؛ شفت 316"
+  },
+  {
+   "group": "MAT",
+   "option": "S-9",
+   "provisional": 1.35,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد کربنی، پروانه آلیاژ نیکل‌-مس؛ رینگ نیکل‌-مس؛ شفت نیکل‌-مس"
+  },
+  {
+   "group": "MAT",
+   "option": "C-6",
+   "provisional": 1.3,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه کروم ۱۲٪، پروانه کروم ۱۲٪؛ رینگ کروم ۱۲٪ سخت‌شده؛ شفت کروم ۱۲٪"
+  },
+  {
+   "group": "MAT",
+   "option": "A-7",
+   "provisional": 1.4,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد ضدزنگ آستنیتی، پروانه فولاد ضدزنگ آستنیتی؛ رینگ با روکش سخت؛ شفت آستنیتی"
+  },
+  {
+   "group": "MAT",
+   "option": "A-8",
+   "provisional": 1.5,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد ضدزنگ 316، پروانه فولاد ضدزنگ 316؛ رینگ با روکش سخت؛ شفت 316"
+  },
+  {
+   "group": "MAT",
+   "option": "D-1",
+   "provisional": 1.7,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه داپلکس، پروانه داپلکس؛ رینگ با روکش سخت؛ شفت داپلکس"
+  },
+  {
+   "group": "MAT",
+   "option": "D-2",
+   "provisional": 1.9,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه سوپرداپلکس، پروانه سوپرداپلکس؛ رینگ با روکش سخت؛ شفت سوپرداپلکس"
+  },
+  {
+   "group": "MAT",
+   "option": "SS316L (non-API)",
+   "provisional": 1.35,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00 | بدنه فولاد ضدزنگ 316L، پروانه فولاد ضدزنگ 316L؛ —"
+  },
+  {
+   "group": "MAT",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 610 material class – base S-5 = 1.00"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Packing",
+   "provisional": 0.9,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Arr 1 - Single",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00 | Base"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Arr 2 - Dual Unpressurized",
+   "provisional": 1.12,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Arr 3 - Dual Pressurized",
+   "provisional": 1.2,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Sealless - Magnetic Drive",
+   "provisional": 1.15,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Sealless - Canned Motor",
+   "provisional": 1.25,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00"
+  },
+  {
+   "group": "SEAL_ARR",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Seal type / API 682 arrangement – base Arr 1 = 1.00 | Neutral"
+  },
+  {
+   "group": "SEAL_CAT",
+   "option": "Cat 1",
+   "provisional": 0.95,
+   "calibrated": null,
+   "description": "API 682 category – base Cat 2 = 1.00"
+  },
+  {
+   "group": "SEAL_CAT",
+   "option": "Cat 2",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 category – base Cat 2 = 1.00 | Base"
+  },
+  {
+   "group": "SEAL_CAT",
+   "option": "Cat 3",
+   "provisional": 1.08,
+   "calibrated": null,
+   "description": "API 682 category – base Cat 2 = 1.00"
+  },
+  {
+   "group": "SEAL_CAT",
+   "option": "N/A",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 category – base Cat 2 = 1.00"
+  },
+  {
+   "group": "SEAL_CAT",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 category – base Cat 2 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "01",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "02",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "11",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00 | Base"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "13",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "14",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "21",
+   "provisional": 1.01,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "23",
+   "provisional": 1.03,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "32",
+   "provisional": 1.02,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "52",
+   "provisional": 1.04,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "53A",
+   "provisional": 1.06,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "53B",
+   "provisional": 1.1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "53C",
+   "provisional": 1.1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "54",
+   "provisional": 1.18,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "62",
+   "provisional": 1.02,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "65A",
+   "provisional": 1.01,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "72/76",
+   "provisional": 1.04,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "11+52",
+   "provisional": 1.04,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "11+53B",
+   "provisional": 1.1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "23+53B",
+   "provisional": 1.12,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "N/A",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00"
+  },
+  {
+   "group": "SEAL_PLAN",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "API 682 seal plan – base Plan 11 = 1.00 | Neutral"
+  },
+  {
+   "group": "DRV",
+   "option": "Electric Motor",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Driver type – base electric motor = 1.00 | Base"
+  },
+  {
+   "group": "DRV",
+   "option": "Diesel Engine",
+   "provisional": 1.35,
+   "calibrated": null,
+   "description": "Driver type – base electric motor = 1.00"
+  },
+  {
+   "group": "DRV",
+   "option": "Steam Turbine",
+   "provisional": 1.6,
+   "calibrated": null,
+   "description": "Driver type – base electric motor = 1.00"
+  },
+  {
+   "group": "DRV",
+   "option": "Air / Pneumatic",
+   "provisional": 0.9,
+   "calibrated": null,
+   "description": "Driver type – base electric motor = 1.00"
+  },
+  {
+   "group": "DRV",
+   "option": "Portable (Air / Electric)",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Driver type – base electric motor = 1.00"
+  },
+  {
+   "group": "DRV",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Driver type – base electric motor = 1.00"
+  },
+  {
+   "group": "NACE",
+   "option": "Y",
+   "provisional": 1.05,
+   "calibrated": null,
+   "description": "NACE MR0175 / ISO 15156 compliance"
+  },
+  {
+   "group": "NACE",
+   "option": "N",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "NACE MR0175 / ISO 15156 compliance | Base"
+  },
+  {
+   "group": "NACE",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "NACE MR0175 / ISO 15156 compliance"
+  },
+  {
+   "group": "SC_DRV",
+   "option": "Y",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: driver included (base = Y) | Base"
+  },
+  {
+   "group": "SC_DRV",
+   "option": "N",
+   "provisional": 0.75,
+   "calibrated": null,
+   "description": "Scope: driver included (base = Y) | Bare-shaft pump"
+  },
+  {
+   "group": "SC_DRV",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: driver included (base = Y)"
+  },
+  {
+   "group": "SC_BSP",
+   "option": "Y",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: baseplate & coupling (base = Y) | Base"
+  },
+  {
+   "group": "SC_BSP",
+   "option": "N",
+   "provisional": 0.95,
+   "calibrated": null,
+   "description": "Scope: baseplate & coupling (base = Y)"
+  },
+  {
+   "group": "SC_BSP",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: baseplate & coupling (base = Y)"
+  },
+  {
+   "group": "SC_SEAL",
+   "option": "Y",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: seal support system (base = Y) | Base"
+  },
+  {
+   "group": "SC_SEAL",
+   "option": "N",
+   "provisional": 0.93,
+   "calibrated": null,
+   "description": "Scope: seal support system (base = Y)"
+  },
+  {
+   "group": "SC_SEAL",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: seal support system (base = Y)"
+  },
+  {
+   "group": "SC_COMM",
+   "option": "Y",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: commissioning spares (base = Y) | Base"
+  },
+  {
+   "group": "SC_COMM",
+   "option": "N",
+   "provisional": 0.98,
+   "calibrated": null,
+   "description": "Scope: commissioning spares (base = Y)"
+  },
+  {
+   "group": "SC_COMM",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: commissioning spares (base = Y)"
+  },
+  {
+   "group": "SC_2Y",
+   "option": "Y",
+   "provisional": 1.08,
+   "calibrated": null,
+   "description": "Scope: 2-year spares (base = N)"
+  },
+  {
+   "group": "SC_2Y",
+   "option": "N",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: 2-year spares (base = N) | Base"
+  },
+  {
+   "group": "SC_2Y",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: 2-year spares (base = N)"
+  },
+  {
+   "group": "SC_TPI",
+   "option": "Y",
+   "provisional": 1.02,
+   "calibrated": null,
+   "description": "Scope: third-party inspection (base = N)"
+  },
+  {
+   "group": "SC_TPI",
+   "option": "N",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: third-party inspection (base = N) | Base"
+  },
+  {
+   "group": "SC_TPI",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: third-party inspection (base = N)"
+  },
+  {
+   "group": "SC_FAT",
+   "option": "Y",
+   "provisional": 1.02,
+   "calibrated": null,
+   "description": "Scope: witnessed FAT (base = N)"
+  },
+  {
+   "group": "SC_FAT",
+   "option": "N",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: witnessed FAT (base = N) | Base"
+  },
+  {
+   "group": "SC_FAT",
+   "option": "Not stated",
+   "provisional": 1,
+   "calibrated": null,
+   "description": "Scope: witnessed FAT (base = N)"
+  }
+ ]
+}

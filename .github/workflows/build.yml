@@ -3,6 +3,9 @@ name: build
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'price_bank/**'
+      - '.github/workflows/price_bank.yml'
   workflow_dispatch:
 
 permissions:

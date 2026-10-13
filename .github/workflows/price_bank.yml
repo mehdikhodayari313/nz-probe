@@ -1,0 +1,108 @@
+name: price_bank
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'price_bank/**'
+      - '.github/workflows/price_bank.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: price_bank
+
+jobs:
+  test:
+    name: Analyze & test (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Install SQLite (for unit tests)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq libsqlite3-dev
+      - name: Prepare
+        run: |
+          mkdir -p ci
+          flutter --version > ci/flutter_version.txt 2>&1
+          echo "${{ github.sha }}" > ci/commit.txt
+          flutter pub get > ci/pub_get.txt 2>&1 || (cat ci/pub_get.txt; exit 1)
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings > ci/analyze.txt 2>&1 || true
+      - name: Unit tests
+        run: |
+          set -o pipefail
+          flutter test --reporter expanded 2>&1 | tee ci/test.txt
+      - name: Publish results
+        if: always()
+        working-directory: .
+        run: |
+          mkdir -p /tmp/res && cp -r price_bank/ci/. /tmp/res/ 2>/dev/null || true
+          cd /tmp/res && git init -q && git config user.name ci-bot && git config user.email ci-bot@users.noreply.github.com
+          git add -A && git commit -qm "PB test results ${GITHUB_SHA} (${{ job.status }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-pb-test
+
+  windows:
+    name: Build & smoke test (Windows)
+    needs: test
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create platform folder
+        run: |
+          New-Item -ItemType Directory -Force ci | Out-Null
+          "${{ github.sha }}" | Set-Content ci/commit.txt
+          flutter create . --platforms=windows --project-name price_bank --org ir.nisoc.desalting
+          (Get-Content windows/runner/main.cpp) -replace 'L"price_bank"', 'L"Desalting Price Bank"' | Set-Content windows/runner/main.cpp
+          (Get-Content windows/runner/main.cpp) -replace 'Win32Window::Size size\(1280, 720\)', 'Win32Window::Size size(1440, 900)' | Set-Content windows/runner/main.cpp
+      - name: Build
+        run: |
+          flutter pub get
+          flutter build windows --release 2>&1 | Tee-Object -FilePath ci/build.txt
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Smoke test built exe (new DB + v8 import + calc)
+        run: |
+          $out = "build/windows/x64/runner/Release"
+          $report = Join-Path (Get-Location) "ci/smoke.txt"
+          $db = Join-Path $env:RUNNER_TEMP "smoke.db"
+          $v8 = Join-Path (Get-Location) "test/fixtures_private/Pumps_Price_Bank_v8.xlsx"
+          $p = Start-Process -FilePath "$out/price_bank.exe" -ArgumentList "--smoke", "`"$report`"", "`"$db`"", "`"$v8`"" -PassThru
+          if (-not $p.WaitForExit(240000)) { $p.Kill(); "TIMEOUT" | Set-Content ci/smoke_exit.txt; exit 1 }
+          "exit code: $($p.ExitCode)" | Set-Content ci/smoke_exit.txt
+          if ($p.ExitCode -ne 0) { exit 1 }
+      - name: Package
+        run: |
+          $out = "build/windows/x64/runner/Release"
+          New-Item -ItemType Directory -Force dist/price_bank | Out-Null
+          Copy-Item "$out/*" dist/price_bank -Recurse -Force
+          foreach ($f in "msvcp140.dll","vcruntime140.dll","vcruntime140_1.dll") {
+            $src = Join-Path $env:SystemRoot "System32/$f"
+            if (Test-Path $src) { Copy-Item $src dist/price_bank -Force }
+          }
+          (Get-FileHash dist/price_bank/price_bank.exe -Algorithm SHA256).Hash | Set-Content dist/price_bank/price_bank.exe.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: price_bank_windows
+          path: price_bank/dist/price_bank/
+          retention-days: 30
+      - name: Publish results
+        if: always()
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p /tmp/res && cp -r price_bank/ci/. /tmp/res/
+          cd /tmp/res && git init -q && git config user.name ci-bot && git config user.email ci-bot@users.noreply.github.com
+          git add -A && git commit -qm "PB windows results ${GITHUB_SHA} (${{ job.status }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-pb-windows

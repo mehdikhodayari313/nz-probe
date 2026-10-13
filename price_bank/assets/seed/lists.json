@@ -1,0 +1,556 @@
+{
+ "lists": {
+  "SubCat": [
+   "ROT-CRU",
+   "ROT-WAT",
+   "ROT-INJ",
+   "ROT-DRN",
+   "ROT-AUX",
+   "ROT-FIR"
+  ],
+  "Service": [
+   "Crude Oil",
+   "Slop / Dirty Oil",
+   "Produced / Disposal Water",
+   "Process / Dilution Water",
+   "Deaerated Water",
+   "Fresh / Potable Water",
+   "Oily Water / Drain",
+   "Sludge",
+   "Chemical",
+   "Diesel / Fuel Oil",
+   "Fire Water",
+   "Cooling / Seal Water",
+   "Other"
+  ],
+  "Std": [
+   "API 610",
+   "API 674",
+   "API 675",
+   "API 676",
+   "ISO 13709",
+   "ISO 5199",
+   "ISO 2858",
+   "NFPA 20",
+   "JIS B 8325",
+   "Manufacturer Std",
+   "Not stated"
+  ],
+  "IPS": [
+   "IPS-G-PM-105",
+   "IPS-M-PM-115",
+   "IPS-M-PM-125",
+   "IPS-M-PM-140",
+   "None"
+  ],
+  "Family": [
+   "Centrifugal",
+   "Centrifugal - Submersible",
+   "PD-Rotary (Gear)",
+   "PD-Rotary (Progressing Cavity)",
+   "PD-Rotary (Screw)",
+   "PD-Rotary (Sliding Vane)",
+   "PD-Reciprocating (Plunger)",
+   "Metering (Diaphragm)",
+   "Metering (Plunger)",
+   "Portable Barrel",
+   "Jet / Eductor",
+   "Not stated"
+  ],
+  "API610": [
+   "OH1",
+   "OH2",
+   "OH3",
+   "OH4",
+   "OH5",
+   "OH6",
+   "BB1",
+   "BB2",
+   "BB3",
+   "BB4",
+   "BB5",
+   "VS1",
+   "VS2",
+   "VS3",
+   "VS4",
+   "VS5",
+   "VS6",
+   "VS7",
+   "OH (unspecified)",
+   "BB (unspecified)",
+   "VS (unspecified)",
+   "N/A (non-API 610)",
+   "Not stated"
+  ],
+  "Power_Basis": [
+   "Motor Rated",
+   "Shaft (Absorbed)",
+   "Not stated"
+  ],
+  "YN": [
+   "Y",
+   "N"
+  ],
+  "YNS": [
+   "Y",
+   "N",
+   "Not stated"
+  ],
+  "Currency": [
+   "EUR",
+   "USD",
+   "IRR"
+  ],
+  "Year": [
+   "1385",
+   "1386",
+   "1387",
+   "1388",
+   "1389",
+   "1390",
+   "1391",
+   "1392",
+   "1393",
+   "1394",
+   "1395",
+   "1396",
+   "1397",
+   "1398",
+   "1399",
+   "1400",
+   "1401",
+   "1402",
+   "1403",
+   "1404",
+   "1405",
+   "(Not stated)"
+  ],
+  "Incoterm": [
+   "EXW",
+   "FCA",
+   "FOB",
+   "CFR",
+   "CIF",
+   "DAP",
+   "DDP",
+   "Domestic Delivered (IRR)",
+   "Not stated"
+  ],
+  "Phase": [
+   "Conceptual",
+   "Basic Design",
+   "FEED",
+   "Detail Engineering",
+   "Tender / Procurement",
+   "EPC Contract",
+   "Not stated"
+  ],
+  "Origin": [
+   "Domestic",
+   "Import",
+   "Domestic (Licensed)"
+  ],
+  "AVL": [
+   "NIOC/NISOC Approved",
+   "Conditional",
+   "Non-AVL",
+   "Not checked"
+  ],
+  "Rank": [
+   "Rank 1",
+   "Rank 2",
+   "Rank 3"
+  ],
+  "TBE": [
+   "Y",
+   "N",
+   "Pending"
+  ],
+  "MAT": [
+   "I-1",
+   "I-2",
+   "S-1",
+   "S-3",
+   "S-4",
+   "S-5",
+   "S-6",
+   "S-8",
+   "S-9",
+   "C-6",
+   "A-7",
+   "A-8",
+   "D-1",
+   "D-2",
+   "SS316L (non-API)",
+   "Not stated"
+  ],
+  "SEAL_ARR": [
+   "Packing",
+   "Arr 1 - Single",
+   "Arr 2 - Dual Unpressurized",
+   "Arr 3 - Dual Pressurized",
+   "Sealless - Magnetic Drive",
+   "Sealless - Canned Motor",
+   "Not stated"
+  ],
+  "SEAL_CAT": [
+   "Cat 1",
+   "Cat 2",
+   "Cat 3",
+   "N/A",
+   "Not stated"
+  ],
+  "SEAL_PLAN": [
+   "01",
+   "02",
+   "11",
+   "13",
+   "14",
+   "21",
+   "23",
+   "32",
+   "52",
+   "53A",
+   "53B",
+   "53C",
+   "54",
+   "62",
+   "65A",
+   "72/76",
+   "11+52",
+   "11+53B",
+   "23+53B",
+   "N/A",
+   "Not stated"
+  ],
+  "DRV": [
+   "Electric Motor",
+   "Diesel Engine",
+   "Steam Turbine",
+   "Air / Pneumatic",
+   "Portable (Air / Electric)",
+   "Not stated"
+  ]
+ },
+ "subcategories": {
+  "ROT-CRU": {
+   "name_en": "Crude Oil & Main Transfer Pumps",
+   "desc_fa": "پمپ‌های نفت خام: انتقال نفت شور و نمک‌زدایی‌شده، Booster، Off-spec و انتقال اصلی"
+  },
+  "ROT-WAT": {
+   "name_en": "Desalting & Process Water Pumps",
+   "desc_fa": "آب فرآیندی واحد: آب رقیق‌سازی، Recycle دیسالتر، آب هوازدایی‌شده، آب شیرین و آب خنک‌کن"
+  },
+  "ROT-INJ": {
+   "name_en": "Produced Water & Disposal Injection Pumps",
+   "desc_fa": "آب تولیدی و پساب: Booster و پمپ‌های پرفشار تزریق به چاه دفعی"
+  },
+  "ROT-DRN": {
+   "name_en": "Drainage, Flare & OWS Pumps",
+   "desc_fa": "درین بسته و باز، Flare KO Drum، جداکننده آب و نفت (OWS)، نفت بازیافتی و لجن"
+  },
+  "ROT-AUX": {
+   "name_en": "Chemical, Fuel & Auxiliary Pumps",
+   "desc_fa": "پمپ‌های جانبی: مواد شیمیایی، گلایکول، گازوئیل و سوخت"
+  },
+  "ROT-FIR": {
+   "name_en": "Firewater & Safety Pumps",
+   "desc_fa": "آتش‌نشانی: پمپ اصلی برقی و دیزلی، Jockey و بارگیری آب آتش‌نشانی"
+  }
+ },
+ "reference_tables": {
+  "material_classes": [
+   [
+    "I-1",
+    "Cast iron",
+    "Cast iron",
+    "Cast-iron rings; carbon-steel shaft",
+    "Water and non-corrosive services, low temperature"
+   ],
+   [
+    "I-2",
+    "Cast iron",
+    "Bronze",
+    "Bronze rings; carbon-steel shaft",
+    "Water, fire water, fresh water"
+   ],
+   [
+    "S-1",
+    "Carbon steel",
+    "Cast iron",
+    "Cast-iron rings; carbon-steel shaft",
+    "Non-corrosive hydrocarbons"
+   ],
+   [
+    "S-3",
+    "Carbon steel",
+    "Ni-resist",
+    "Ni-resist rings; AISI 4140 shaft",
+    "Mildly abrasive or corrosive services"
+   ],
+   [
+    "S-4",
+    "Carbon steel",
+    "Carbon steel",
+    "Cast-iron rings; carbon-steel shaft",
+    "General hydrocarbons"
+   ],
+   [
+    "S-5",
+    "Carbon steel",
+    "Carbon steel",
+    "Hardened 12% Cr rings; AISI 4140 shaft",
+    "General and hot hydrocarbons"
+   ],
+   [
+    "S-6",
+    "Carbon steel",
+    "12% Cr",
+    "Hardened 12% Cr rings; 12% Cr shaft",
+    "Hot hydrocarbons, sour water, mild corrosion"
+   ],
+   [
+    "S-8",
+    "Carbon steel",
+    "316 stainless steel",
+    "Hard-faced 316 rings; 316 shaft",
+    "More corrosive services"
+   ],
+   [
+    "S-9",
+    "Carbon steel",
+    "Ni-Cu alloy",
+    "Ni-Cu rings; Ni-Cu shaft",
+    "Special corrosive services"
+   ],
+   [
+    "C-6",
+    "12% Cr",
+    "12% Cr",
+    "Hardened 12% Cr rings; 12% Cr shaft",
+    "Boiler feed water, hot hydrocarbons"
+   ],
+   [
+    "A-7",
+    "Austenitic stainless steel",
+    "Austenitic stainless steel",
+    "Hard-faced rings; austenitic shaft",
+    "High corrosion, low temperature"
+   ],
+   [
+    "A-8",
+    "316 stainless steel",
+    "316 stainless steel",
+    "Hard-faced rings; 316 shaft",
+    "Corrosive services"
+   ],
+   [
+    "D-1",
+    "Duplex stainless steel",
+    "Duplex stainless steel",
+    "Hard-faced rings; duplex shaft",
+    "Saline and produced water with chlorides"
+   ],
+   [
+    "D-2",
+    "Super-duplex stainless steel",
+    "Super-duplex stainless steel",
+    "Hard-faced rings; super-duplex shaft",
+    "High-chloride saline / produced water, severe corrosion"
+   ],
+   [
+    "SS316L (non-API)",
+    "316L stainless steel",
+    "316L stainless steel",
+    "—",
+    "Non-API construction (e.g. portable barrel pump)"
+   ],
+   [
+    "Not stated",
+    "—",
+    "—",
+    "—",
+    "Not stated in source"
+   ]
+  ],
+  "api610_types": [
+   [
+    "OH1",
+    "Overhung, foot-mounted",
+    "Single-stage overhung, foot-mounted; moderate temperature and pressure"
+   ],
+   [
+    "OH2",
+    "Overhung, centreline-mounted",
+    "Single-stage overhung, centreline-mounted; the most common refinery process pump, suitable for high temperature"
+   ],
+   [
+    "OH3",
+    "Vertical in-line, separate bearing bracket",
+    "Vertical in-line pump with separate bearing bracket"
+   ],
+   [
+    "OH4",
+    "Vertical in-line, rigidly coupled",
+    "Vertical in-line pump, rigidly coupled"
+   ],
+   [
+    "OH5",
+    "Vertical in-line, close-coupled",
+    "Vertical in-line pump, close-coupled (impeller on the motor shaft)"
+   ],
+   [
+    "OH6",
+    "High-speed integral gear",
+    "High-speed integral-gear pump; low flow, high head"
+   ],
+   [
+    "BB1",
+    "Between bearings, 1–2 stage, axially split",
+    "Between bearings, 1–2 stage, axially split casing"
+   ],
+   [
+    "BB2",
+    "Between bearings, 1–2 stage, radially split",
+    "Between bearings, 1–2 stage, radially split; high temperature and pressure"
+   ],
+   [
+    "BB3",
+    "Between bearings, multistage, axially split",
+    "Multistage, axially split casing; water injection and high-pressure transfer"
+   ],
+   [
+    "BB4",
+    "Between bearings, multistage, single casing radially split",
+    "Multistage single-casing ring-section pump"
+   ],
+   [
+    "BB5",
+    "Between bearings, multistage, double casing (barrel)",
+    "Multistage double-casing (barrel) pump; the most severe high-pressure services"
+   ],
+   [
+    "VS1",
+    "Vertically suspended, diffuser, discharge through column",
+    "Wet-pit vertically suspended, diffuser, discharge through the column"
+   ],
+   [
+    "VS2",
+    "Vertically suspended, volute, discharge through column",
+    "Wet-pit vertically suspended, volute, discharge through the column"
+   ],
+   [
+    "VS3",
+    "Vertically suspended, axial flow",
+    "Wet-pit vertically suspended, axial flow; high flow, low head"
+   ],
+   [
+    "VS4",
+    "Vertically suspended, line-shaft, separate discharge (sump)",
+    "Line-shaft sump pump with separate discharge; drain and flare KO sumps"
+   ],
+   [
+    "VS5",
+    "Vertically suspended, cantilever sump",
+    "Cantilever sump pump without submerged bearings"
+   ],
+   [
+    "VS6",
+    "Vertically suspended, double casing, diffuser (can)",
+    "Double-casing diffuser (can) pump; low NPSH, e.g. off-spec crude and near-boiling liquids"
+   ],
+   [
+    "VS7",
+    "Vertically suspended, double casing, volute",
+    "Double-casing volute pump"
+   ],
+   [
+    "OH (unspecified)",
+    "Overhung – subtype not stated",
+    "Source states only \"Overhung\"; API subtype not given"
+   ],
+   [
+    "BB (unspecified)",
+    "Between bearings – subtype not stated",
+    "Source states only \"Between Bearings\"; API subtype not given"
+   ],
+   [
+    "VS (unspecified)",
+    "Vertically suspended – subtype not stated",
+    "Source states only \"Vertical\"; API subtype not given"
+   ],
+   [
+    "N/A (non-API 610)",
+    "Not an API 610 pump",
+    "Not an API 610 pump (ISO 5199, NFPA 20, JIS, positive-displacement or portable pump); API 610 type does not apply"
+   ],
+   [
+    "Not stated",
+    "—",
+    "Pump type not stated in source"
+   ]
+  ],
+  "incoterms": [
+   [
+    "EXW",
+    "Ex Works – goods made available at the seller's works; buyer bears all transport, insurance, export/import costs",
+    "تحویل درب کارخانه؛ همه هزینه‌های حمل، بیمه، گمرک و ترخیص با خریدار",
+    "گچساران ۴ (هزینه حمل، بیمه، بازرسی و یدکی جدا) و اقلام ریالی کوپال"
+   ],
+   [
+    "FCA",
+    "Free Carrier – delivered to the buyer's carrier at a named place",
+    "تحویل به حمل‌کننده خریدار در محل تعیین‌شده",
+    "—"
+   ],
+   [
+    "FOB",
+    "Free On Board – loaded on the vessel at the port of shipment; sea freight, insurance and import costs for buyer",
+    "تحویل روی کشتی در بندر مبدأ؛ کرایه حمل دریایی، بیمه و هزینه‌های ورود با خریدار",
+    "پازنان ۲ (۱۳۹۳ و ۱۴۰۴) و اقلام ارزی کوپال"
+   ],
+   [
+    "CFR",
+    "Cost and Freight – seller pays sea freight to the destination port; insurance for buyer",
+    "فروشنده کرایه حمل تا بندر مقصد را می‌پردازد؛ بیمه با خریدار",
+    "—"
+   ],
+   [
+    "CIF",
+    "Cost, Insurance and Freight – seller pays sea freight and minimum insurance to the destination port",
+    "فروشنده کرایه حمل و بیمه تا بندر مقصد را می‌پردازد",
+    "—"
+   ],
+   [
+    "DAP",
+    "Delivered At Place – delivered at the named destination, not unloaded; import duties for buyer",
+    "تحویل در مقصد تعیین‌شده (مثلاً سایت)؛ حقوق ورودی و ترخیص با خریدار",
+    "—"
+   ],
+   [
+    "DDP",
+    "Delivered Duty Paid – delivered at destination with all duties paid by the seller",
+    "تحویل در مقصد با پرداخت همه عوارض و حقوق گمرکی توسط فروشنده",
+    "—"
+   ],
+   [
+    "Domestic Delivered (IRR)",
+    "Domestic supply in rials, delivered to site",
+    "خرید داخلی ریالی با تحویل در سایت",
+    "—"
+   ],
+   [
+    "Not stated",
+    "Delivery basis not stated in the source",
+    "شرط تحویل در منبع ذکر نشده است",
+    "رکوردهای CSV و نمونه قیمتی (بدون پروژه و سال)"
+   ],
+   [
+    "در همه رکوردها قیمت در سطح فروشنده است: سربار پروژه، مالیات بر ارزش افزوده و هزینه نصب در هیچ قیمتی نیست. آنچه هر قیمت دقیقاً شامل هست یا نیست، در Note ستون Incoterm همان ردیف در Master Database آمده است.",
+    null,
+    null,
+    null
+   ]
+  ]
+ }
+}

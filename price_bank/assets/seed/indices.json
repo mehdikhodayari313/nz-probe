@@ -1,0 +1,1686 @@
+{
+ "series": [
+  {
+   "code": "PPI_EU_C2813_GREG",
+   "name_fa": "PPI پمپ و کمپرسور منطقه‌ی یورو (میلادی)",
+   "name_en": "Eurostat PPI C28.13 EA20, Gregorian",
+   "kind": "level",
+   "group": "ppi_world",
+   "unit": "2021=100",
+   "base": "2021=100",
+   "source": "Eurostat sts_inppd_a, NACE C28.13",
+   "calendar": "gregorian"
+  },
+  {
+   "code": "PPI_US_333914_GREG",
+   "name_fa": "PPI پمپ آمریکا (میلادی)",
+   "name_en": "US BLS PPI NAICS 333914 (January)",
+   "kind": "level",
+   "group": "ppi_world",
+   "unit": "Dec1983=100",
+   "base": "Dec1983=100",
+   "source": "FRED/BLS PCU333914333914",
+   "calendar": "gregorian"
+  },
+  {
+   "code": "PPI_EU_C2813",
+   "name_fa": "PPI پمپ منطقه‌ی یورو (سال شمسی)",
+   "name_en": "Eurostat PPI C28.13 EA20, Jalali-year blend",
+   "kind": "level",
+   "group": "ppi_world",
+   "unit": "2021=100",
+   "base": "2021=100",
+   "source": "ترکیب سال میلادی: 0.79×PPI(Y+621) + 0.21×PPI(Y+622) — Pump_Escalation_Validation, Indices C51:C71",
+   "calendar": "jalali"
+  },
+  {
+   "code": "FX_USD_V8",
+   "name_fa": "دلار به ریال — جدول مرجع v8",
+   "name_en": "USD→IRR (v8 reference table)",
+   "kind": "level",
+   "group": "fx",
+   "unit": "ریال",
+   "base": null,
+   "source": "Pumps_Price_Bank_v8, Assumptions & FX Reference",
+   "calendar": "jalali"
+  },
+  {
+   "code": "FX_EUR_V8",
+   "name_fa": "یورو به ریال — جدول مرجع v8",
+   "name_en": "EUR→IRR (v8 reference table)",
+   "kind": "level",
+   "group": "fx",
+   "unit": "ریال",
+   "base": null,
+   "source": "Pumps_Price_Bank_v8, Assumptions & FX Reference",
+   "calendar": "jalali"
+  },
+  {
+   "code": "FX_USD_FREE",
+   "name_fa": "دلار به ریال — بازار آزاد",
+   "name_en": "USD→IRR free market (annual avg, approx.)",
+   "kind": "level",
+   "group": "fx",
+   "unit": "ریال",
+   "base": null,
+   "source": "Pump_Escalation_Validation, Indices ستون D",
+   "calendar": "jalali"
+  },
+  {
+   "code": "FX_EUR_FREE",
+   "name_fa": "یورو به ریال — بازار آزاد",
+   "name_en": "EUR→IRR free market (effective)",
+   "kind": "level",
+   "group": "fx",
+   "unit": "ریال",
+   "base": null,
+   "source": "Pump_Escalation_Validation, Indices ستون G (= دلار آزاد × یورو/دلار، یا نرخ جایگزین)",
+   "calendar": "jalali"
+  },
+  {
+   "code": "FX_USD_NIMA",
+   "name_fa": "دلار به ریال — مرکز مبادله / نیما",
+   "name_en": "USD→IRR exchange centre (NIMA)",
+   "kind": "level",
+   "group": "fx",
+   "unit": "ریال",
+   "base": null,
+   "source": "ورود توسط کاربر",
+   "calendar": "jalali"
+  },
+  {
+   "code": "FX_EUR_NIMA",
+   "name_fa": "یورو به ریال — مرکز مبادله / نیما",
+   "name_en": "EUR→IRR exchange centre (NIMA)",
+   "kind": "level",
+   "group": "fx",
+   "unit": "ریال",
+   "base": null,
+   "source": "ورود توسط کاربر",
+   "calendar": "jalali"
+  },
+  {
+   "code": "INF_IRR",
+   "name_fa": "تورم ریالی سالانه (CPI)",
+   "name_en": "Rial inflation (annual)",
+   "kind": "annual_rate",
+   "group": "inflation",
+   "unit": "نسبت",
+   "base": null,
+   "source": "مارون ۳ (شیت Inflation) / Pump_Escalation_Validation",
+   "calendar": "jalali"
+  },
+  {
+   "code": "INF_FX_M3",
+   "name_fa": "تورم ارزی سالانه (مارون ۳)",
+   "name_en": "FX inflation (Maroon 3)",
+   "kind": "annual_rate",
+   "group": "inflation",
+   "unit": "نسبت",
+   "base": null,
+   "source": "مارون ۳ (شیت Inflation)",
+   "calendar": "jalali"
+  },
+  {
+   "code": "MET_STEEL",
+   "name_fa": "قیمت فولاد (HRC/Plate)",
+   "name_en": "MET_STEEL",
+   "kind": "level",
+   "group": "metal",
+   "unit": "USD/t",
+   "base": null,
+   "source": "Pump_Escalation_Validation, Indices ردیف 38؛ وزن در سبد پمپ: 0.6",
+   "calendar": "jalali"
+  },
+  {
+   "code": "MET_NICKEL",
+   "name_fa": "قیمت نیکل",
+   "name_en": "MET_NICKEL",
+   "kind": "level",
+   "group": "metal",
+   "unit": "USD/t",
+   "base": null,
+   "source": "Pump_Escalation_Validation, Indices ردیف 39؛ وزن در سبد پمپ: 0.12",
+   "calendar": "jalali"
+  },
+  {
+   "code": "MET_MOLY",
+   "name_fa": "قیمت مولیبدن",
+   "name_en": "MET_MOLY",
+   "kind": "level",
+   "group": "metal",
+   "unit": "USD/t",
+   "base": null,
+   "source": "Pump_Escalation_Validation, Indices ردیف 40؛ وزن در سبد پمپ: 0.03",
+   "calendar": "jalali"
+  },
+  {
+   "code": "MET_COPPER",
+   "name_fa": "قیمت مس",
+   "name_en": "MET_COPPER",
+   "kind": "level",
+   "group": "metal",
+   "unit": "USD/t",
+   "base": null,
+   "source": "Pump_Escalation_Validation, Indices ردیف 41؛ وزن در سبد پمپ: 0.25",
+   "calendar": "jalali"
+  },
+  {
+   "code": "PPI_IR_TOTAL",
+   "name_fa": "PPI کل بخش صنعت ایران",
+   "name_en": "PPI_IR_TOTAL",
+   "kind": "level",
+   "group": "ppi_iran",
+   "unit": "1395=100",
+   "base": "1395=100",
+   "source": "مرکز آمار ایران — شاخص قیمت تولیدکننده بخش صنعت",
+   "calendar": "jalali"
+  },
+  {
+   "code": "PPI_IR_C24",
+   "name_fa": "PPI ساخت فلزات پایه (ISIC 24)",
+   "name_en": "PPI_IR_C24",
+   "kind": "level",
+   "group": "ppi_iran",
+   "unit": "1395=100",
+   "base": "1395=100",
+   "source": "مرکز آمار ایران — شاخص قیمت تولیدکننده بخش صنعت",
+   "calendar": "jalali"
+  },
+  {
+   "code": "PPI_IR_C25",
+   "name_fa": "PPI ساخت محصولات فلزی ساخته‌شده (ISIC 25)",
+   "name_en": "PPI_IR_C25",
+   "kind": "level",
+   "group": "ppi_iran",
+   "unit": "1395=100",
+   "base": "1395=100",
+   "source": "مرکز آمار ایران — شاخص قیمت تولیدکننده بخش صنعت",
+   "calendar": "jalali"
+  },
+  {
+   "code": "PPI_IR_C26",
+   "name_fa": "PPI محصولات رایانه‌ای، الکترونیکی و نوری (ISIC 26)",
+   "name_en": "PPI_IR_C26",
+   "kind": "level",
+   "group": "ppi_iran",
+   "unit": "1395=100",
+   "base": "1395=100",
+   "source": "مرکز آمار ایران — شاخص قیمت تولیدکننده بخش صنعت",
+   "calendar": "jalali"
+  },
+  {
+   "code": "PPI_IR_C27",
+   "name_fa": "PPI ساخت تجهیزات برقی (ISIC 27)",
+   "name_en": "PPI_IR_C27",
+   "kind": "level",
+   "group": "ppi_iran",
+   "unit": "1395=100",
+   "base": "1395=100",
+   "source": "مرکز آمار ایران — شاخص قیمت تولیدکننده بخش صنعت",
+   "calendar": "jalali"
+  },
+  {
+   "code": "PPI_IR_C28",
+   "name_fa": "PPI ساخت ماشین‌آلات و تجهیزات (ISIC 28)",
+   "name_en": "PPI_IR_C28",
+   "kind": "level",
+   "group": "ppi_iran",
+   "unit": "1395=100",
+   "base": "1395=100",
+   "source": "مرکز آمار ایران — شاخص قیمت تولیدکننده بخش صنعت",
+   "calendar": "jalali"
+  }
+ ],
+ "values": [
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2005",
+   "value": 74.8,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2006",
+   "value": 76.5,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2007",
+   "value": 79.8,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2008",
+   "value": 81.5,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2009",
+   "value": 83.7,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2010",
+   "value": 84.4,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2011",
+   "value": 86.2,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2012",
+   "value": 88.4,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2013",
+   "value": 89.9,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2014",
+   "value": 91.2,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2015",
+   "value": 91.9,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2016",
+   "value": 92.6,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2017",
+   "value": 93.6,
+   "status": "imputed",
+   "source": "Eurostat sts_inppd_a (imputed)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2018",
+   "value": 94.6,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2019",
+   "value": 96.4,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2020",
+   "value": 97.8,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2021",
+   "value": 100.0,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2022",
+   "value": 109.3,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2023",
+   "value": 118.6,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2024",
+   "value": 121.7,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2025",
+   "value": 122.9,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2026",
+   "value": 125.358,
+   "status": "forecast",
+   "source": "پیش‌بینی (داده رسمی هنوز منتشر نشده)"
+  },
+  {
+   "series": "PPI_EU_C2813_GREG",
+   "period": "2027",
+   "value": 127.86516,
+   "status": "forecast",
+   "source": "پیش‌بینی"
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2010",
+   "value": 226.2,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2011",
+   "value": 229.2,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2012",
+   "value": 235.4,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2013",
+   "value": 239.5,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2014",
+   "value": 245.1,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2015",
+   "value": 250.7,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2016",
+   "value": 255.9,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2017",
+   "value": 256.9,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2018",
+   "value": 266.4,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2019",
+   "value": 274.9,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2020",
+   "value": 276.0,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2021",
+   "value": 279.4,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2022",
+   "value": 304.842,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2023",
+   "value": 343.291,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2024",
+   "value": 367.3,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2025",
+   "value": 382.901,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_US_333914_GREG",
+   "period": "2026",
+   "value": 399.843,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1385",
+   "value": 77.193,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C51"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1386",
+   "value": 80.157,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C52"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1387",
+   "value": 81.962,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C53"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1388",
+   "value": 83.847,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C54"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1389",
+   "value": 84.778,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C55"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1390",
+   "value": 86.662,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C56"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1391",
+   "value": 88.715,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C57"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1392",
+   "value": 90.173,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C58"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1393",
+   "value": 91.347,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C59"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1394",
+   "value": 92.047,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C60"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1395",
+   "value": 92.81,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C61"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1396",
+   "value": 93.81,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a (imputed before 2018) | Pump_Escalation_Validation.xlsx Indices C62"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1397",
+   "value": 94.978,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C63"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1398",
+   "value": 96.694,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C64"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1399",
+   "value": 98.262,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C65"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1400",
+   "value": 101.953,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C66"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1401",
+   "value": 111.253,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C67"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1402",
+   "value": 119.251,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C68"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1403",
+   "value": 121.952,
+   "status": "official",
+   "source": "Eurostat sts_inppd_a | Pump_Escalation_Validation.xlsx Indices C69"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1404",
+   "value": 123.416,
+   "status": "forecast",
+   "source": "Eurostat 2025 (79%) + 2026 forecast (21%) | Pump_Escalation_Validation.xlsx Indices C70"
+  },
+  {
+   "series": "PPI_EU_C2813",
+   "period": "1405",
+   "value": 125.885,
+   "status": "forecast",
+   "source": "FORECAST – 2026 not yet published; +2%/yr trend (Indices C4); 21% weight of 2027 also forecast | Pump_Escalation_Validation.xlsx Indices C71"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1385",
+   "value": 9148.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1385",
+   "value": 11285.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1386",
+   "value": 9202.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1386",
+   "value": 11781.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1387",
+   "value": 9300.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1387",
+   "value": 14260.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1388",
+   "value": 9900.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1388",
+   "value": 13400.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1389",
+   "value": 10200.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1389",
+   "value": 13800.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1390",
+   "value": 11300.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1390",
+   "value": 15750.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1391",
+   "value": 19000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1391",
+   "value": 25500.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1392",
+   "value": 36300.0,
+   "status": "official",
+   "source": "EUR: free-market euro rate 42,000 (label 'نرخ آزاد یورو', Maroon3 sheets p.lab.1392 / SEFTY.p.1392)."
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1392",
+   "value": 42000.0,
+   "status": "official",
+   "source": "EUR: free-market euro rate 42,000 (label 'نرخ آزاد یورو', Maroon3 sheets p.lab.1392 / SEFTY.p.1392)."
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1393",
+   "value": 31000.0,
+   "status": "official",
+   "source": "EUR: 40,530.8 – Maroon3 sheet Inflation, label 'نرخ تسعیر ارز سال 93' (currency not written in the label; presumed EUR – verify)."
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1393",
+   "value": 40530.8,
+   "status": "official",
+   "source": "EUR: 40,530.8 – Maroon3 sheet Inflation, label 'نرخ تسعیر ارز سال 93' (currency not written in the label; presumed EUR – verify)."
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1394",
+   "value": 33550.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1394",
+   "value": 36750.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1395",
+   "value": 34600.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1395",
+   "value": 38800.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1396",
+   "value": 37300.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1396",
+   "value": 40250.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1397",
+   "value": 47700.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1397",
+   "value": 59000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1398",
+   "value": 135000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1398",
+   "value": 152800.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1399",
+   "value": 161000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1399",
+   "value": 172200.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1400",
+   "value": 252000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1400",
+   "value": 298400.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1401",
+   "value": 263000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1401",
+   "value": 289500.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1402",
+   "value": 420000.0,
+   "status": "official",
+   "source": "USD: 420,000 – Gachsaran4 sheet Procurement 'ارز مرجع' (PEP Rev. 1402/05)."
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1402",
+   "value": 529500.0,
+   "status": "official",
+   "source": "USD: 420,000 – Gachsaran4 sheet Procurement 'ارز مرجع' (PEP Rev. 1402/05)."
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1403",
+   "value": 600500.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1403",
+   "value": 653000.0,
+   "status": "official",
+   "source": "(not found in the source files – add if needed)"
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1404",
+   "value": 658533.0,
+   "status": "official",
+   "source": "USD: 658,533 = cached external-link value used by Pazanan2 formulas (assumed IRR per USD; verify). EUR = USD x 1.0558 (cached ratio) – derived."
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1404",
+   "value": 695268.0,
+   "status": "official",
+   "source": "USD: 658,533 = cached external-link value used by Pazanan2 formulas (assumed IRR per USD; verify). EUR = USD x 1.0558 (cached ratio) – derived."
+  },
+  {
+   "series": "FX_USD_V8",
+   "period": "1405",
+   "value": 1818181.8181818181,
+   "status": "official",
+   "source": "EUR: 2,000,000 – Maroon3 sheet Inflation, label 'یورو به ریال' (1405 estimate). USD = EUR / 1.1 (same sheet) – derived. | اصلاح: فرمول دوری B25↔D25 حذف و USD = EUR/1.1 مستقیم شد."
+  },
+  {
+   "series": "FX_EUR_V8",
+   "period": "1405",
+   "value": 2000000.0,
+   "status": "official",
+   "source": "EUR: 2,000,000 – Maroon3 sheet Inflation, label 'یورو به ریال' (1405 estimate). USD = EUR / 1.1 (same sheet) – derived. | اصلاح: فرمول دوری B25↔D25 حذف و USD = EUR/1.1 مستقیم شد."
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1385",
+   "value": 9148.0,
+   "status": "approx",
+   "source": "نرخ دلار از خود شما (Params مدل)"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1385",
+   "value": 11526.48,
+   "status": "approx",
+   "source": "نرخ دلار از خود شما (Params مدل)"
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1386",
+   "value": 9300.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1386",
+   "value": 12741.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1386",
+   "value": 0.184,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1386",
+   "value": 0.03,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1387",
+   "value": 9800.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1387",
+   "value": 14406.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1387",
+   "value": 0.254,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1387",
+   "value": 0.035,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1388",
+   "value": 10300.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1388",
+   "value": 14317.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1388",
+   "value": 0.108,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1388",
+   "value": 0.0,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1389",
+   "value": 10700.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1389",
+   "value": 14231.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1389",
+   "value": 0.124,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1389",
+   "value": 0.015,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1390",
+   "value": 13500.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1390",
+   "value": 18765.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1390",
+   "value": 0.215,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1390",
+   "value": 0.03,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1391",
+   "value": 24000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1391",
+   "value": 30720.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1391",
+   "value": 0.305,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1391",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1392",
+   "value": 27500.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1392",
+   "value": 36575.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1392",
+   "value": 0.37,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1392",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1393",
+   "value": 31000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1393",
+   "value": 40530.8,
+   "status": "approx",
+   "source": "نرخ جایگزین (مارون ۳)"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1393",
+   "value": 0.156,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1393",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1394",
+   "value": 33500.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1394",
+   "value": 37185.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1394",
+   "value": 0.119,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1394",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1395",
+   "value": 36500.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1395",
+   "value": 40515.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1395",
+   "value": 0.09,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1395",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1396",
+   "value": 41000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1396",
+   "value": 46330.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1396",
+   "value": 0.096,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1396",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1397",
+   "value": 85000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1397",
+   "value": 100300.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1397",
+   "value": 0.312,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1397",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1398",
+   "value": 120000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1398",
+   "value": 134400.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1398",
+   "value": 0.412,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1398",
+   "value": 0.02,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1399",
+   "value": 240000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1399",
+   "value": 273600.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1399",
+   "value": 0.47,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1399",
+   "value": 0.05,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1400",
+   "value": 270000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1400",
+   "value": 318600.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1400",
+   "value": 0.462,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1400",
+   "value": 0.05,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1401",
+   "value": 350000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1401",
+   "value": 367500.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1401",
+   "value": 0.465,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1401",
+   "value": 0.049,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1402",
+   "value": 520000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1402",
+   "value": 561600.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1402",
+   "value": 0.5,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1402",
+   "value": 0.04,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1403",
+   "value": 640000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1403",
+   "value": 691200.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1403",
+   "value": 0.4,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1403",
+   "value": 0.04,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1404",
+   "value": 1000000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1404",
+   "value": 1130000.0,
+   "status": "approx",
+   "source": "نرخ دلار و یورو/دلار از Params مدل شما (تخمینی) — با سری رسمی/بازار جایگزین شود؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1404",
+   "value": 0.6,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1404",
+   "value": 0.04,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "FX_USD_FREE",
+   "period": "1405",
+   "value": 2500000.0,
+   "status": "approx",
+   "source": "نرخ دلار از خود شما (Params مدل)؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "FX_EUR_FREE",
+   "period": "1405",
+   "value": 2875000.0,
+   "status": "approx",
+   "source": "نرخ دلار از خود شما (Params مدل)؛ تورم‌ها از شیت Inflation مارون ۳"
+  },
+  {
+   "series": "INF_IRR",
+   "period": "1405",
+   "value": 0.2,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "INF_FX_M3",
+   "period": "1405",
+   "value": 0.01,
+   "status": "official",
+   "source": null
+  },
+  {
+   "series": "MET_STEEL",
+   "period": "1393",
+   "value": 560.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_STEEL",
+   "period": "1403",
+   "value": 600.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_STEEL",
+   "period": "1404",
+   "value": 560.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_STEEL",
+   "period": "1405",
+   "value": 600.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_NICKEL",
+   "period": "1393",
+   "value": 16893.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_NICKEL",
+   "period": "1403",
+   "value": 16814.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_NICKEL",
+   "period": "1404",
+   "value": 15162.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_NICKEL",
+   "period": "1405",
+   "value": 17800.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_MOLY",
+   "period": "1393",
+   "value": 24000.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_MOLY",
+   "period": "1403",
+   "value": 46000.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_MOLY",
+   "period": "1404",
+   "value": 52000.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_MOLY",
+   "period": "1405",
+   "value": 66000.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_COPPER",
+   "period": "1393",
+   "value": 6863.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_COPPER",
+   "period": "1403",
+   "value": 9142.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_COPPER",
+   "period": "1404",
+   "value": 9921.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "MET_COPPER",
+   "period": "1405",
+   "value": 13200.0,
+   "status": "approx",
+   "source": null
+  },
+  {
+   "series": "PPI_IR_TOTAL",
+   "period": "1404-03",
+   "value": 1758.0,
+   "status": "needs_verification",
+   "source": "https://amar.org.ir/Portals/0/Articles/sanaat-3-1404.pdf — خوانده‌شده خودکار؛ با PDF تطبیق دهید"
+  },
+  {
+   "series": "PPI_IR_C24",
+   "period": "1404-03",
+   "value": 2242.8,
+   "status": "needs_verification",
+   "source": "https://amar.org.ir/Portals/0/Articles/sanaat-3-1404.pdf — خوانده‌شده خودکار؛ با PDF تطبیق دهید"
+  },
+  {
+   "series": "PPI_IR_C25",
+   "period": "1404-03",
+   "value": 2011.8,
+   "status": "needs_verification",
+   "source": "https://amar.org.ir/Portals/0/Articles/sanaat-3-1404.pdf — خوانده‌شده خودکار؛ با PDF تطبیق دهید"
+  },
+  {
+   "series": "PPI_IR_C26",
+   "period": "1404-03",
+   "value": 1000.4,
+   "status": "needs_verification",
+   "source": "https://amar.org.ir/Portals/0/Articles/sanaat-3-1404.pdf — خوانده‌شده خودکار؛ با PDF تطبیق دهید"
+  },
+  {
+   "series": "PPI_IR_C27",
+   "period": "1404-03",
+   "value": 2715.7,
+   "status": "needs_verification",
+   "source": "https://amar.org.ir/Portals/0/Articles/sanaat-3-1404.pdf — خوانده‌شده خودکار؛ با PDF تطبیق دهید"
+  },
+  {
+   "series": "PPI_IR_C28",
+   "period": "1404-03",
+   "value": 2439.3,
+   "status": "needs_verification",
+   "source": "https://amar.org.ir/Portals/0/Articles/sanaat-3-1404.pdf — خوانده‌شده خودکار؛ با PDF تطبیق دهید"
+  }
+ ]
+}
