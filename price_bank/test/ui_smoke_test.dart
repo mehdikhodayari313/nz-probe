@@ -54,7 +54,7 @@ void main() {
     final id = app.pumps.firstWhere((r) => r.result.eurTarget.isNumber).item.id;
     await tester.pumpWidget(PriceBankApp(state: app));
     final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
-    nav.push(MaterialPageRoute<void>(builder: (_) => AppScope(state: app, child: PumpDetailPage(itemId: id))));
+    nav.push(MaterialPageRoute<void>(builder: (_) => PumpDetailPage(itemId: id)));
     await tester.pumpAndSettle();
     for (final tab in ['مشخصات', 'محاسبه‌ی قیمت', 'قیمت‌ها و استعلام‌ها', 'تاریخچه']) {
       await tester.tap(find.text(tab).first);
@@ -65,7 +65,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull, reason: 'حالت ویرایش');
     // پمپ جدید
-    nav.push(MaterialPageRoute<void>(builder: (_) => AppScope(state: app, child: const PumpDetailPage(itemId: null))));
+    nav.push(MaterialPageRoute<void>(builder: (_) => const PumpDetailPage(itemId: null)));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull, reason: 'پمپ جدید');
   });

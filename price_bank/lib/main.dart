@@ -40,7 +40,8 @@ class PriceBankApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    // AppScope بالای MaterialApp است تا صفحه‌هایی که با Navigator باز می‌شوند هم به وضعیت برنامه دسترسی داشته باشند.
+    final app = MaterialApp(
       title: 'بانک قیمت تجهیزات نمک‌زدایی',
       debugShowCheckedModeBanner: false,
       locale: const Locale('fa'),
@@ -53,10 +54,9 @@ class PriceBankApp extends StatelessWidget {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: ThemeMode.light,
-      home: state == null
-          ? _StartupError(error: startupError)
-          : AppScope(state: state!, child: const AppShell()),
+      home: state == null ? _StartupError(error: startupError) : const AppShell(),
     );
+    return state == null ? app : AppScope(state: state!, child: app);
   }
 }
 
