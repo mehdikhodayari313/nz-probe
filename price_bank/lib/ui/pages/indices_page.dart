@@ -30,10 +30,11 @@ class _IndicesPageState extends State<IndicesPage> {
     }
 
     return Row(children: [
-      Container(
+      Material(
+        color: t.colorScheme.surface,
+        child: Container(
         width: 330,
         decoration: BoxDecoration(
-          color: t.colorScheme.surface,
           border: BorderDirectional(end: BorderSide(color: t.colorScheme.outlineVariant)),
         ),
         child: Column(children: [
@@ -73,6 +74,7 @@ class _IndicesPageState extends State<IndicesPage> {
             ]),
           ),
         ]),
+      ),
       ),
       Expanded(
         child: sel == null

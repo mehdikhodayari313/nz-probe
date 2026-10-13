@@ -62,11 +62,12 @@ class SectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: t.colorScheme.surface,
+    // Material (نه Container رنگی) تا ListTile و افکت‌های لمس درون کارت درست نمایش داده شوند.
+    return Material(
+      color: t.colorScheme.surface,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: t.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+        side: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.7)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
