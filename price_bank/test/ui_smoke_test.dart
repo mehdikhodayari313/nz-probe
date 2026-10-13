@@ -46,7 +46,7 @@ void main() {
 
   testWidgets('همه‌ی صفحه‌ها در پنجره‌ی کوچک (۹۸۰×۷۲۰، نوار کناری باریک با نام منوها)', (tester) async {
     await boot(tester, size: const Size(980, 720));
-    expect(find.descendant(of: find.byKey(const Key('sidebar')), matching: find.text('تنظیمات')), findsOneWidget);
+    expect(find.descendant(of: find.byKey(const Key('sidebar')), matching: find.text('روش‌های تعدیل')), findsOneWidget);
     for (var i = 0; i < labels.length; i++) {
       await go(tester, i);
       debugPrint('✓ ' 'صفحه‌ی ${labels[i]} (پنجره‌ی کوچک)');

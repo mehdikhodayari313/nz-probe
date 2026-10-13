@@ -242,7 +242,7 @@ class _NavItemState extends State<_NavItem> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          height: widget.compact ? 58 : 44,
+          height: widget.compact ? 50 : 44,
           margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
             color: sel
