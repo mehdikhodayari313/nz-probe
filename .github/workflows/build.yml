@@ -64,20 +64,20 @@ jobs:
         run: |
           $out = "build/windows/x64/runner/Release"
           if (-not (Test-Path $out)) { $out = "build/windows/runner/Release" }
+          New-Item -ItemType Directory -Force dist/nz_probe | Out-Null
+          Copy-Item "$out/*" dist/nz_probe -Recurse -Force
           foreach ($f in "msvcp140.dll","vcruntime140.dll","vcruntime140_1.dll") {
             $src = Join-Path $env:SystemRoot "System32/$f"
-            if (Test-Path $src) { Copy-Item $src $out -Force }
+            if (Test-Path $src) { Copy-Item $src dist/nz_probe -Force }
           }
-          New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path "$out/*" -DestinationPath dist/nz_probe_windows.zip -Force
-          (Get-FileHash dist/nz_probe_windows.zip -Algorithm SHA256).Hash | Set-Content dist/nz_probe_windows.zip.sha256
-          Get-ChildItem $out -Recurse | Select-Object FullName, Length | Out-String | Set-Content ci/package_files.txt
-          Get-ChildItem dist | Out-String | Set-Content ci/dist.txt
+          (Get-FileHash dist/nz_probe/nz_probe.exe -Algorithm SHA256).Hash | Set-Content dist/nz_probe/nz_probe.exe.sha256
+          Get-ChildItem dist/nz_probe -Recurse | Select-Object FullName, Length | Out-String | Set-Content ci/package_files.txt
 
+      # GitHub خودش پوشه را یک بار zip می‌کند؛ کاربر یک zip دانلود می‌کند که مستقیم nz_probe.exe داخلش است.
       - uses: actions/upload-artifact@v4
         with:
           name: nz_probe_windows
-          path: dist/
+          path: dist/nz_probe/
           retention-days: 30
 
       - name: Publish results to branch ci-results

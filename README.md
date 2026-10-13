@@ -70,7 +70,7 @@
 3. پایین صفحه در بخش **Artifacts**:
    - `nz_probe_windows` ← نسخه‌ی ویندوز
    - `nz_probe_android` ← فایل APK اندروید
-4. فایل دانلودشده یک zip است که داخلش `nz_probe_windows.zip` قرار دارد؛ همان را به سیستم شرکت ببرید.
+4. فایل دانلودشده یک zip است که مستقیم `nz_probe.exe` و فایل‌های کنارش داخل آن است. آن را با «Extract to nz_probe_windows\» در یک پوشه‌ی جدید باز کنید (نه Extract Here روی دسکتاپ) و `nz_probe.exe` را اجرا کنید.
 
 ## حالت خودآزمایی بدون رابط کاربری
 
@@ -84,6 +84,7 @@ nz_probe.exe --selftest C:\temp\report.txt
 
 | نشانه | علت محتمل | راه‌حل |
 |---|---|---|
+| خطای «Cannot create … being used by another process» هنگام باز کردن zip | استخراج روی همان پوشه‌ای که فایل zip در آن باز است | «Extract to پوشه‌ی جدید» را بزنید |
 | پیام «Windows protected your PC» | SmartScreen؛ فایل از اینترنت یا پیام‌رسان آمده | More info ← Run anyway؛ یا انتقال با فلش |
 | پیام «This app has been blocked by your system administrator» | AppLocker یا سیاست لیست سفید | واحد IT باید برنامه را مجاز کند (شناسه‌ی SHA-256 در فایل `.sha256` هست) |
 | برنامه باز نمی‌شود و آنتی‌ویروس هشدار می‌دهد | برنامه‌ی ناشناس بدون امضای دیجیتال | استثنا در آنتی‌ویروس توسط IT |
