@@ -94,7 +94,10 @@ Future<CheckOutcome> checkPlatform() async {
     final m = RegExp(r'Build (\d+)').firstMatch(Platform.operatingSystemVersion);
     final build = m == null ? null : int.tryParse(m.group(1)!);
     if (build != null) {
-      final name = build >= 22000 ? 'ویندوز ۱۱' : (build >= 10240 ? 'ویندوز ۱۰' : 'ویندوز قدیمی‌تر');
+      final isServer = Platform.operatingSystemVersion.contains('Server');
+      final name = isServer
+          ? 'ویندوز سرور'
+          : (build >= 22000 ? 'ویندوز ۱۱' : (build >= 10240 ? 'ویندوز ۱۰' : 'ویندوز قدیمی‌تر'));
       d.add('تشخیص: $name (Build $build)');
       if (build < 10240) {
         return CheckOutcome(CheckStatus.failed, 'ویندوز قدیمی‌تر از ۱۰ پشتیبانی نمی‌شود', d);
@@ -248,7 +251,7 @@ Future<CheckOutcome> checkSqlite() async {
   final ms = sw.elapsedMilliseconds;
   return CheckOutcome(
     ms < 5000 ? CheckStatus.passed : CheckStatus.warning,
-    ms < 5000 ? 'کار می‌کند (${ms}ms)' : 'کار می‌کند ولی کند است (${ms}ms) — احتمالاً آنتی‌ویروس',
+    ms < 5000 ? 'کار می‌کند' : 'کار می‌کند ولی کند است — احتمالاً آنتی‌ویروس',
     d,
   );
 }
