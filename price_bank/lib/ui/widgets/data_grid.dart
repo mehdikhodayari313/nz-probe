@@ -1,8 +1,6 @@
 // جدول داده: ستون‌های وسط‌چین با خط جداکننده، سرستون رنگی، ردیف‌های راه‌راه با رنگ متمایز،
 // مرتب‌سازی، نمایش مجازی (ده‌ها هزار ردیف) و پر کردن خودکار عرض صفحه.
 
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 
 import '../theme.dart';

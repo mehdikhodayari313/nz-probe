@@ -12,7 +12,6 @@ class UsersPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final t = Theme.of(context);
     final users = app.pb.users.all();
     final discs = app.pb.catalog.disciplines();
     final admin = app.user.isAdmin;

@@ -433,6 +433,7 @@ class _MethodCard extends StatelessWidget {
                   label: const Text('روش فعال'),
                 )
               : FilledButton.tonalIcon(
+                  key: ValueKey('select-${m.code}'),
                   onPressed: onSelect,
                   icon: const Icon(Icons.radio_button_unchecked_rounded),
                   label: const Text('انتخاب این روش'),

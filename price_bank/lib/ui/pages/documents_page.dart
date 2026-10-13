@@ -14,7 +14,6 @@ class DocumentsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final t = Theme.of(context);
     final projects = app.pb.docs.projects();
     final docs = app.pb.docs.documents();
     final canEdit = app.user.role != 'viewer';

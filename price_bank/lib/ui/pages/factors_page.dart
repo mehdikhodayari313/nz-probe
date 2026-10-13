@@ -28,7 +28,6 @@ class FactorsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final t = Theme.of(context);
     final rows = app.pb.indices.factors(PriceBank.pumpFactorSet);
     final groups = <String, List<Map<String, Object?>>>{};
     for (final r in rows) {

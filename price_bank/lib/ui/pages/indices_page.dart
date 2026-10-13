@@ -169,7 +169,6 @@ class _SeriesDetailState extends State<_SeriesDetail> {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final t = Theme.of(context);
     final s = widget.info;
     final values = app.pb.indices.values(s.code);
     final canEdit = app.user.role != 'viewer';

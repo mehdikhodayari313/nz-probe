@@ -385,7 +385,6 @@ class _CalcTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final t = Theme.of(context);
     final s = app.settings;
     final fxTypes = app.pb.settingsRepo.fxRateTypes();
     final unit = app.unit;

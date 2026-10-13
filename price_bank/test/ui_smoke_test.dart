@@ -63,17 +63,17 @@ void main() {
   testWidgets('انتخاب روش تعدیل از صفحه‌ی روش‌ها', (tester) async {
     final app = await boot(tester);
     await go(tester, 3);
-    final btn = find.text('انتخاب این روش');
-    expect(btn, findsWidgets);
-    await tester.ensureVisible(btn.first);
-    await tester.tap(btn.first);
+    final btn = find.byKey(const ValueKey('select-M4'));
+    await tester.scrollUntilVisible(btn, 300, scrollable: find.byType(Scrollable).last);
+    await tester.pumpAndSettle();
+    await tester.tap(btn);
     await tester.pumpAndSettle();
     await tester.tap(find.text('ثبت'));
     await tester.pumpAndSettle();
-    expect(app.settings.escalationMethod, 'M0');
+    expect(app.settings.escalationMethod, 'M4');
     await go(tester, 1); // تجهیزات با روش جدید
     await go(tester, 0);
-    debugPrint('✓ ' 'تغییر روش به M0 و نمایش صفحه‌ها');
+    debugPrint('✓ ' 'تغییر روش به M4 و نمایش صفحه‌ها');
   });
 
   testWidgets('تخمین: ویرایش ضریب موردی', (tester) async {
@@ -95,7 +95,7 @@ void main() {
     if (!hasFixtures) return;
     await boot(tester);
     await go(tester, 1);
-    await tester.tap(find.text('آب‌بند'));
+    await tester.tap(find.ancestor(of: find.text('آب‌بند'), matching: find.byType(DropdownButtonFormField<String?>)));
     await tester.pumpAndSettle();
     expect(find.text('Arr 2 - Dual Unpressurized'), findsWidgets);
     expect(find.text('Arr 3 - Dual Pressurized'), findsWidgets);
