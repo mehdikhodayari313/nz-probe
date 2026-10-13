@@ -439,7 +439,6 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
       ));
     }
 
-    final t = Theme.of(context);
     final inputs = SectionCard(
       title: 'ورودی‌ها',
       icon: Icons.edit_note_rounded,
@@ -825,7 +824,6 @@ class _TotalBand extends StatelessWidget {
       ]),
     );
   }
-}
 }
 
 /// نتیجه‌ی ماشین‌حساب انتقال: یورو ← دلار ← ریال/تومان ← جمع.
