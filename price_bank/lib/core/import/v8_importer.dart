@@ -103,14 +103,13 @@ class V8Importer {
         final projectName = (values['project'] as String?)?.trim();
         final projectId = (projectName == null || projectName.isEmpty) ? null : docs.ensureProject(projectName);
 
-        // سند منبع: «عنوان – محل در سند»
+        // سند منبع: «File <عنوان>, <محل در سند>» یا «<عنوان> – <محل>»
         final src = (values['source_document'] as String?)?.trim() ?? '';
         int? documentId;
         String? location;
         if (src.isNotEmpty) {
-          final i = src.indexOf(' – ');
-          final title = i > 0 ? src.substring(0, i).trim() : src;
-          location = i > 0 ? src.substring(i + 3).trim() : null;
+          final (title, loc) = splitSourceDocument(src);
+          location = loc;
           documentId = docs.ensureDocument(projectId: projectId, title: title, docType: 'v8');
         }
         values['_source_location'] = location;
@@ -198,6 +197,26 @@ class V8Importer {
       );
       report.quotes++;
     }
+  }
+
+  /// جدا کردن عنوان سند از محل داخل سند.
+  /// «File PC-ME 14040105 Pazanan2 Reconstruction.xlsx, sheet 'PUMPS', spec B10» →
+  /// («PC-ME 14040105 Pazanan2 Reconstruction.xlsx»، «sheet 'PUMPS', spec B10»)
+  static (String, String?) splitSourceDocument(String src) {
+    var head = src, rest = '';
+    final dash = src.indexOf(' – ');
+    if (dash > 0) {
+      head = src.substring(0, dash);
+      rest = src.substring(dash + 3);
+    }
+    final comma = head.indexOf(', ');
+    if (comma > 0) {
+      rest = head.substring(comma + 2) + (rest.isEmpty ? '' : ' – $rest');
+      head = head.substring(0, comma);
+    }
+    head = head.trim();
+    if (head.startsWith('File ')) head = head.substring(5).trim();
+    return (head, rest.trim().isEmpty ? null : rest.trim());
   }
 
   static String? _n(String s) => s.trim().isEmpty ? null : s.trim();

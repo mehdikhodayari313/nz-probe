@@ -2,6 +2,7 @@
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:price_bank/core/calc/series.dart';
+import 'package:price_bank/core/import/v8_importer.dart';
 import 'package:price_bank/core/price_bank.dart';
 import 'package:price_bank/core/xlsx/xlsx_reader.dart';
 
@@ -42,7 +43,7 @@ void main() {
       expect(rep.alreadyImported, isFalse);
       expect(rep.items, 146);
       expect(rep.projects, greaterThanOrEqualTo(5));
-      expect(rep.documents, greaterThan(0));
+      expect(rep.documents, 6); // پازنان ۲، KPL (اسمری و بنگستان)، گچساران ۴، دو CSV
       expect(rep.inferredFlags, greaterThan(100));
       expect(rep.notes, greaterThan(500));
       // ورود دوباره ممکن نیست
@@ -111,6 +112,14 @@ void main() {
       expect(s.resolve('FX_EUR_NIMA', 1404, month: 4)!.value, 720000);
       expect(s.resolve('FX_EUR_NIMA', 1404, month: 1)!.value, 700000);
       expect(s.resolve('FX_EUR_NIMA', 1405)!.value, 900000);
+    });
+
+    test('تفکیک عنوان سند از محل داخل سند', () {
+      expect(V8Importer.splitSourceDocument("File PC-ME 14040105 Pazanan2 Reconstruction.xlsx, sheet 'PUMPS', spec B10"),
+          ('PC-ME 14040105 Pazanan2 Reconstruction.xlsx', "sheet 'PUMPS', spec B10"));
+      expect(V8Importer.splitSourceDocument('18061405_Pump_only_CSV.csv – section Pumps (row 1)'),
+          ('18061405_Pump_only_CSV.csv', 'section Pumps (row 1)'));
+      expect(V8Importer.splitSourceDocument('Datasheet only'), ('Datasheet only', null));
     });
 
     test('بایگانی و بازگرداندن قلم', () {
