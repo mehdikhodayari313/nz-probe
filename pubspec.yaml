@@ -1,0 +1,46 @@
+name: nz_probe
+description: >-
+  برنامه‌ی آزمایشی سنجش سازگاری بانک قیمت نمک‌زدایی.
+  بررسی می‌کند که برنامه‌ی اصلی روی سیستم‌های شرکت و گوشی‌ها اجرا می‌شود.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # خواندن فایل اکسل (xlsx = فایل zip حاوی XML)
+  archive: ^3.6.1
+  xml: ^6.5.0
+
+  # دیتابیس محلی
+  sqlite3: ^2.4.6
+  sqlite3_flutter_libs: ^0.5.24
+
+  # مسیرها و انتخاب فایل
+  path_provider: ^2.1.4
+  file_picker: '>=8.1.2 <11.0.0'
+
+  # تاریخ شمسی
+  shamsi_date: ^1.1.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  fonts:
+    - family: Vazirmatn
+      fonts:
+        - asset: assets/fonts/Vazirmatn-Regular.ttf
+        - asset: assets/fonts/Vazirmatn-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Vazirmatn-Bold.ttf
+          weight: 700

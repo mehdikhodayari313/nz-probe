@@ -1,0 +1,89 @@
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    name: Test & build (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Create platform folders
+        run: |
+          flutter create . --platforms=windows,android --project-name nz_probe --org ir.nisoc.desalting
+          (Get-Content windows/runner/main.cpp) -replace 'L"nz_probe"', 'L"NZ Probe - Desalting Price Bank"' | Set-Content windows/runner/main.cpp
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos
+        continue-on-error: true
+
+      - name: Unit tests
+        run: flutter test --reporter expanded
+
+      - name: Build Windows release
+        run: flutter build windows --release
+
+      - name: Package
+        run: |
+          $out = "build/windows/x64/runner/Release"
+          if (-not (Test-Path $out)) { $out = "build/windows/runner/Release" }
+          foreach ($f in "msvcp140.dll","vcruntime140.dll","vcruntime140_1.dll") {
+            $src = Join-Path $env:SystemRoot "System32/$f"
+            if (Test-Path $src) { Copy-Item $src $out -Force }
+          }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path "$out/*" -DestinationPath dist/nz_probe_windows.zip -Force
+          (Get-FileHash dist/nz_probe_windows.zip -Algorithm SHA256).Hash | Set-Content dist/nz_probe_windows.zip.sha256
+          Get-ChildItem dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nz_probe_windows
+          path: dist/
+          retention-days: 30
+
+  android:
+    name: Build (Android APK)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create platform folders
+        run: flutter create . --platforms=windows,android --project-name nz_probe --org ir.nisoc.desalting
+
+      - name: Build APK
+        run: |
+          flutter pub get
+          flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nz_probe_android
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30

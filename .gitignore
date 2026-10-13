@@ -1,0 +1,16 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+dist/
+*.iml
+.idea/
+.vscode/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# فایل‌های واقعی پروژه‌ها محرمانه‌اند و نباید در مخزن کد قرار بگیرند
+test/fixtures/*.xlsx
+test/fixtures/*.xlsm
