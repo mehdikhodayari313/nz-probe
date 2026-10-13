@@ -201,7 +201,7 @@ class _SeriesDetailState extends State<_SeriesDetail> {
         initiallyOpen: false,
         lines: [
           'هر مقدار برای یک «دوره» ثبت می‌شود: سال (۱۴۰۴)، فصل (1404Q1) یا ماه (1404-03). در محاسبه، اول مقدار ماه، بعد فصل و بعد سال جستجو می‌شود.',
-          'نرخ‌های ارز سه نوع دارند: «جدول مرجع v8»، «بازار آزاد» و «مرکز مبادله / نیما». نوع مورد استفاده را از نوار بالا انتخاب کنید.',
+          'نرخ‌های ارز در «جدول»‌های جداگانه‌اند: «جدول پیش‌فرض» (داده‌ی فایل v8)، «بازار آزاد»، «مرکز مبادله / نیما» و هر جدولی که خودتان در «تنظیمات» بسازید. جدول مورد استفاده را از نوار بالا انتخاب کنید.',
           'PPI بخشی ایران (مرکز آمار، پایه ۱۳۹۵=۱۰۰) برای تجهیزات ساخت داخل (مخزن، ظرف، سازه، برق و ابزار دقیق) در نظر گرفته شده؛ مقادیر «نیاز به تأیید» را با PDF مرکز آمار تطبیق دهید.',
           'هر ویرایش با مقدار قبلی، کاربر و زمان در تاریخچه ثبت می‌شود. «چسباندن از اکسل»: دو ستون دوره و مقدار را از اکسل کپی و اینجا بچسبانید.',
           if (s.source != null) 'منبع این سری: ${s.source}',
@@ -264,7 +264,7 @@ class _SeriesDetailState extends State<_SeriesDetail> {
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
                   TableRow(
-                    decoration: BoxDecoration(color: t.colorScheme.surfaceContainerHigh),
+                    decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
                     children: [for (final h in ['دوره', 'مقدار', 'وضعیت', 'منبع / یادداشت', 'آخرین ویرایش', '']) _c(h, b: true)],
                   ),
                   for (final v in values.reversed)

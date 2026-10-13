@@ -268,4 +268,12 @@ CREATE TABLE audit_log(
     'CREATE INDEX ix_audit_entity ON audit_log(entity, entity_id)',
     'CREATE INDEX ix_audit_ts ON audit_log(ts)',
   ]),
+  Migration(2, 'نام «جدول پیش‌فرض» برای نرخ ارز مرجع، تنظیم روش تعدیل، جدول‌های نرخ ارز کاربر', [
+    "UPDATE fx_rate_types SET name_fa = 'جدول پیش‌فرض' WHERE code = 'V8'",
+    "UPDATE index_series SET name_fa = replace(name_fa, 'جدول مرجع v8', 'جدول پیش‌فرض') "
+        "WHERE code IN ('FX_USD_V8', 'FX_EUR_V8')",
+    "INSERT OR IGNORE INTO settings(key, value) VALUES ('escalation_method', 'M6')",
+    'ALTER TABLE fx_rate_types ADD COLUMN user_defined INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE fx_rate_types ADD COLUMN description TEXT',
+  ]),
 ];

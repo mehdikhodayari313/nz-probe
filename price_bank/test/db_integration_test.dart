@@ -1,6 +1,7 @@
 // آزمون زنجیره‌ی کامل: دیتابیس ← داده‌های پایه ← انتقال v8 ← محاسبه ← ویرایش با تاریخچه.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:price_bank/core/calc/methods.dart';
 import 'package:price_bank/core/calc/series.dart';
 import 'package:price_bank/core/import/v8_importer.dart';
 import 'package:price_bank/core/price_bank.dart';
@@ -22,6 +23,49 @@ void main() {
     expect(pb.settingsRepo.load().targetYear, 1404);
     // باز کردن دوباره نباید داده‌ی پایه را تکرار کند
     expect(pb.factorTable.get('MAT', 'D-2'), 1.9);
+    pb.close();
+  });
+
+  test('مهاجرت ۲: نام جدول پیش‌فرض و روش تعدیل M6', () {
+    final pb = PriceBank.memory(loadSeed());
+    expect(pb.db.schemaVersion, 2);
+    final types = pb.settingsRepo.fxRateTypes();
+    expect(types.first.code, 'V8');
+    expect(types.first.nameFa, 'جدول پیش‌فرض');
+    expect(pb.settingsRepo.load().escalationMethod, 'M6');
+    pb.close();
+  });
+
+  test('جدول نرخ ارز جدید: ساخت با کپی، انتخاب در محاسبه، تغییر نام و حذف', () {
+    final pb = PriceBank.memory(loadSeed());
+    final code = pb.settingsRepo.createFxType('نرخ بودجه ۱۴۰۵', copyFrom: 'V8');
+    expect(code, 'U1');
+    expect(() => pb.settingsRepo.createFxType('نرخ بودجه ۱۴۰۵'), throwsArgumentError);
+    pb.indices.upsert('FX_EUR_U1', Period.year(1404), 999999);
+    pb.invalidateCalc();
+    expect(pb.seriesSnapshot.resolve('FX_EUR_U1', 1404)!.value, 999999);
+    expect(pb.seriesSnapshot.resolve('FX_EUR_U1', 1393)!.value, pb.seriesSnapshot.resolve('FX_EUR_V8', 1393)!.value);
+    expect(pb.pumpEngine(fxType: 'U1').eurRateTarget, 999999);
+    pb.settingsRepo.renameFxType('U1', 'نرخ بودجه');
+    expect(pb.settingsRepo.fxRateTypes().last.nameFa, 'نرخ بودجه');
+    pb.settingsRepo.set('fx_rate_type', 'U1');
+    pb.settingsRepo.deleteFxType('U1');
+    expect(pb.settingsRepo.fxRateTypes().length, 3);
+    expect(pb.settingsRepo.load().fxRateType, 'V8');
+    expect(() => pb.settingsRepo.deleteFxType('V8'), throwsArgumentError);
+    pb.close();
+  });
+
+  test('ضرایب روش‌های تعدیل ۱۳۹۳ → ۱۴۰۴ برابر فایل صحت‌سنجی', () {
+    final pb = PriceBank.memory(loadSeed());
+    final mf = MethodFactors(pb.seriesSnapshot, ppiSeries: 'PPI_EU_C2813', fxType: 'V8');
+    expect(mf.factor('M0', 1393, null, 1404, null).factor, 1);
+    expect(mf.factor('M1', 1393, null, 1404, null).factor, closeTo(1.38108886484153, 1e-9));
+    expect(mf.factor('M2', 1393, null, 1404, null).factor, closeTo(1.55207623267439, 1e-12));
+    expect(mf.factor('M2', 1393, null, 1393, null).factor, closeTo(1, 1e-12));
+    expect(mf.factor('M5', 1393, null, 1404, null).factor, isNotNull);
+    expect(mf.factor('M6', 1393, null, 1404, null).factor, closeTo(123.41618 / 91.347, 1e-4));
+    expect(methodByCode('M3').code, 'M6'); // M3 قابل انتخاب نیست
     pb.close();
   });
 
@@ -122,12 +166,47 @@ void main() {
       expect(V8Importer.splitSourceDocument('Datasheet only'), ('Datasheet only', null));
     });
 
+    test('روش‌های تعدیل روی محاسبه اثر دارند (M0 بدون تعدیل، M4 بدون کف)', () {
+      final m6 = pb.computePumps();
+      final m0 = pb.computePumps(engine: pb.pumpEngine(method: 'M0'));
+      final m4 = pb.computePumps(engine: pb.pumpEngine(method: 'M4'));
+      var checked = 0, floorDiff = 0;
+      for (var i = 0; i < m6.length; i++) {
+        final a = m0[i].result, b = m4[i].result, c = m6[i].result;
+        if (a.eurTarget.isNumber && a.eurSource.isNumber) {
+          expect(a.eurTarget.number, closeTo(a.eurSource.number!, 1e-9));
+          checked++;
+        }
+        if (c.floorBinding) {
+          expect(b.eurTarget.number!, lessThan(c.eurTarget.number!));
+          floorDiff++;
+        }
+        expect(b.floorBinding, isFalse);
+      }
+      expect(checked, greaterThan(50));
+      expect(floorDiff, greaterThan(0));
+    });
+
     test('بایگانی و بازگرداندن قلم', () {
       final id = pb.computePumps().first.item.id;
       pb.items.archive(id, archived: true);
       expect(pb.items.count(pb.pumpCategory.id), 145);
       pb.items.archive(id, archived: false);
       expect(pb.items.count(pb.pumpCategory.id), 146);
+    });
+
+    test('حذف پروژه: اقلام، اسناد و تاریخچه', () {
+      final p = pb.docs.projects().firstWhere((p) => p.itemCount > 0);
+      final before = pb.items.count(pb.pumpCategory.id);
+      final docsBefore = pb.docs.documents().length;
+      final res = pb.docs.deleteProject(p.id, reason: 'آزمون حذف');
+      expect(res.items, p.itemCount);
+      expect(pb.items.count(pb.pumpCategory.id), before - p.itemCount);
+      expect(pb.docs.documents().length, docsBefore - res.documents);
+      expect(pb.docs.projects().any((x) => x.id == p.id), isFalse);
+      expect(pb.audit.history('project', p.id).first.field, 'delete');
+      expect(pb.db.scalar('SELECT COUNT(*) FROM item_values WHERE item_id NOT IN (SELECT id FROM items)'), 0);
+      expect(pb.db.scalar('SELECT COUNT(*) FROM price_obs WHERE item_id NOT IN (SELECT id FROM items)'), 0);
     });
   });
 }

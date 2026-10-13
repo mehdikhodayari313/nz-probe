@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' show FontFeature;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +50,10 @@ class _EquipmentPageState extends State<EquipmentPage> {
   bool _onlyPriced = false;
   bool _onlyIssues = false;
   bool _showFilters = true;
+
+  /// ستون‌های قابل نمایش (بین اجراهای صفحه حفظ می‌شود)
+  static final Set<String> _hiddenCols = {'sub', 'qty', 'coef'};
+  static bool? _showCats;
 
   @override
   void dispose() {
@@ -121,8 +126,12 @@ class _EquipmentPageState extends State<EquipmentPage> {
     final unit = app.unit;
     final canEdit = app.canEdit('MECH');
 
+    final width = MediaQuery.sizeOf(context).width;
+    final showCats = _showCats ?? width >= 1700;
+    final method = app.settings.escalationMethod;
+
     return Row(children: [
-      _CategoryPanel(count: all.length),
+      if (showCats) _CategoryPanel(count: all.length, onClose: () => setState(() => _showCats = false)),
       Expanded(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -130,12 +139,19 @@ class _EquipmentPageState extends State<EquipmentPage> {
             PageHeader(
               icon: Icons.water_rounded,
               title: 'پمپ‌ها',
-              subtitle: 'مکانیک ← تجهیزات دوار ← پمپ — ${fa(all.length)} قلم، قیمت‌ها به سال ${fa(app.settings.targetYear)}',
+              subtitle: 'مکانیک ← تجهیزات دوار ← پمپ · قیمت‌ها تعدیل‌شده به سال ${fa(app.settings.targetYear)} با روش $method',
               actions: [
+                if (!showCats)
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _showCats = true),
+                    icon: const Icon(Icons.account_tree_outlined),
+                    label: const Text('رده‌ها'),
+                  ),
+                _columnsMenu(context),
                 OutlinedButton.icon(
                   onPressed: rows.isEmpty ? null : () => _exportCsv(context, rows, unit),
                   icon: const Icon(Icons.download_rounded),
-                  label: const Text('خروجی اکسل (CSV)'),
+                  label: const Text('خروجی CSV'),
                 ),
                 if (canEdit)
                   FilledButton.icon(
@@ -145,26 +161,27 @@ class _EquipmentPageState extends State<EquipmentPage> {
                   ),
               ],
             ),
-            const HelpPanel(
+            HelpPanel(
               id: 'equipment',
               title: 'راهنمای این صفحه',
               initiallyOpen: false,
               lines: [
                 'برای جستجو، بخشی از تگ، نام سرویس، سازنده یا پروژه را بنویسید؛ چند کلمه = همه باید باشند.',
-                'با فیلترها و بازه‌های عددی (دبی، هد، توان) همتاهای یک پمپ را پیدا کنید. روی سرستون‌ها بزنید تا مرتب شوند.',
-                'قیمت‌های «تعدیل‌شده» با روش M6 به سال هدف (نوار بالا) و با نوع نرخ ارز انتخاب‌شده محاسبه شده‌اند.',
-                'علامت ⚠ یعنی داده‌ی ناقص (مثلاً کلاس متریال یا آب‌بند نامشخص). روی هر ردیف بزنید تا جزئیات، محاسبه‌ی گام‌به‌گام و ویرایش باز شود.',
+                'هر فیلتر همه‌ی گزینه‌های فهرست را با تعداد پمپ‌های هر گزینه نشان می‌دهد (عدد کنار گزینه). روی سرستون‌ها بزنید تا مرتب شوند.',
+                'قیمت‌های «تعدیل‌شده» با روش $method به سال هدف (نوار بالا) و با جدول نرخ ارز انتخاب‌شده محاسبه شده‌اند.',
+                'خط تیره (—) یعنی مقدار در منبع ثبت نشده یا قابل محاسبه نیست؛ نشانگر ماوس را روی آن نگه دارید تا علت را ببینید.',
+                'علامت ⚠ یعنی داده‌ی ناقص. روی هر ردیف بزنید تا جزئیات، محاسبه‌ی گام‌به‌گام و ویرایش باز شود. با دکمه‌ی «ستون‌ها» ستون‌های اضافی را نشان دهید.',
               ],
             ),
-            _filtersBar(context, all),
-            const SizedBox(height: 10),
-            _summary(context, rows, unit),
-            const SizedBox(height: 10),
+            _filtersBar(context, all, rows),
+            const SizedBox(height: 12),
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12),
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                  boxShadow: softShadow(context),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: rows.isEmpty
@@ -179,8 +196,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
                     : DataGrid<PumpRow>(
                         rows: rows,
                         onTap: (r) => _open(context, r.item.id),
-                        rowColor: (c, r) => r.item.include ? null : Theme.of(c).colorScheme.surfaceContainerHighest,
-                        columns: _columns(unit),
+                        rowColor: (c, r) => r.item.include ? null : const Color(0xFFF6EFE6),
+                        columns: _columns(unit).where((c) => !_hiddenCols.contains(c.$1)).map((c) => c.$2).toList(),
                       ),
               ),
             ),
@@ -190,66 +207,193 @@ class _EquipmentPageState extends State<EquipmentPage> {
     ]);
   }
 
-  List<GridColumn<PumpRow>> _columns(MoneyUnit unit) => [
-        GridColumn(
-          label: '',
-          width: 36,
-          text: (r) => '',
-          sortKey: (r) => r.result.qaFlags.isEmpty ? 0 : 1,
-          cell: (c, r) => r.result.qaFlags.isEmpty
-              ? const SizedBox()
-              : Tooltip(
-                  message: qaFlagsFa(r.result.qaFlags).join('\n'),
-                  child: Icon(Icons.warning_amber_rounded, size: 18, color: Tones.warn(c)),
-                ),
+  static const _optionalCols = {'sub': 'زیرگروه', 'qty': 'تعداد', 'coef': 'ضریب هزینه', 'project': 'پروژه', 'src': 'قیمت منبع'};
+
+  Widget _columnsMenu(BuildContext context) => MenuAnchor(
+        menuChildren: [
+          for (final e in _optionalCols.entries)
+            CheckboxMenuButton(
+              value: !_hiddenCols.contains(e.key),
+              onChanged: (v) => setState(() => v == true ? _hiddenCols.remove(e.key) : _hiddenCols.add(e.key)),
+              child: Text(e.value),
+            ),
+        ],
+        builder: (context, ctl, _) => OutlinedButton.icon(
+          onPressed: () => ctl.isOpen ? ctl.close() : ctl.open(),
+          icon: const Icon(Icons.view_column_outlined),
+          label: const Text('ستون‌ها'),
         ),
-        GridColumn(label: 'تگ', width: 120, text: (r) => r.item.tag ?? '', sortKey: (r) => r.item.tag ?? ''),
-        GridColumn(label: 'نام / سرویس', width: 240, text: (r) => r.item.name, sortKey: (r) => r.item.name),
-        GridColumn(label: 'پروژه', width: 150, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
-        GridColumn(label: 'زیرگروه', width: 86, text: (r) => _val(r, 'sub_category'), sortKey: (r) => _val(r, 'sub_category')),
-        GridColumn(label: 'نوع', width: 70, text: (r) => _val(r, 'api610_type'), sortKey: (r) => _val(r, 'api610_type')),
-        GridColumn(label: 'متریال', width: 80, text: (r) => _val(r, 'material_class'), sortKey: (r) => _val(r, 'material_class')),
-        GridColumn(
-            label: 'دبی m³/h', width: 80, numeric: true,
-            text: (r) => faSmart(asNumber(r.item.values['capacity_m3h'])),
-            sortKey: (r) => asNumber(r.item.values['capacity_m3h'])),
-        GridColumn(
-            label: 'هد m', width: 70, numeric: true,
-            text: (r) => faSmart(asNumber(r.item.values['diff_head_m'])),
-            sortKey: (r) => asNumber(r.item.values['diff_head_m'])),
-        GridColumn(
-            label: 'توان kW', width: 76, numeric: true, tooltip: 'توان اعلام‌شده یا برآوردی (Q·H/367η)',
-            text: (r) => faSmart(r.result.sizeKw.number),
-            sortKey: (r) => r.result.sizeKw.number),
-        GridColumn(label: 'تعداد', width: 54, numeric: true, text: (r) => faSmart(r.item.quantity), sortKey: (r) => r.item.quantity),
-        GridColumn(label: 'سال قیمت', width: 70, text: (r) => fa(_val(r, 'cost_year')), sortKey: (r) => _val(r, 'cost_year')),
-        GridColumn(
-            label: 'قیمت منبع', width: 150, numeric: true,
-            text: (r) {
-              final a = r.item.primary?.amount;
-              return a == null ? '—' : '${faNum(a)} ${r.item.primary?.currency ?? ''}';
+      );
+
+  /// سلول متنی با «—» کم‌رنگ برای مقدار خالی و توضیح علت در راهنمای شناور.
+  static Widget _txt(BuildContext c, String? v, {String? why, bool ltr = false, bool bold = false, Color? color}) {
+    final t = Theme.of(c);
+    final s = cleanCell(v);
+    if (s == gridEmpty) {
+      final w = Text(gridEmpty, style: TextStyle(color: t.colorScheme.outline));
+      return why == null ? w : Tooltip(message: why, child: w);
+    }
+    return Text(s,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        textDirection: ltr ? TextDirection.ltr : null,
+        style: t.textTheme.bodySmall?.copyWith(
+          fontWeight: bold ? FontWeight.w700 : null,
+          color: color,
+          fontFeatures: const [FontFeature.tabularFigures()],
+        ));
+  }
+
+  List<(String, GridColumn<PumpRow>)> _columns(MoneyUnit unit) => [
+        (
+          'qa',
+          GridColumn(
+            label: '',
+            width: 34,
+            grow: false,
+            text: (r) => '',
+            sortKey: (r) => r.result.qaFlags.isEmpty ? 0 : 1,
+            cell: (c, r) => r.result.qaFlags.isEmpty
+                ? const SizedBox()
+                : Tooltip(
+                    message: qaFlagsFa(r.result.qaFlags).join('\n'),
+                    child: Icon(Icons.warning_amber_rounded, size: 18, color: Tones.warn(c)),
+                  ),
+          )
+        ),
+        (
+          'tag',
+          GridColumn(
+            label: 'تگ',
+            width: 104,
+            ltr: true,
+            text: (r) => r.item.tag ?? '',
+            sortKey: (r) => r.item.tag ?? '',
+            cell: (c, r) => _txt(c, r.item.tag, ltr: true, bold: true, color: AppColors.petrolDark),
+          )
+        ),
+        (
+          'name',
+          GridColumn(
+            label: 'نام / سرویس',
+            width: 190,
+            align: TextAlign.start,
+            text: (r) => r.item.name,
+            sortKey: (r) => r.item.name,
+          )
+        ),
+        ('project', GridColumn(label: 'پروژه', width: 120, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? '')),
+        ('sub', GridColumn(label: 'زیرگروه', width: 84, ltr: true, text: (r) => _val(r, 'sub_category'), sortKey: (r) => _val(r, 'sub_category'))),
+        ('type', GridColumn(label: 'نوع', width: 58, ltr: true, text: (r) => _val(r, 'api610_type'), sortKey: (r) => _val(r, 'api610_type'))),
+        ('mat', GridColumn(label: 'متریال', width: 62, ltr: true, text: (r) => _val(r, 'material_class'), sortKey: (r) => _val(r, 'material_class'))),
+        (
+          'q',
+          GridColumn(
+              label: 'دبی\nm³/h', width: 64, numeric: true,
+              text: (r) => _num(asNumber(r.item.values['capacity_m3h'])),
+              sortKey: (r) => asNumber(r.item.values['capacity_m3h']))
+        ),
+        (
+          'h',
+          GridColumn(
+              label: 'هد\nm', width: 58, numeric: true,
+              text: (r) => _num(asNumber(r.item.values['diff_head_m'])),
+              sortKey: (r) => asNumber(r.item.values['diff_head_m']))
+        ),
+        (
+          'kw',
+          GridColumn(
+              label: 'توان\nkW', width: 64, numeric: true, tooltip: 'توان اعلام‌شده یا برآوردی (Q·H/367η)',
+              text: (r) => _num(r.result.sizeKw.number),
+              sortKey: (r) => r.result.sizeKw.number)
+        ),
+        ('qty', GridColumn(label: 'تعداد', width: 54, numeric: true, text: (r) => _num(r.item.quantity), sortKey: (r) => r.item.quantity)),
+        (
+          'year',
+          GridColumn(
+            label: 'سال قیمت',
+            width: 62,
+            text: (r) => r.item.primary?.costYear == null ? '' : fa(r.item.primary!.costYear),
+            sortKey: (r) => r.item.primary?.costYear,
+            cell: (c, r) => _txt(c, r.item.primary?.costYear == null ? null : fa(r.item.primary!.costYear),
+                why: 'سال قیمت در منبع ذکر نشده${(r.item.primary?.costYearText ?? '').isEmpty ? '' : ' («${r.item.primary!.costYearText}»)'}'),
+          )
+        ),
+        (
+          'src',
+          GridColumn(
+            label: 'قیمت منبع',
+            width: 132,
+            numeric: true,
+            text: (r) => r.item.primary?.amount == null ? '' : '${faNum(r.item.primary!.amount)} ${r.item.primary?.currency ?? ''}',
+            sortKey: (r) => r.result.eurSource.number,
+            cell: (c, r) {
+              final o = r.item.primary;
+              if (o?.amount == null) return _txt(c, null, why: 'قیمت عددی در منبع ثبت نشده${(o?.amountText ?? '').isEmpty ? '' : ' («${o!.amountText}»)'}');
+              final cur = o!.currency ?? '';
+              return Row(mainAxisSize: MainAxisSize.min, children: [
+                Flexible(child: _txt(c, faNum(o.amount), bold: true)),
+                const SizedBox(width: 4),
+                Text(CurrencyBadge.faOf(cur), style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: CurrencyBadge.colorOf(cur))),
+              ]);
             },
-            sortKey: (r) => r.result.eurSource.number),
-        GridColumn(
-            label: 'یورو تعدیل‌شده', width: 120, numeric: true,
-            text: (r) => r.result.eurTarget.isNumber ? faNum(r.result.eurTarget.number) : calcMessageFa(r.result.eurTarget.text),
-            sortKey: (r) => r.result.eurTarget.number),
-        GridColumn(
-            label: '${unitLabel(unit)} تعدیل‌شده (واحد)', width: 170, numeric: true,
-            text: (r) => money(r.result.irrTarget.number, unit, withUnit: false),
-            sortKey: (r) => r.result.irrTarget.number),
-        GridColumn(
-            label: 'ضریب هزینه', width: 90, numeric: true, tooltip: 'یورو نرمال‌شده‌ی تعدیل‌شده ÷ kWⁿ',
-            text: (r) => faSmart(r.result.costCoef.number),
-            sortKey: (r) => r.result.costCoef.number),
+          )
+        ),
+        (
+          'eur',
+          GridColumn(
+            label: 'یورو\nتعدیل‌شده',
+            width: 104,
+            numeric: true,
+            text: (r) => r.result.eurTarget.isNumber ? faNum(r.result.eurTarget.number) : '',
+            sortKey: (r) => r.result.eurTarget.number,
+            cell: (c, r) => r.result.eurTarget.isNumber
+                ? Row(mainAxisSize: MainAxisSize.min, children: [
+                    _txt(c, faNum(r.result.eurTarget.number), bold: true, color: AppColors.eur),
+                    if (r.result.floorBinding)
+                      const Padding(
+                        padding: EdgeInsetsDirectional.only(start: 3),
+                        child: Tooltip(message: 'کف قیمت اعمال شده', child: Icon(Icons.vertical_align_bottom_rounded, size: 14, color: AppColors.amber)),
+                      ),
+                  ])
+                : _txt(c, null, why: calcMessageFa(r.result.eurTarget.text)),
+          )
+        ),
+        (
+          'irr',
+          GridColumn(
+            label: '${unitLabel(unit)}\nتعدیل‌شده (واحد)',
+            width: 142,
+            numeric: true,
+            text: (r) => r.result.irrTarget.isNumber ? money(r.result.irrTarget.number, unit, withUnit: false) : '',
+            sortKey: (r) => r.result.irrTarget.number,
+            cell: (c, r) => r.result.irrTarget.isNumber
+                ? Tooltip(
+                    message: money(r.result.irrTarget.number, unit, compact: true),
+                    child: _txt(c, money(r.result.irrTarget.number, unit, withUnit: false), bold: true, color: AppColors.irr),
+                  )
+                : _txt(c, null, why: r.result.eurTarget.isNumber ? 'نرخ یوروی سال هدف وارد نشده' : calcMessageFa(r.result.eurTarget.text)),
+          )
+        ),
+        (
+          'coef',
+          GridColumn(
+              label: 'ضریب\nهزینه', width: 80, numeric: true, tooltip: 'یورو نرمال‌شده‌ی تعدیل‌شده ÷ kWⁿ',
+              text: (r) => _num(r.result.costCoef.number),
+              sortKey: (r) => r.result.costCoef.number)
+        ),
       ];
 
-  Widget _filtersBar(BuildContext context, List<PumpRow> all) {
+  static String _num(num? v) => v == null ? '' : faSmart(v);
+
+  Widget _filtersBar(BuildContext context, List<PumpRow> all, List<PumpRow> rows) {
     final t = Theme.of(context);
     final active = _filters.values.whereType<String>().length +
         _ranges.values.where((r) => r.$1.text.isNotEmpty || r.$2.text.isNotEmpty).length +
         (_onlyPriced ? 1 : 0) +
         (_onlyIssues ? 1 : 0);
+    final priced = rows.where((r) => r.result.eurTarget.isNumber).length;
+    final fields = {for (final f in AppScope.read(context).pb.catalog.fields(AppScope.read(context).pb.pumpCategory.id)) f.key: f};
     return SectionCard(
       padding: const EdgeInsets.all(12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -265,6 +409,20 @@ class _EquipmentPageState extends State<EquipmentPage> {
             ),
           ),
           const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(color: AppColors.petrol.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(10)),
+            child: Text.rich(
+              TextSpan(children: [
+                TextSpan(text: fa(rows.length), style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
+                TextSpan(text: ' از ${fa(all.length)} پمپ · '),
+                TextSpan(text: fa(priced), style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
+                const TextSpan(text: ' با قیمت تعدیل‌شده'),
+              ]),
+              style: t.textTheme.bodySmall,
+            ),
+          ),
+          const SizedBox(width: 10),
           FilterChip(
             label: Text('فیلترها${active > 0 ? ' (${fa(active)})' : ''}'),
             selected: _showFilters,
@@ -277,7 +435,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
         if (_showFilters) ...[
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            for (final e in _enumFilters.entries) _enumFilter(context, all, e.key, e.value),
+            for (final e in _enumFilters.entries) _enumFilter(context, all, e.key, e.value, fields[e.key]?.listKey),
             for (final e in _ranges.entries) _rangeFilter(context, e.key, e.value),
             FilterChip(
               label: const Text('فقط دارای قیمت تعدیل‌شده'),
@@ -291,50 +449,85 @@ class _EquipmentPageState extends State<EquipmentPage> {
               selectedColor: Tones.warn(context).withValues(alpha: 0.2),
             ),
           ]),
-          if (active == 0)
-            Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('هیچ فیلتری فعال نیست.',
-                  style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-            ),
         ],
       ]),
     );
   }
 
-  Widget _enumFilter(BuildContext context, List<PumpRow> all, String key, String label) {
-    final values = {for (final r in all) _val(r, key)}..remove('');
-    final sorted = values.toList()..sort();
+  /// فیلتر انتخابی: همه‌ی گزینه‌های فهرست قالب (حتی بدون پمپ) + مقادیر موجود، با تعداد هر گزینه.
+  Widget _enumFilter(BuildContext context, List<PumpRow> all, String key, String label, String? listKey) {
+    final t = Theme.of(context);
+    final counts = <String, int>{};
+    for (final r in all) {
+      final v = _val(r, key);
+      if (v.isEmpty) continue;
+      counts[v] = (counts[v] ?? 0) + 1;
+    }
+    final catalog = listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(listKey);
+    final labels = <String, String?>{for (final o in catalog) o.value: o.labelFa};
+    final values = <String>[
+      for (final o in catalog) o.value,
+      for (final v in (counts.keys.toList()..sort())) if (!labels.containsKey(v)) v,
+    ];
+    if (key == 'cost_year') values.sort();
     final current = _filters[key];
+    String show(String v) {
+      if (v == 'Not stated' || v == '(Not stated)') return 'نامشخص';
+      if (key == 'cost_year') return fa(v);
+      if (listKey == 'YN' || listKey == 'YNS') return labels[v] ?? v;
+      return v;
+    }
+
     return SizedBox(
-      width: 168,
+      width: 178,
       child: DropdownButtonFormField<String?>(
-        value: sorted.contains(current) ? current : null,
+        value: values.contains(current) ? current : null,
         isExpanded: true,
+        menuMaxHeight: 420,
         decoration: InputDecoration(
           labelText: label,
           filled: true,
-          fillColor: current != null ? Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.5) : null,
+          fillColor: current != null ? t.colorScheme.primaryContainer : null,
         ),
+        selectedItemBuilder: (_) => [
+          const Text('همه'),
+          for (final v in values) Text(show(v), overflow: TextOverflow.ellipsis),
+        ],
         items: [
-          const DropdownMenuItem<String?>(value: null, child: Text('همه')),
-          for (final v in sorted)
+          DropdownMenuItem<String?>(
+            value: null,
+            child: Row(children: [
+              const Expanded(child: Text('همه')),
+              Text(fa(all.length), style: TextStyle(fontSize: 11.5, color: t.colorScheme.outline)),
+            ]),
+          ),
+          for (final v in values)
             DropdownMenuItem<String?>(
               value: v,
-              child: Text(_displayEnum(key, v), overflow: TextOverflow.ellipsis),
+              child: Row(children: [
+                Expanded(
+                  child: Text(show(v),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: (counts[v] ?? 0) == 0 ? t.colorScheme.outline : null)),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  decoration: BoxDecoration(
+                    color: (counts[v] ?? 0) == 0 ? null : AppColors.petrol.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(fa(counts[v] ?? 0),
+                      style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w700,
+                          color: (counts[v] ?? 0) == 0 ? t.colorScheme.outline : AppColors.petrolDark)),
+                ),
+              ]),
             ),
         ],
         onChanged: (v) => setState(() => _filters[key] = v),
       ),
     );
-  }
-
-  String _displayEnum(String key, String v) {
-    if (key == 'include_in_totals' || key == 'nace') {
-      return switch (v) { 'Y' => 'بله', 'N' => 'خیر', 'Not stated' => 'نامشخص', _ => v };
-    }
-    if (key == 'cost_year') return fa(v);
-    return v;
   }
 
   Widget _rangeFilter(BuildContext context, String key, (TextEditingController, TextEditingController) c) {
@@ -351,33 +544,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
     );
   }
 
-  Widget _summary(BuildContext context, List<PumpRow> rows, MoneyUnit unit) {
-    final priced = rows.where((r) => r.result.eurTarget.isNumber).toList();
-    final eurs = priced.map((r) => r.result.eurTarget.number!).toList()..sort();
-    final totalIrr = rows
-        .where((r) => r.item.include && r.result.irrTarget.isNumber)
-        .fold<double>(0, (s, r) => s + r.result.irrTarget.number! * (r.item.quantity ?? 1));
-    final avg = eurs.isEmpty ? null : eurs.reduce((a, b) => a + b) / eurs.length;
-    final median = eurs.isEmpty ? null : eurs[eurs.length ~/ 2];
-    return Wrap(spacing: 10, runSpacing: 10, children: [
-      KpiTile(label: 'تعداد نتایج', value: fa(rows.length), sub: '${fa(priced.length)} دارای قیمت تعدیل‌شده', icon: Icons.list_alt_rounded, width: 190),
-      KpiTile(label: 'یورو تعدیل‌شده — کمینه / بیشینه', value: eurs.isEmpty ? '—' : '${compactNum(eurs.first)} / ${compactNum(eurs.last)}', icon: Icons.unfold_more_rounded, width: 250),
-      KpiTile(label: 'یورو تعدیل‌شده — میانگین / میانه', value: avg == null ? '—' : '${compactNum(avg)} / ${compactNum(median!)}', icon: Icons.functions_rounded, width: 250),
-      KpiTile(
-        label: 'جمع ${unitLabel(unit)} (× تعداد، فقط شمارش‌شده‌ها)',
-        value: money(totalIrr, unit, compact: true, withUnit: false),
-        sub: unitLabel(unit),
-        icon: Icons.account_balance_wallet_outlined,
-        width: 280,
-      ),
-    ]);
-  }
-
   Future<void> _exportCsv(BuildContext context, List<PumpRow> rows, MoneyUnit unit) async {
-    final cols = _columns(unit).skip(1).toList();
+    final cols = _columns(unit).skip(1).map((c) => c.$2).toList();
     String esc(String s) => '"${s.replaceAll('"', '""')}"';
     final b = StringBuffer('﻿');
-    b.writeln(cols.map((c) => esc(c.label)).join(','));
+    b.writeln(cols.map((c) => esc(c.label.replaceAll('\n', ' '))).join(','));
     for (final r in rows) {
       b.writeln([
         esc(r.item.tag ?? ''),
@@ -413,8 +584,9 @@ class _EquipmentPageState extends State<EquipmentPage> {
 
 /// ستون رده‌ها: رشته ← گروه ← رده. رده‌های غیرفعال با برچسب «به‌زودی».
 class _CategoryPanel extends StatelessWidget {
-  const _CategoryPanel({required this.count});
+  const _CategoryPanel({required this.count, required this.onClose});
   final int count;
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -454,15 +626,22 @@ class _CategoryPanel extends StatelessWidget {
     }
 
     return Container(
-      width: 250,
+      width: 236,
       decoration: BoxDecoration(
         color: t.colorScheme.surface,
         border: BorderDirectional(end: BorderSide(color: t.colorScheme.outlineVariant)),
       ),
       child: ListView(padding: const EdgeInsets.symmetric(vertical: 14), children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-          child: Text('رده‌های تجهیزات', style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 6, 8),
+          child: Row(children: [
+            Expanded(child: Text('رده‌های تجهیزات', style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))),
+            IconButton(
+              tooltip: 'بستن این ستون (جای بیشتر برای جدول)',
+              onPressed: onClose,
+              icon: const Icon(Icons.keyboard_double_arrow_right_rounded, size: 20),
+            ),
+          ]),
         ),
         for (final d in discs) ...[
           Padding(

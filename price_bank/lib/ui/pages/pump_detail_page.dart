@@ -227,16 +227,20 @@ class _PriceStrip extends StatelessWidget {
       child: Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
         KpiTile(
           label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
-          value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : calcMessageFa(result.eurTarget.text),
-          sub: result.floorBinding ? 'کف قیمت API 610 اعمال شد' : 'روش M6',
+          value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
+          sub: !result.eurTarget.isNumber
+              ? calcMessageFa(result.eurTarget.text)
+              : (result.floorBinding ? 'کف قیمت API 610 اعمال شد' : 'روش ${result.methodCode}'),
           icon: Icons.euro_rounded,
+          color: AppColors.eur,
           width: 220,
         ),
         KpiTile(
           label: 'قیمت واحد (${unitLabel(unit)})',
           value: money(result.irrTarget.number, unit, withUnit: false),
-          sub: result.eurRateTarget == null ? null : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
+          sub: result.eurRateTarget == null ? 'نرخ یوروی سال هدف وارد نشده' : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
           icon: Icons.payments_outlined,
+          color: AppColors.irr,
           width: 250,
         ),
         KpiTile(
@@ -388,9 +392,10 @@ class _CalcTab extends StatelessWidget {
     return ListView(padding: const EdgeInsets.all(20), children: [
       HelpPanel(
         id: 'calc_tab',
-        title: 'روش محاسبه (M6 — مصوب فایل صحت‌سنجی)',
+        title: 'روش محاسبه (روش فعال: ${s.escalationMethod})',
         initiallyOpen: false,
         lines: [
+          'گام‌های زیر با روش فعال (${s.escalationMethod}) محاسبه شده‌اند؛ روش را در صفحه‌ی «روش‌های تعدیل» عوض کنید. شرح زیر مربوط به روش پیش‌فرض M6 است.',
           'قیمت منبع با «نرخ تسعیر همان منبع» (یا نرخ یوروی سال قیمت) به یورو برگردانده می‌شود.',
           'یورو با شاخص PPI پمپ و کمپرسور منطقه‌ی یورو (Eurostat C28.13) به سال هدف تعدیل می‌شود.',
           'برای پمپ گریز از مرکز API 610 با کلاس S یا D، حداقل ${faNum(s.floorEur)} یورو در سطح ${fa(s.floorBaseYear)} (تعدیل‌شده با همان شاخص) اعمال می‌شود.',
@@ -415,7 +420,7 @@ class _CalcTab extends StatelessWidget {
           columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(2), 2: FlexColumnWidth(3)},
           children: [
             TableRow(
-              decoration: BoxDecoration(color: t.colorScheme.surfaceContainerHigh),
+              decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
               children: [
                 _cell(context, 'نوع نرخ', bold: true),
                 _cell(context, 'نرخ یوروی سال هدف', bold: true),

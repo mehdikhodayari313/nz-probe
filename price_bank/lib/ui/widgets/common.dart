@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme.dart';
 
-/// سرصفحه‌ی هر صفحه: عنوان، زیرعنوان و دکمه‌ها.
+/// سرصفحه‌ی هر صفحه: نشان رنگی، عنوان، زیرعنوان و دکمه‌ها.
 class PageHeader extends StatelessWidget {
   const PageHeader({super.key, required this.title, this.subtitle, this.icon, this.actions = const []});
   final String title;
@@ -14,23 +14,34 @@ class PageHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(4, 4, 4, 14),
+      padding: const EdgeInsets.fromLTRB(2, 2, 2, 16),
       child: Row(
         children: [
           if (icon != null) ...[
             Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(color: t.colorScheme.primaryContainer, borderRadius: BorderRadius.circular(12)),
-              child: Icon(icon, color: t.colorScheme.onPrimaryContainer),
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppColors.petrol, AppColors.teal],
+                  begin: Alignment.topRight,
+                  end: Alignment.bottomLeft,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [BoxShadow(color: AppColors.petrol.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Icon(icon, color: Colors.white, size: 24),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
           ],
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+              Text(title, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
               if (subtitle != null)
-                Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                ),
             ]),
           ),
           if (actions.isNotEmpty)
@@ -41,7 +52,7 @@ class PageHeader extends StatelessWidget {
   }
 }
 
-/// قاب بخش‌ها.
+/// قاب بخش‌ها: کارت سفید با سایه‌ی نرم و سرصفحه‌ی آیکن‌دار.
 class SectionCard extends StatelessWidget {
   const SectionCard({
     super.key,
@@ -51,6 +62,7 @@ class SectionCard extends StatelessWidget {
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.icon,
+    this.accent,
   });
   final String? title;
   final String? subtitle;
@@ -58,39 +70,52 @@ class SectionCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final IconData? icon;
+  final Color? accent;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
+    final c = accent ?? t.colorScheme.primary;
     // Material (نه Container رنگی) تا ListTile و افکت‌های لمس درون کارت درست نمایش داده شوند.
-    return Material(
-      color: t.colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.7)),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
-              child: Row(children: [
-                if (icon != null) ...[Icon(icon, size: 20, color: t.colorScheme.primary), const SizedBox(width: 8)],
-                Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title!, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                    if (subtitle != null)
-                      Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-                  ]),
-                ),
-                if (trailing != null) Flexible(child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing!)),
-              ]),
-            ),
-          Padding(padding: padding, child: child),
-        ],
+    return DecoratedBox(
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: softShadow(context)),
+      child: Material(
+        color: t.colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.8)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (title != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                child: Row(children: [
+                  if (icon != null) ...[
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(color: c.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(9)),
+                      child: Icon(icon, size: 18, color: c),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(title!, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      if (subtitle != null)
+                        Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                    ]),
+                  ),
+                  if (trailing != null) Flexible(child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing!)),
+                ]),
+              ),
+            Padding(padding: padding, child: child),
+          ],
+        ),
       ),
     );
   }
@@ -162,15 +187,25 @@ class _HelpPanelState extends State<HelpPanel> {
   }
 }
 
-/// کاشی شاخص کلیدی.
+/// کاشی شاخص کلیدی: نوار رنگی کناری، آیکن در دایره‌ی رنگی، عدد درشت.
 class KpiTile extends StatelessWidget {
-  const KpiTile({super.key, required this.label, required this.value, this.sub, this.icon, this.color, this.width = 220});
+  const KpiTile({
+    super.key,
+    required this.label,
+    required this.value,
+    this.sub,
+    this.icon,
+    this.color,
+    this.width = 220,
+    this.onTap,
+  });
   final String label;
   final String value;
   final String? sub;
   final IconData? icon;
   final Color? color;
   final double width;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -178,28 +213,145 @@ class KpiTile extends StatelessWidget {
     final c = color ?? t.colorScheme.primary;
     return Container(
       width: width,
-      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: t.colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: t.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: t.colorScheme.outlineVariant.withValues(alpha: 0.8)),
+        boxShadow: softShadow(context),
       ),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          if (icon != null) ...[Icon(icon, size: 18, color: c), const SizedBox(width: 6)],
-          Expanded(
-            child: Text(label,
-                style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant),
-                overflow: TextOverflow.ellipsis),
-          ),
-        ]),
-        const SizedBox(height: 6),
-        Text(value, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700, color: c)),
-        if (sub != null)
-          Text(sub!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-      ]),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          child: Stack(children: [
+              PositionedDirectional(start: 0, top: 0, bottom: 0, child: Container(width: 4, color: c)),
+              Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(18, 12, 14, 12),
+                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Row(children: [
+                      Expanded(
+                        child: Text(label,
+                            style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 2),
+                      ),
+                      if (icon != null)
+                        Container(
+                          width: 30,
+                          height: 30,
+                          decoration: BoxDecoration(color: c.withValues(alpha: 0.10), shape: BoxShape.circle),
+                          child: Icon(icon, size: 16, color: c),
+                        ),
+                    ]),
+                    const SizedBox(height: 6),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(value, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: c)),
+                    ),
+                    if (sub != null)
+                      Text(sub!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                  ]),
+              ),
+            ]),
+        ),
+      ),
     );
   }
+}
+
+/// نشان ارز (یورو/دلار/ریال/تومان) تا هیچ عددی بدون واحد خوانده نشود.
+class CurrencyBadge extends StatelessWidget {
+  const CurrencyBadge(this.code, {super.key, this.label});
+  final String code; // EUR, USD, IRR, IRT
+  final String? label;
+
+  static Color colorOf(String code) => switch (code) {
+        'EUR' => AppColors.eur,
+        'USD' => AppColors.usd,
+        _ => AppColors.irr,
+      };
+
+  static String faOf(String code) => switch (code) {
+        'EUR' => 'یورو',
+        'USD' => 'دلار',
+        'IRT' => 'تومان',
+        _ => 'ریال',
+      };
+
+  @override
+  Widget build(BuildContext context) {
+    final c = colorOf(code);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: c.withValues(alpha: 0.35)),
+      ),
+      child: Text(label ?? faOf(code), style: TextStyle(color: c, fontSize: 11.5, fontWeight: FontWeight.w700)),
+    );
+  }
+}
+
+/// نوار بازه: کمینه تا بیشینه با نشانگر مقدار مورد انتظار.
+/// با CustomPaint ساخته شده (نه LayoutBuilder) تا داخل IntrinsicHeight هم کار کند.
+class RangeBar extends StatelessWidget {
+  const RangeBar({super.key, required this.low, required this.high, this.mid, required this.color, this.height = 10});
+  final double low;
+  final double high;
+  final double? mid;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final span = high - low;
+    final pos = (mid == null || span <= 0) ? null : ((mid! - low) / span).clamp(0.0, 1.0);
+    return SizedBox(
+      height: height + 8,
+      width: double.infinity,
+      child: CustomPaint(
+        painter: _RangePainter(pos, color, height, Directionality.of(context) == TextDirection.rtl),
+      ),
+    );
+  }
+}
+
+class _RangePainter extends CustomPainter {
+  _RangePainter(this.pos, this.color, this.barH, this.rtl);
+  final double? pos;
+  final Color color;
+  final double barH;
+  final bool rtl;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final cy = size.height / 2;
+    final rect = Rect.fromLTWH(0, cy - barH / 2, size.width, barH);
+    final grad = LinearGradient(
+      colors: rtl
+          ? [color.withValues(alpha: 0.75), color.withValues(alpha: 0.25)]
+          : [color.withValues(alpha: 0.25), color.withValues(alpha: 0.75)],
+    );
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(barH)), Paint()..shader = grad.createShader(rect));
+    if (pos != null) {
+      final r = size.height / 2 - 1;
+      final x = rtl ? size.width - r - (size.width - 2 * r) * pos! : r + (size.width - 2 * r) * pos!;
+      canvas.drawCircle(Offset(x, cy), r, Paint()..color = Colors.white);
+      canvas.drawCircle(
+          Offset(x, cy),
+          r - 1.5,
+          Paint()
+            ..color = color
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 3);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_RangePainter old) => old.pos != pos || old.color != color || old.rtl != rtl;
 }
 
 /// برچسب کوچک رنگی.

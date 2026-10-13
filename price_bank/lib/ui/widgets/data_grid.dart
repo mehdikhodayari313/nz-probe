@@ -1,8 +1,23 @@
-// جدول داده با ستون‌های ثابت، مرتب‌سازی و نمایش مجازی (برای ده‌ها هزار ردیف).
+// جدول داده: ستون‌های وسط‌چین با خط جداکننده، سرستون رنگی، ردیف‌های راه‌راه با رنگ متمایز،
+// مرتب‌سازی، نمایش مجازی (ده‌ها هزار ردیف) و پر کردن خودکار عرض صفحه.
 
-import 'dart:math' as math;
+import 'dart:ui' show FontFeature;
 
 import 'package:flutter/material.dart';
+
+import '../theme.dart';
+
+/// مقدار خالی یا «نامشخص» در جدول‌ها به شکل یک خط تیره‌ی کم‌رنگ نمایش داده می‌شود.
+const gridEmpty = '—';
+
+/// متن‌های «نامشخص» منبع (Not stated و …) → خالی.
+String cleanCell(String? s) {
+  if (s == null) return gridEmpty;
+  final v = s.trim();
+  if (v.isEmpty) return gridEmpty;
+  const empties = {'Not stated', '(Not stated)', 'N/A', 'n/a', 'NA', '-', '(Cost year not stated)', 'None'};
+  return empties.contains(v) ? gridEmpty : v;
+}
 
 class GridColumn<T> {
   const GridColumn({
@@ -13,8 +28,14 @@ class GridColumn<T> {
     this.numeric = false,
     this.cell,
     this.tooltip,
+    this.align = TextAlign.center,
+    this.grow = true,
+    this.ltr = false,
+    this.clean = true,
   });
   final String label;
+
+  /// عرض پایه؛ اگر جا باشد ستون‌های [grow] به تناسب پهن‌تر می‌شوند.
   final double width;
   final String Function(T row) text;
 
@@ -23,6 +44,14 @@ class GridColumn<T> {
   final bool numeric;
   final Widget Function(BuildContext context, T row)? cell;
   final String? tooltip;
+  final TextAlign align;
+  final bool grow;
+
+  /// متن لاتین (تگ، کد) چپ‌به‌راست نمایش داده شود.
+  final bool ltr;
+
+  /// «Not stated» و مشابه آن به «—» تبدیل شود (در تاریخچه خاموش است تا متن اصلی دیده شود).
+  final bool clean;
 }
 
 class DataGrid<T> extends StatefulWidget {
@@ -31,7 +60,7 @@ class DataGrid<T> extends StatefulWidget {
     required this.rows,
     required this.columns,
     this.onTap,
-    this.rowHeight = 40,
+    this.rowHeight = 42,
     this.selected,
     this.rowColor,
   });
@@ -61,7 +90,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
 
   List<T> get _sorted {
     final c = _sortCol;
-    if (c == null || widget.columns[c].sortKey == null) return widget.rows;
+    if (c == null || c >= widget.columns.length || widget.columns[c].sortKey == null) return widget.rows;
     final key = widget.columns[c].sortKey!;
     final list = [...widget.rows];
     list.sort((a, b) {
@@ -75,44 +104,46 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     return list;
   }
 
+  /// عرض نهایی ستون‌ها: اگر جا هست، اضافه به تناسب بین ستون‌های قابل رشد تقسیم می‌شود.
+  List<double> _widths(double available) {
+    final base = [for (final c in widget.columns) c.width];
+    final total = base.fold<double>(0, (s, w) => s + w);
+    if (total >= available) return base;
+    final growable = widget.columns.where((c) => c.grow).fold<double>(0, (s, c) => s + c.width);
+    if (growable == 0) return base;
+    final extra = available - total;
+    return [for (final c in widget.columns) c.grow ? c.width + extra * c.width / growable : c.width];
+  }
+
   @override
   Widget build(BuildContext context) {
-    final t = Theme.of(context);
     final rows = _sorted;
-    final total = widget.columns.fold<double>(0, (s, c) => s + c.width);
     return LayoutBuilder(builder: (context, cons) {
-      final width = math.max(total, cons.maxWidth);
+      final widths = _widths(cons.maxWidth - 1);
+      final total = widths.fold<double>(0, (s, w) => s + w);
+      final scrollH = total > cons.maxWidth;
       return Scrollbar(
         controller: _h,
-        thumbVisibility: total > cons.maxWidth,
+        thumbVisibility: scrollH,
         notificationPredicate: (n) => n.depth == 0,
         child: SingleChildScrollView(
           controller: _h,
           scrollDirection: Axis.horizontal,
           child: SizedBox(
-            width: width,
+            width: scrollH ? total : cons.maxWidth,
             height: cons.maxHeight,
             child: Column(children: [
-              // سرستون
-              Container(
-                height: 44,
-                decoration: BoxDecoration(
-                  color: t.colorScheme.surfaceContainerHigh,
-                  border: Border(bottom: BorderSide(color: t.colorScheme.outlineVariant)),
-                ),
-                child: Row(children: [
-                  for (var i = 0; i < widget.columns.length; i++) _header(context, i),
-                ]),
-              ),
+              _headerRow(context, widths),
               Expanded(
                 child: Scrollbar(
                   controller: _v,
                   thumbVisibility: true,
                   child: ListView.builder(
                     controller: _v,
+                    padding: EdgeInsets.only(bottom: scrollH ? 12 : 0),
                     itemCount: rows.length,
                     itemExtent: widget.rowHeight,
-                    itemBuilder: (context, i) => _row(context, rows[i], i),
+                    itemBuilder: (context, i) => _row(context, rows[i], i, widths),
                   ),
                 ),
               ),
@@ -123,10 +154,33 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     });
   }
 
-  Widget _header(BuildContext context, int i) {
+  Widget _headerRow(BuildContext context, List<double> widths) {
+    final t = Theme.of(context);
+    final dark = t.brightness == Brightness.dark;
+    return Container(
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: dark
+            ? null
+            : const LinearGradient(
+                colors: [Color(0xFFE3EFF2), Color(0xFFD7E8EC)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+        color: dark ? t.colorScheme.surfaceContainerHighest : null,
+        border: const Border(bottom: BorderSide(color: AppColors.petrol, width: 1.6)),
+      ),
+      child: Row(children: [
+        for (var i = 0; i < widget.columns.length; i++) _header(context, i, widths[i], i == widget.columns.length - 1),
+      ]),
+    );
+  }
+
+  Widget _header(BuildContext context, int i, double width, bool last) {
     final t = Theme.of(context);
     final c = widget.columns[i];
     final active = _sortCol == i;
+    final fg = t.brightness == Brightness.dark ? t.colorScheme.onSurface : AppColors.petrolDark;
     final w = InkWell(
       onTap: c.sortKey == null
           ? null
@@ -139,48 +193,87 @@ class _DataGridState<T> extends State<DataGrid<T>> {
                 }
               }),
       child: Container(
-        width: c.width,
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        alignment: AlignmentDirectional.centerStart,
-        child: Row(children: [
-          Expanded(
+        width: width,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: BoxDecoration(
+          border: last ? null : BorderDirectional(end: BorderSide(color: AppColors.petrol.withValues(alpha: 0.15))),
+        ),
+        alignment: Alignment.center,
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Flexible(
             child: Text(c.label,
                 maxLines: 2,
+                textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: t.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.3)),
+                style: t.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800, height: 1.3, color: fg)),
           ),
-          if (active) Icon(_asc ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 14),
+          if (active)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 3),
+              child: Icon(_asc ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded, size: 14, color: AppColors.amber),
+            ),
         ]),
       ),
     );
     return c.tooltip == null ? w : Tooltip(message: c.tooltip!, child: w);
   }
 
-  Widget _row(BuildContext context, T r, int index) {
+  Widget _row(BuildContext context, T r, int index, List<double> widths) {
     final t = Theme.of(context);
+    final dark = t.brightness == Brightness.dark;
     final sel = widget.selected?.call(r) ?? false;
     final custom = widget.rowColor?.call(context, r);
+    final zebra = dark ? t.colorScheme.surfaceContainerHigh : const Color(0xFFEFF5F7);
     final bg = sel
-        ? t.colorScheme.primaryContainer.withValues(alpha: 0.6)
-        : (custom ?? (index.isOdd ? t.colorScheme.surfaceContainerLowest : t.colorScheme.surface));
+        ? t.colorScheme.primaryContainer
+        : (custom ?? (index.isOdd ? zebra : t.colorScheme.surface));
+    final lineC = t.colorScheme.outlineVariant;
     return Material(
       color: bg,
       child: InkWell(
         onTap: widget.onTap == null ? null : () => widget.onTap!(r),
+        hoverColor: AppColors.amber.withValues(alpha: 0.12),
         child: Container(
-          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.4)))),
+          decoration: BoxDecoration(border: Border(bottom: BorderSide(color: lineC.withValues(alpha: 0.7)))),
           child: Row(children: [
-            for (final c in widget.columns)
+            for (var i = 0; i < widget.columns.length; i++)
               Container(
-                width: c.width,
+                width: widths[i],
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                alignment: c.numeric ? AlignmentDirectional.centerEnd : AlignmentDirectional.centerStart,
-                child: c.cell != null
-                    ? c.cell!(context, r)
-                    : Text(c.text(r), maxLines: 1, overflow: TextOverflow.ellipsis, style: t.textTheme.bodySmall),
+                decoration: BoxDecoration(
+                  border: i == widget.columns.length - 1
+                      ? null
+                      : BorderDirectional(end: BorderSide(color: lineC.withValues(alpha: 0.9))),
+                ),
+                alignment: switch (widget.columns[i].align) {
+                  TextAlign.start || TextAlign.right => AlignmentDirectional.centerStart,
+                  TextAlign.end || TextAlign.left => AlignmentDirectional.centerEnd,
+                  _ => Alignment.center,
+                },
+                child: _cell(context, widget.columns[i], r),
               ),
           ]),
         ),
+      ),
+    );
+  }
+
+  Widget _cell(BuildContext context, GridColumn<T> c, T r) {
+    if (c.cell != null) return c.cell!(context, r);
+    final t = Theme.of(context);
+    final raw = c.text(r);
+    final s = c.clean ? cleanCell(raw) : (raw.isEmpty ? gridEmpty : raw);
+    final empty = s == gridEmpty;
+    return Text(
+      s,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: c.align,
+      textDirection: c.ltr && !empty ? TextDirection.ltr : null,
+      style: t.textTheme.bodySmall?.copyWith(
+        color: empty ? t.colorScheme.outline : null,
+        fontWeight: c.numeric ? FontWeight.w600 : null,
+        fontFeatures: c.numeric ? const [FontFeature.tabularFigures()] : null,
       ),
     );
   }

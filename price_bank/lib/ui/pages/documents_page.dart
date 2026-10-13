@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../core/repo/docs_repo.dart';
 import '../format.dart';
+import '../theme.dart';
 import '../widgets/common.dart';
 
 class DocumentsPage extends StatelessWidget {
@@ -37,11 +40,11 @@ class DocumentsPage extends StatelessWidget {
         icon: Icons.factory_outlined,
         padding: EdgeInsets.zero,
         child: Table(
-          columnWidths: const {0: FlexColumnWidth(3), 1: FixedColumnWidth(90), 2: FixedColumnWidth(150), 3: FlexColumnWidth(2), 4: FixedColumnWidth(60)},
+          columnWidths: const {0: FlexColumnWidth(3), 1: FixedColumnWidth(90), 2: FixedColumnWidth(150), 3: FlexColumnWidth(2), 4: FixedColumnWidth(104)},
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
             TableRow(
-              decoration: BoxDecoration(color: t.colorScheme.surfaceContainerHigh),
+              decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
               children: [for (final h in ['نام پروژه', 'اقلام', 'ظرفیت (بشکه/روز)', 'محل', '']) _c(h, b: true)],
             ),
             for (final p in projects)
@@ -50,9 +53,19 @@ class DocumentsPage extends StatelessWidget {
                 _c(fa(p.itemCount)),
                 _c(p.capacityBpd == null ? '—' : faNum(p.capacityBpd)),
                 _c(p.location ?? '—'),
-                canEdit
-                    ? IconButton(icon: const Icon(Icons.edit_outlined, size: 18), onPressed: () => _editProject(context, p))
-                    : const SizedBox(),
+                Row(mainAxisSize: MainAxisSize.min, children: [
+                  if (canEdit)
+                    IconButton(
+                        tooltip: 'ویرایش پروژه',
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        onPressed: () => _editProject(context, p)),
+                  if (app.user.isAdmin)
+                    IconButton(
+                      tooltip: 'حذف پروژه',
+                      icon: Icon(Icons.delete_outline_rounded, size: 19, color: Tones.bad(context)),
+                      onPressed: () => _deleteProject(context, p),
+                    ),
+                ]),
               ]),
           ],
         ),
@@ -70,7 +83,7 @@ class DocumentsPage extends StatelessWidget {
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
             TableRow(
-              decoration: BoxDecoration(color: t.colorScheme.surfaceContainerHigh),
+              decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
               children: [for (final h in ['پروژه', 'عنوان سند', 'بازنگری', 'سال صدور', 'نرخ تسعیر منبع', 'قیمت‌ها', '']) _c(h, b: true)],
             ),
             for (final d in docs)
@@ -114,6 +127,35 @@ class DocumentsPage extends StatelessWidget {
     final app = AppScope.read(context);
     app.pb.docs.updateProject(p.id, values, reason: reason);
     app.dataChanged();
+  }
+
+  Future<void> _deleteProject(BuildContext context, Project p) async {
+    final app = AppScope.read(context);
+    final nDocs = app.pb.docs.documents(projectId: p.id).length;
+    final ok = await showDialog<String>(context: context, builder: (ctx) => _DeleteProjectDialog(project: p, docCount: nDocs));
+    if (ok == null || !context.mounted) return;
+    // پشتیبان خودکار پیش از حذف
+    String? backup;
+    try {
+      final dbPath = app.pb.db.path;
+      if (dbPath != ':memory:') {
+        final dir = Directory('${File(dbPath).parent.path}${Platform.pathSeparator}backups')..createSync(recursive: true);
+        final n = DateTime.now();
+        String two(int v) => v.toString().padLeft(2, '0');
+        backup = '${dir.path}${Platform.pathSeparator}before_delete_project_${p.id}_'
+            '${n.year}${two(n.month)}${two(n.day)}_${two(n.hour)}${two(n.minute)}${two(n.second)}.db';
+        app.pb.db.backupTo(backup);
+      }
+    } catch (e) {
+      if (context.mounted) showSnack(context, 'پشتیبان‌گیری ناموفق بود؛ حذف انجام نشد: $e', error: true);
+      return;
+    }
+    final res = app.pb.docs.deleteProject(p.id, reason: ok.isEmpty ? 'حذف پروژه' : ok);
+    app.dataChanged(calcInputs: true);
+    if (context.mounted) {
+      showSnack(context,
+          'پروژه حذف شد (${fa(res.items)} قلم، ${fa(res.documents)} سند).${backup == null ? '' : ' پشتیبان پیش از حذف: $backup'}');
+    }
   }
 
   Future<void> _editDoc(BuildContext context, SourceDocument d) async {
@@ -224,6 +266,79 @@ class DocumentsPage extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+
+/// تأیید حذف پروژه: نمایش اثر حذف + تایپ کلمه‌ی «حذف» + دلیل.
+class _DeleteProjectDialog extends StatefulWidget {
+  const _DeleteProjectDialog({required this.project, required this.docCount});
+  final Project project;
+  final int docCount;
+
+  @override
+  State<_DeleteProjectDialog> createState() => _DeleteProjectDialogState();
+}
+
+class _DeleteProjectDialogState extends State<_DeleteProjectDialog> {
+  final _confirm = TextEditingController();
+  final _reason = TextEditingController();
+
+  @override
+  void dispose() {
+    _confirm.dispose();
+    _reason.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final p = widget.project;
+    final ready = _confirm.text.trim() == 'حذف';
+    return AlertDialog(
+      icon: Icon(Icons.delete_forever_rounded, color: Tones.bad(context), size: 40),
+      title: Text('حذف پروژه «${p.nameFa ?? p.name}»'),
+      content: SizedBox(
+        width: 480,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Tones.bad(context).withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Tones.bad(context).withValues(alpha: 0.3)),
+            ),
+            child: Text(
+              'با حذف این پروژه، ${fa(p.itemCount)} قلم (با همه‌ی مشخصات، قیمت‌ها و استعلام‌ها) و ${fa(widget.docCount)} سند منبع آن حذف می‌شوند.\n'
+              'پیش از حذف، یک نسخه‌ی پشتیبان کامل از دیتابیس به طور خودکار در پوشه‌ی backups کنار دیتابیس ذخیره می‌شود و حذف در تاریخچه ثبت می‌شود.',
+              style: t.textTheme.bodySmall?.copyWith(height: 1.9),
+            ),
+          ),
+          const SizedBox(height: 14),
+          TextField(
+            controller: _reason,
+            decoration: const InputDecoration(labelText: 'دلیل حذف (اختیاری)'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _confirm,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'برای تأیید، کلمه‌ی «حذف» را بنویسید'),
+            onChanged: (_) => setState(() {}),
+          ),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+        FilledButton.icon(
+          style: FilledButton.styleFrom(backgroundColor: Tones.bad(context)),
+          onPressed: ready ? () => Navigator.pop(context, _reason.text.trim()) : null,
+          icon: const Icon(Icons.delete_rounded),
+          label: const Text('حذف پروژه'),
+        ),
+      ],
     );
   }
 }

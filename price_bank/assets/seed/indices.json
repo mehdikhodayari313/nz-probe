@@ -35,7 +35,7 @@
   },
   {
    "code": "FX_USD_V8",
-   "name_fa": "دلار به ریال — جدول مرجع v8",
+   "name_fa": "دلار به ریال — جدول پیش‌فرض",
    "name_en": "USD→IRR (v8 reference table)",
    "kind": "level",
    "group": "fx",
@@ -46,7 +46,7 @@
   },
   {
    "code": "FX_EUR_V8",
-   "name_fa": "یورو به ریال — جدول مرجع v8",
+   "name_fa": "یورو به ریال — جدول پیش‌فرض",
    "name_en": "EUR→IRR (v8 reference table)",
    "kind": "level",
    "group": "fx",

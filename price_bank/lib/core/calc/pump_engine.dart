@@ -13,6 +13,7 @@
 
 import 'dart:math' as math;
 
+import 'methods.dart';
 import 'series.dart';
 
 /// مقدار یک خانه‌ی محاسباتی: عدد، یا متن (پیام خطا/وضعیت)، یا خالی.
@@ -46,7 +47,11 @@ class PumpCalcSettings {
     this.eurCheckLimit = 5000000,
     this.eurTargetOverride,
     this.usdTargetOverride,
+    this.method = defaultMethodCode,
   });
+
+  /// روش تعدیل (M0، M1، M2، M4، M5، M6) — پیش‌فرض M6
+  final String method;
 
   final int targetYear;
   final int? targetMonth;
@@ -73,6 +78,10 @@ class FactorTable {
   double get(String group, String option) => _map['$group|$option'] ?? 1.0;
 
   bool has(String group, String option) => _map.containsKey('$group|$option');
+
+  /// نسخه‌ای با ضرایب جایگزین (کلید «گروه|گزینه») — برای تخمین موردی بدون تغییر بانک.
+  FactorTable withOverrides(Map<String, double> overrides) =>
+      overrides.isEmpty ? this : FactorTable({..._map, ...overrides});
 }
 
 /// ورودی محاسبه برای یک پمپ.
@@ -138,6 +147,8 @@ class PumpCalcResult {
   String baseConversionSource = '';
   double? floorTargetEur;
   bool floorBinding = false;
+  String methodCode = defaultMethodCode;
+  double? escalationFactor;
 
   final List<CalcStep> steps = [];
 
@@ -294,12 +305,32 @@ class PumpEngine {
     final ba = ppi(settings.targetYear, month: settings.targetMonth);
     r.ppiBase = az == null ? const CalcCell.blank() : CalcCell.number(az);
     r.ppiTarget = ba == null ? const CalcCell.blank() : CalcCell.number(ba);
-    r.steps.add(CalcStep(
-      '۲. ضریب تعدیل PPI',
-      'PPI(${settings.targetYear}) ÷ PPI(${y ?? '؟'}) = ${ba == null ? '؟' : _g(ba)} ÷ ${az == null ? '؟' : _g(az)}',
-      (az != null && ba != null) ? _g(ba / az) : 'شاخص موجود نیست',
-      warning: az == null || ba == null,
-    ));
+    final method = methodByCode(settings.method);
+    final ppiMethod = method.code == 'M4' || method.code == 'M6';
+    // ضریب روش‌های غیر PPI
+    MethodFactor? other;
+    if (!ppiMethod && y != null) {
+      other = MethodFactors(series, ppiSeries: settings.ppiSeries, fxType: settings.fxType)
+          .factor(method.code, y, ym, settings.targetYear, settings.targetMonth);
+    }
+    r.methodCode = method.code;
+    if (ppiMethod) {
+      r.escalationFactor = (az != null && ba != null) ? ba / az : null;
+      r.steps.add(CalcStep(
+        '۲. ضریب تعدیل PPI (روش ${method.code})',
+        'PPI(${settings.targetYear}) ÷ PPI(${y ?? '؟'}) = ${ba == null ? '؟' : _g(ba)} ÷ ${az == null ? '؟' : _g(az)}',
+        (az != null && ba != null) ? _g(ba / az) : 'شاخص موجود نیست',
+        warning: az == null || ba == null,
+      ));
+    } else {
+      r.escalationFactor = other?.factor;
+      r.steps.add(CalcStep(
+        '۲. ضریب تعدیل (روش ${method.code} — ${method.nameFa})',
+        other?.detail ?? 'سال قیمت مشخص نیست',
+        other?.factor == null ? 'محاسبه نشد' : _g(other!.factor!),
+        warning: other?.factor == null,
+      ));
+    }
 
     // ---------- BB: کف قیمت
     final g = sv('material_class');
@@ -311,10 +342,12 @@ class PumpEngine {
     final excluded = z == 'EUR' && (aa ?? 0) > settings.eurCheckLimit;
     if (excluded) {
       r.eurTarget = const CalcCell.text('(Check currency – excluded)');
-    } else if (r.eurSource.isNumber && az != null && ba != null) {
-      final escalated = r.eurSource.number! * ba / az;
+    } else if (r.eurSource.isNumber && (ppiMethod ? (az != null && ba != null) : other?.factor != null)) {
+      final escalated = ppiMethod ? r.eurSource.number! * ba! / az! : r.eurSource.number! * other!.factor!;
       var value = escalated;
-      if (r.floorApplies && ppiFloorBase != null) {
+      if (!method.usesFloor) {
+        r.steps.add(CalcStep('۳. کف قیمت', 'در روش ${method.code} کف قیمت اعمال نمی‌شود', '—'));
+      } else if (r.floorApplies && ppiFloorBase != null && ba != null) {
         final floor = settings.floorEur * ba / ppiFloorBase;
         r.floorTargetEur = floor;
         value = math.max(escalated, floor);
@@ -332,7 +365,9 @@ class PumpEngine {
       r.eurTarget = const CalcCell.text('(PPI/FX missing)');
     }
     r.steps.add(CalcStep('۴. قیمت یورویی تعدیل‌شده (سال ${settings.targetYear})',
-        excluded ? 'قیمت یورویی بیش از ${_g(settings.eurCheckLimit)} — احتمال اشتباه ارز؛ از محاسبه کنار گذاشته شد' : 'یورو(پایه) × ضریب PPI، حداقل برابر کف',
+        excluded
+            ? 'قیمت یورویی بیش از ${_g(settings.eurCheckLimit)} — احتمال اشتباه ارز؛ از محاسبه کنار گذاشته شد'
+            : (method.usesFloor ? 'یورو(پایه) × ضریب تعدیل، حداقل برابر کف' : 'یورو(پایه) × ضریب تعدیل'),
         r.eurTarget.isNumber ? _f(r.eurTarget.number!, 'EUR') : _msg(r.eurTarget.text),
         warning: !r.eurTarget.isNumber));
 

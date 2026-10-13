@@ -2,6 +2,7 @@
  "target_year": 1404,
  "fx_rate_type": "V8",
  "ppi_series": "PPI_EU_C2813",
+ "escalation_method": "M6",
  "floor_eur": 25000,
  "floor_base_year": 1404,
  "cost_exponent_n": 0.6,
@@ -11,7 +12,7 @@
  "fx_rate_types": [
   {
    "code": "V8",
-   "name_fa": "جدول مرجع v8"
+   "name_fa": "جدول پیش‌فرض"
   },
   {
    "code": "FREE",

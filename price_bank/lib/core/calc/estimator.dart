@@ -5,6 +5,7 @@
 
 import 'dart:math' as math;
 
+import 'methods.dart';
 import 'pump_engine.dart';
 
 /// یک رکورد همتا برای تخمین.
@@ -121,7 +122,8 @@ class PumpEstimator {
       r.coefMax = coefs.reduce(math.max);
     }
 
-    r.floorApplies = PumpEngine.floorRule(inp.standard, inp.family, sv('material_class'));
+    // کف قیمت فقط در روش‌هایی که کف دارند (M6)
+    r.floorApplies = methodByCode(s.method).usesFloor && PumpEngine.floorRule(inp.standard, inp.family, sv('material_class'));
     final ppiT = engine.ppi(s.targetYear, month: s.targetMonth);
     final ppiF = engine.ppi(s.floorBaseYear);
     if (ppiT != null && ppiF != null) r.floorEur = s.floorEur * ppiT / ppiF;
@@ -188,7 +190,12 @@ class TransferResult {
   double? toEurRate;
   String toEurSource = '';
   double? baseEur;
-  double? ppiBase, ppiTarget, ppiFactor;
+  double? ppiBase, ppiTarget;
+
+  /// ضریب تعدیل روش انتخاب‌شده (در M4/M6 همان نسبت PPI)
+  double? ppiFactor;
+  String methodCode = defaultMethodCode;
+  String factorDetail = '';
   double? escalatedEur;
   bool floorApplies = false;
   double? floorEur;
@@ -228,13 +235,27 @@ class PriceTransferCalculator {
       return r;
     }
     r.baseEur = i.basePrice / r.toEurRate!;
+    final method = methodByCode(s.method);
+    r.methodCode = method.code;
     r.ppiBase = engine.ppi(i.baseYear, month: i.baseMonth);
     r.ppiTarget = engine.ppi(s.targetYear, month: s.targetMonth);
-    if (r.ppiBase == null || r.ppiTarget == null) {
-      r.warnings.add('شاخص PPI سال پایه یا هدف موجود نیست.');
-      return r;
+    if (method.code == 'M4' || method.code == 'M6') {
+      if (r.ppiBase == null || r.ppiTarget == null) {
+        r.warnings.add('شاخص PPI سال پایه یا هدف موجود نیست.');
+        return r;
+      }
+      r.ppiFactor = r.ppiTarget! / r.ppiBase!;
+      r.factorDetail = 'PPI(${s.targetYear}) ÷ PPI(${i.baseYear})';
+    } else {
+      final mf = MethodFactors(engine.series, ppiSeries: s.ppiSeries, fxType: s.fxType)
+          .factor(method.code, i.baseYear, i.baseMonth, s.targetYear, s.targetMonth);
+      if (mf.factor == null) {
+        r.warnings.add(mf.detail);
+        return r;
+      }
+      r.ppiFactor = mf.factor;
+      r.factorDetail = mf.detail;
     }
-    r.ppiFactor = r.ppiTarget! / r.ppiBase!;
     r.escalatedEur = r.baseEur! * r.ppiFactor!;
 
     final cls = i.materialClass.toUpperCase();
@@ -243,10 +264,10 @@ class PriceTransferCalculator {
     r.floorApplies = switch (i.floorMode) {
       FloorMode.yes => true,
       FloorMode.no => false,
-      FloorMode.auto => i.isApiCentrifugal && sOrD,
+      FloorMode.auto => method.usesFloor && i.isApiCentrifugal && sOrD,
     };
     final ppiF = engine.ppi(s.floorBaseYear);
-    if (ppiF != null) r.floorEur = s.floorEur * r.ppiTarget! / ppiF;
+    if (ppiF != null && r.ppiTarget != null) r.floorEur = s.floorEur * r.ppiTarget! / ppiF;
     r.finalEurUnit = (r.floorApplies && r.floorEur != null) ? math.max(r.escalatedEur!, r.floorEur!) : r.escalatedEur;
 
     r.eurRate = engine.eurRateTarget;

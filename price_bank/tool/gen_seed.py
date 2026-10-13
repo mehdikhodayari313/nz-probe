@@ -189,9 +189,9 @@ for r in range(5, 26):
       "forecast" if "FORECAST" in st or "forecast" in st else "official", st)
 
 # نرخ ارز — نوع «جدول v8»
-S("FX_USD_V8", "دلار به ریال — جدول مرجع v8", "USD→IRR (v8 reference table)", "level", "fx", "ریال", None,
+S("FX_USD_V8", "دلار به ریال — جدول پیش‌فرض", "USD→IRR (v8 reference table)", "level", "fx", "ریال", None,
   "Pumps_Price_Bank_v8, Assumptions & FX Reference")
-S("FX_EUR_V8", "یورو به ریال — جدول مرجع v8", "EUR→IRR (v8 reference table)", "level", "fx", "ریال", None,
+S("FX_EUR_V8", "یورو به ریال — جدول پیش‌فرض", "EUR→IRR (v8 reference table)", "level", "fx", "ریال", None,
   "Pumps_Price_Bank_v8, Assumptions & FX Reference")
 af = wv["Assumptions & FX Reference"]
 for r in range(5, 26):
@@ -247,10 +247,10 @@ dump("indices.json", {"series": series, "values": values})
 
 # ---------------------------------------------------------------- settings
 dump("settings.json", {
-    "target_year": 1404, "fx_rate_type": "V8", "ppi_series": "PPI_EU_C2813",
+    "target_year": 1404, "fx_rate_type": "V8", "ppi_series": "PPI_EU_C2813", "escalation_method": "M6",
     "floor_eur": 25000, "floor_base_year": 1404, "cost_exponent_n": 0.6, "pump_efficiency": 0.6,
     "eur_check_limit": 5000000, "display_unit": "IRR",
-    "fx_rate_types": [{"code": "V8", "name_fa": "جدول مرجع v8"},
+    "fx_rate_types": [{"code": "V8", "name_fa": "جدول پیش‌فرض"},
                       {"code": "FREE", "name_fa": "بازار آزاد"},
                       {"code": "NIMA", "name_fa": "مرکز مبادله / نیما"}],
 })

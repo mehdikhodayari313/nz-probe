@@ -177,6 +177,34 @@ class DocsRepo {
   // ---------------------------------------------------------------------------
   // فروشندگان
 
+  /// حذف کامل یک پروژه: اقلام آن (با مقادیر، برچسب‌ها و قیمت‌ها)، اسناد آن و خود پروژه.
+  /// قیمت‌های اقلام پروژه‌های دیگر که به اسناد این پروژه ارجاع داشتند، فقط از سند جدا می‌شوند.
+  /// همه‌چیز در تاریخچه ثبت می‌شود. قبل از صدا زدن، از دیتابیس پشتیبان بگیرید.
+  ({int items, int documents}) deleteProject(int id, {String? reason}) {
+    final row = db.queryOne('SELECT name FROM projects WHERE id = ?', [id]);
+    if (row == null) return (items: 0, documents: 0);
+    final batch = Audit.newBatch();
+    return db.transaction(() {
+      final nItems = db.scalar('SELECT COUNT(*) FROM items WHERE project_id = ?', [id]) as int;
+      final nDocs = db.scalar('SELECT COUNT(*) FROM documents WHERE project_id = ?', [id]) as int;
+      db.execute(
+        'UPDATE price_obs SET document_id = NULL WHERE document_id IN (SELECT id FROM documents WHERE project_id = ?) '
+        'AND item_id NOT IN (SELECT id FROM items WHERE project_id = ?)',
+        [id, id],
+      );
+      for (final it in db.query('SELECT id, tag, name FROM items WHERE project_id = ?', [id])) {
+        audit.log(entity: 'item', entityId: it['id'], field: 'delete',
+            oldValue: '${it['tag'] ?? ''} ${it['name']}'.trim(), reason: reason ?? 'حذف پروژه', batch: batch);
+      }
+      db.execute('DELETE FROM items WHERE project_id = ?', [id]);
+      db.execute('DELETE FROM documents WHERE project_id = ?', [id]);
+      db.execute('DELETE FROM projects WHERE id = ?', [id]);
+      audit.log(entity: 'project', entityId: id, field: 'delete',
+          oldValue: '${row['name']} ($nItems قلم، $nDocs سند)', reason: reason, batch: batch);
+      return (items: nItems, documents: nDocs);
+    });
+  }
+
   List<DbRow> vendors() => db.query('SELECT * FROM vendors ORDER BY name');
 
   int ensureVendor(String name, {String? code}) {

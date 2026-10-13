@@ -73,9 +73,11 @@ class PriceBank {
   MemorySeries get seriesSnapshot => _seriesCache ??= indices.snapshot();
   FactorTable get factorTable => _factorCache ??= indices.factorTable(pumpFactorSet);
 
-  PumpEngine pumpEngine({String? fxType, int? targetYear}) => PumpEngine(
+  PumpEngine pumpEngine({String? fxType, int? targetYear, String? method}) => PumpEngine(
         seriesSnapshot,
-        settingsRepo.load().toPumpSettings(fxTypeOverride: fxType, targetYearOverride: targetYear),
+        settingsRepo
+            .load()
+            .toPumpSettings(fxTypeOverride: fxType, targetYearOverride: targetYear, methodOverride: method),
         factorTable,
       );
 
