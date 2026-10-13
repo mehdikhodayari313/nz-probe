@@ -82,6 +82,9 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
   final _h = TextEditingController(text: '600');
   final _qty = TextEditingController(text: '2');
 
+  /// راندمان پمپ برای برآورد توان از دبی و هد (خالی = مقدار تنظیمات)
+  final _eta = TextEditingController();
+
   static const _params = <(String, String, String)>[
     ('sub_category', 'زیرگروه', 'SubCat'),
     ('match', 'فقط همتاهای همین زیرگروه؟', 'YN'),
@@ -105,7 +108,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
 
   @override
   void dispose() {
-    for (final c in [_kw, _q, _h, _qty]) {
+    for (final c in [_kw, _q, _h, _qty, _eta]) {
       c.dispose();
     }
     super.dispose();
@@ -147,7 +150,11 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
     final t = Theme.of(context);
     final base = app.pb.pumpEngine();
     final f = app.pb.factorTable.withOverrides(_overrides);
-    final engine = PumpEngine(base.series, base.settings, f);
+    final etaIn = parseUserNumber(_eta.text);
+    // راندمان به درصد (مثلاً ۶۵) یا کسر (۰٫۶۵) پذیرفته می‌شود
+    final eta = etaIn == null ? null : (etaIn > 1 ? etaIn / 100 : etaIn);
+    final engine = PumpEngine(
+        base.series, eta == null || eta <= 0 || eta > 1 ? base.settings : base.settings.copyWith(pumpEfficiency: eta), f);
     final peers = app.pb.peersFrom(app.pumps);
     final qty = parseUserNumber(_qty.text) ?? 1;
     final r = PumpEstimator(engine).estimate(
@@ -203,7 +210,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
               ),
               const SizedBox(width: 8),
               SizedBox(
-                width: 74,
+                width: 96,
                 child: _groupOf(key) == null
                     ? const SizedBox()
                     : _FactorChip(
@@ -218,6 +225,9 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
         _numRow(context, 'توان (kW) — اگر معلوم است', _kw),
         _numRow(context, 'دبی (m³/h)', _q),
         _numRow(context, 'هد اختلافی (m)', _h),
+        _numRow(context, 'راندمان پمپ η (٪) — اختیاری', _eta,
+            hint: 'پیش‌فرض ${faNum(base.settings.pumpEfficiency * 100)}٪',
+            help: 'فقط وقتی توان وارد نشده و توان از دبی و هد برآورد می‌شود استفاده می‌شود: kW = Q·H ÷ (367·η). عدد را به درصد بنویسید (مثلاً ۶۵).'),
         _numRow(context, 'تعداد (دستگاه)', _qty),
         if (!canEditFactors)
           Padding(
@@ -272,7 +282,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
                   Container(
                     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
                     decoration: BoxDecoration(
-                      color: i.isOdd ? const Color(0xFFF3F8FA) : null,
+                      color: i.isOdd ? AppColors.zebra : null,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(children: [
@@ -281,7 +291,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
                         child: Text(r.peers[i].tag,
                             textDirection: TextDirection.ltr,
                             textAlign: TextAlign.right,
-                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.petrolDark)),
+                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.petrolDark)),
                       ),
                       const SizedBox(width: 10),
                       Expanded(child: Text(r.peers[i].name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5))),
@@ -317,14 +327,32 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
     ]);
   }
 
-  Widget _numRow(BuildContext context, String label, TextEditingController c) => Padding(
+  Widget _numRow(BuildContext context, String label, TextEditingController c, {String? hint, String? help}) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
-          SizedBox(width: 170, child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
-          Expanded(
-            child: TextField(controller: c, textDirection: TextDirection.ltr, onChanged: (_) => setState(() {})),
+          SizedBox(
+            width: 170,
+            child: Row(children: [
+              Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
+              if (help != null)
+                Tooltip(
+                  message: help,
+                  child: Padding(
+                    padding: const EdgeInsetsDirectional.only(start: 4),
+                    child: Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.outline),
+                  ),
+                ),
+            ]),
           ),
-          const SizedBox(width: 82),
+          Expanded(
+            child: TextField(
+              controller: c,
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(hintText: hint),
+              onChanged: (_) => setState(() {}),
+            ),
+          ),
+          const SizedBox(width: 104),
         ]),
       );
 
@@ -447,20 +475,28 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         _tf(context, 'گمرک/حمل/ترخیص (٪ از قیمت)', _customs, help: 'برای کالای وارداتی؛ ساخت داخل صفر.'),
         _tf(context, 'نرخ یوروی هدف (ریال) — اختیاری', _eurOverride,
             help: 'خالی = نرخ سال هدف از جدول نوع نرخ انتخاب‌شده در نوار بالا.'),
-        Row(children: [
-          SizedBox(width: 210, child: Text('اعمال کف قیمت', style: t.textTheme.bodySmall)),
-          Expanded(
-            child: SegmentedButton<FloorMode>(
-              segments: const [
-                ButtonSegment(value: FloorMode.auto, label: Text('خودکار')),
-                ButtonSegment(value: FloorMode.yes, label: Text('بله')),
-                ButtonSegment(value: FloorMode.no, label: Text('خیر')),
-              ],
-              selected: {_floor},
-              onSelectionChanged: (v) => setState(() => _floor = v.first),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            SizedBox(
+              width: 210,
+              child: _label(context, 'اعمال کف قیمت',
+                  'خودکار: فقط برای «گریز از مرکز API 610» با کلاس متریال S یا D و فقط در روش M6.'),
             ),
-          ),
-        ]),
+            Expanded(
+              child: DropdownButtonFormField<FloorMode>(
+                value: _floor,
+                isExpanded: true,
+                items: const [
+                  DropdownMenuItem(value: FloorMode.auto, child: Text('خودکار (طبق نوع پمپ و کلاس متریال)')),
+                  DropdownMenuItem(value: FloorMode.yes, child: Text('همیشه اعمال شود')),
+                  DropdownMenuItem(value: FloorMode.no, child: Text('اعمال نشود')),
+                ],
+                onChanged: (v) => setState(() => _floor = v ?? FloorMode.auto),
+              ),
+            ),
+          ]),
+        ),
       ]),
     );
 
@@ -580,7 +616,7 @@ class _FactorChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = local ? const Color(0xFFB0700F) : AppColors.petrol;
+    final c = local ? AppColors.amberText : AppColors.petrol;
     return Tooltip(
       message: local ? 'ضریب موردی همین تخمین — برای تغییر بزنید' : 'ضریب بانک — برای تغییر بزنید',
       child: Material(
@@ -591,15 +627,18 @@ class _FactorChip extends StatelessWidget {
           onTap: onTap,
           child: Container(
             height: 34,
-            alignment: Alignment.center,
+            padding: const EdgeInsetsDirectional.only(start: 8, end: 4),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: c.withValues(alpha: 0.35)),
             ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            // عدد سمت راست، قلم ویرایش در لبه‌ی چپ و جدا از عدد
+            child: Row(children: [
               Text('× ${faSmart(value)}', style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 12.5)),
-              const SizedBox(width: 2),
-              Icon(Icons.edit_rounded, size: 11, color: c.withValues(alpha: 0.7)),
+              const Spacer(),
+              Container(width: 1, height: 18, color: c.withValues(alpha: 0.25)),
+              const SizedBox(width: 4),
+              Icon(Icons.edit_rounded, size: 13, color: c.withValues(alpha: 0.8)),
             ]),
           ),
         ),
@@ -722,11 +761,11 @@ class _EstimateResults extends StatelessWidget {
       _TotalBand(
         title: '۶. جمع برای ${fa(qty % 1 == 0 ? qty.toInt() : qty)} دستگاه',
         main: r.irrTotal == null ? '—' : money(r.irrTotal, unit),
-        sub: [
-          if (r.irrTotal != null) money(r.irrTotal, unit, compact: true),
-          if (r.eurExpected != null) '${faNum(r.eurExpected! * qty)} یورو',
-          if (r.usdExpected != null) '${faNum(r.usdExpected! * qty)} دلار',
-        ].join('  ·  '),
+        items: [
+          if (r.irrTotal != null) ('به عدد خلاصه', money(r.irrTotal, unit, compact: true)),
+          if (r.eurExpected != null) ('معادل یورویی', '${faNum(r.eurExpected! * qty)} یورو'),
+          if (r.usdExpected != null) ('معادل دلاری', '${faNum(r.usdExpected! * qty)} دلار'),
+        ],
       ),
     ]);
   }
@@ -734,37 +773,59 @@ class _EstimateResults extends StatelessWidget {
 
 /// نوار جمع کل (پس‌زمینه‌ی تیره).
 class _TotalBand extends StatelessWidget {
-  const _TotalBand({required this.title, required this.main, required this.sub});
+  const _TotalBand({required this.title, required this.main, required this.items});
   final String title;
   final String main;
-  final String sub;
+
+  /// معادل‌ها با برچسب روشن: (برچسب، مقدار)
+  final List<(String, String)> items;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [AppColors.navy, AppColors.petrol]),
+        color: AppColors.navy,
         borderRadius: BorderRadius.circular(14),
+        boxShadow: [BoxShadow(color: AppColors.navy.withValues(alpha: 0.35), blurRadius: 16, offset: const Offset(0, 6))],
       ),
-      child: Row(children: [
-        const Icon(Icons.summarize_rounded, color: AppColors.amber, size: 28),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Padding(
+          padding: EdgeInsets.only(top: 4),
+          child: Icon(Icons.summarize_rounded, color: AppColors.amber, size: 28),
+        ),
         const SizedBox(width: 14),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.75), fontSize: 12.5, fontWeight: FontWeight.w600)),
+            Text(title, style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 12.5, fontWeight: FontWeight.w600)),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: AlignmentDirectional.centerStart,
               child: Text(main, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800)),
             ),
-            if (sub.isNotEmpty)
-              Text(sub, style: const TextStyle(color: AppColors.amber, fontSize: 12.5, fontWeight: FontWeight.w600)),
+            if (items.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(spacing: 8, runSpacing: 6, children: [
+                for (final (label, value) in items)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.10),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text.rich(TextSpan(children: [
+                      TextSpan(text: '$label: ', style: TextStyle(color: Colors.white.withValues(alpha: 0.75))),
+                      TextSpan(text: value, style: const TextStyle(color: AppColors.amber, fontWeight: FontWeight.w800)),
+                    ]), style: const TextStyle(fontSize: 12.5)),
+                  ),
+              ]),
+            ],
           ]),
         ),
       ]),
     );
   }
+}
 }
 
 /// نتیجه‌ی ماشین‌حساب انتقال: یورو ← دلار ← ریال/تومان ← جمع.
@@ -807,11 +868,11 @@ class _TransferResults extends StatelessWidget {
       _TotalBand(
         title: 'جمع برای ${fa(qty % 1 == 0 ? qty.toInt() : qty)} دستگاه',
         main: money(r.irrTotal, unit),
-        sub: [
-          money(r.irrTotal, unit, compact: true),
-          if (r.eurTotal != null) '${faNum(r.eurTotal)} یورو',
-          if (r.usdTotal != null) '${faNum(r.usdTotal)} دلار',
-        ].join('  ·  '),
+        items: [
+          ('به عدد خلاصه', money(r.irrTotal, unit, compact: true)),
+          if (r.eurTotal != null) ('معادل یورویی', '${faNum(r.eurTotal)} یورو'),
+          if (r.usdTotal != null) ('معادل دلاری', '${faNum(r.usdTotal)} دلار'),
+        ],
       ),
     ]);
   }

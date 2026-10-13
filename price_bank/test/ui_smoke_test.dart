@@ -14,9 +14,10 @@ import 'support.dart';
 void main() {
   setUpAll(loadAppFonts);
   const labels = [
-    'داشبورد', 'تجهیزات', 'تخمین و تعدیل', 'روش‌های تعدیل', 'شاخص‌ها و ارز', 'ضرایب', 'پروژه‌ها و اسناد',
+    'داشبورد', 'شاخص‌ها و ارز', 'روش‌های تعدیل', 'تجهیزات', 'تخمین و تعدیل', 'ضرایب', 'پروژه‌ها و اسناد',
     'تاریخچه', 'کاربران', 'تنظیمات',
   ];
+  const nIndices = 1, nMethods = 2, nEquipment = 3, nEstimator = 4, nDocuments = 6;
 
   Future<AppState> boot(WidgetTester tester, {bool withData = true, Size size = const Size(1600, 1000)}) async {
     tester.view.physicalSize = size;
@@ -43,12 +44,28 @@ void main() {
     }
   });
 
-  testWidgets('همه‌ی صفحه‌ها در پنجره‌ی کوچک (۱۲۸۰×۷۶۰، نوار کناری جمع‌شده)', (tester) async {
-    await boot(tester, size: const Size(1280, 760));
+  testWidgets('همه‌ی صفحه‌ها در پنجره‌ی کوچک (۹۸۰×۷۲۰، نوار کناری باریک با نام منوها)', (tester) async {
+    await boot(tester, size: const Size(980, 720));
+    expect(find.descendant(of: find.byKey(const Key('sidebar')), matching: find.text('تنظیمات')), findsOneWidget);
     for (var i = 0; i < labels.length; i++) {
       await go(tester, i);
       debugPrint('✓ ' 'صفحه‌ی ${labels[i]} (پنجره‌ی کوچک)');
     }
+  });
+
+  testWidgets('حالت شب و پالت سبز: همه‌ی صفحه‌ها', (tester) async {
+    final app = await boot(tester);
+    app.setSetting('theme_mode', 'dark');
+    app.setSetting('theme_palette', 'green');
+    await tester.pumpAndSettle();
+    expect(Theme.of(tester.element(find.byKey(const Key('sidebar')))).brightness, Brightness.dark);
+    for (var i = 0; i < labels.length; i++) {
+      await go(tester, i);
+      debugPrint('✓ ' 'صفحه‌ی ${labels[i]} (شب)');
+    }
+    app.setSetting('theme_mode', 'light');
+    app.setSetting('theme_palette', 'petrol');
+    await tester.pumpAndSettle();
   });
 
   testWidgets('صفحه‌ها با دیتابیس خالی هم باز می‌شوند', (tester) async {
@@ -62,7 +79,7 @@ void main() {
 
   testWidgets('انتخاب روش تعدیل از صفحه‌ی روش‌ها', (tester) async {
     final app = await boot(tester);
-    await go(tester, 3);
+    await go(tester, nMethods);
     final btn = find.byKey(const ValueKey('select-M4'));
     await tester.scrollUntilVisible(btn, 300, scrollable: find.byType(Scrollable).last);
     await tester.pumpAndSettle();
@@ -71,7 +88,7 @@ void main() {
     await tester.tap(find.text('ثبت'));
     await tester.pumpAndSettle();
     expect(app.settings.escalationMethod, 'M4');
-    await go(tester, 1); // تجهیزات با روش جدید
+    await go(tester, nEquipment); // تجهیزات با روش جدید
     await go(tester, 0);
     debugPrint('✓ ' 'تغییر روش به M4 و نمایش صفحه‌ها');
   });
@@ -79,8 +96,9 @@ void main() {
   testWidgets('تخمین: ویرایش ضریب موردی', (tester) async {
     if (!hasFixtures) return;
     await boot(tester);
-    await go(tester, 2);
+    await go(tester, nEstimator);
     expect(find.textContaining('۱. قیمت مورد انتظار (یورو)'), findsOneWidget);
+    expect(find.textContaining('معادل یورویی'), findsOneWidget);
     final chip = find.textContaining('× ').first;
     await tester.tap(chip);
     await tester.pumpAndSettle();
@@ -94,7 +112,7 @@ void main() {
   testWidgets('تجهیزات: فیلتر آب‌بند همه‌ی گزینه‌ها را دارد', (tester) async {
     if (!hasFixtures) return;
     await boot(tester);
-    await go(tester, 1);
+    await go(tester, nEquipment);
     await tester.tap(find.ancestor(of: find.text('آب‌بند'), matching: find.byType(DropdownButtonFormField<String?>)));
     await tester.pumpAndSettle();
     expect(find.text('Arr 2 - Dual Unpressurized'), findsWidgets);
@@ -102,24 +120,49 @@ void main() {
     debugPrint('✓ ' 'گزینه‌های فیلتر آب‌بند');
   });
 
-  testWidgets('ساخت جدول نرخ ارز جدید از تنظیمات', (tester) async {
+  testWidgets('ساخت و حذف جدول نرخ ارز در صفحه‌ی شاخص‌ها', (tester) async {
     final app = await boot(tester);
-    await go(tester, 9);
-    await tester.tap(find.text('جدول جدید'));
+    await go(tester, nIndices);
+    await tester.tap(find.byKey(const ValueKey('add-fx-table')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, 'نرخ بودجه');
+    final fields = find.descendant(of: find.byType(AlertDialog), matching: find.byType(TextField));
+    await tester.enterText(fields.at(0), 'نرخ بودجه');
+    await tester.enterText(fields.at(1), '1200000');
     await tester.pumpAndSettle();
     await tester.tap(find.text('ساخت جدول'));
     await tester.pumpAndSettle();
-    expect(app.pb.settingsRepo.fxRateTypes().any((f) => f.nameFa == 'نرخ بودجه'), isTrue);
-    debugPrint('✓ ' 'جدول نرخ ارز جدید');
+    final ft = app.pb.settingsRepo.fxRateTypes().firstWhere((f) => f.nameFa == 'نرخ بودجه');
+    expect(app.pb.seriesSnapshot.resolve('FX_EUR_${ft.code}', app.settings.targetYear)!.value, 1200000);
+    // جدول جدید باز شده؛ حذف از همین صفحه
+    await tester.tap(find.text('حذف این جدول نرخ ارز'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('حذف جدول'));
+    await tester.pumpAndSettle();
+    expect(app.pb.settingsRepo.fxRateTypes().any((f) => f.nameFa == 'نرخ بودجه'), isFalse);
+    debugPrint('✓ ' 'ساخت و حذف جدول نرخ ارز');
+  });
+
+  testWidgets('ورود نرخ تورم به درصد', (tester) async {
+    final app = await boot(tester);
+    await go(tester, nIndices);
+    await tester.ensureVisible(find.text('تورم ریالی سالانه (CPI)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('تورم ریالی سالانه (CPI)'));
+    await tester.pumpAndSettle();
+    final yearField = find.widgetWithText(TextField, 'سال');
+    await tester.enterText(yearField, '1406');
+    await tester.enterText(find.widgetWithText(TextField, 'نرخ (درصد)'), '35');
+    await tester.tap(find.text('ثبت'));
+    await tester.pumpAndSettle();
+    expect(app.pb.seriesSnapshot.resolve('INF_IRR', 1406)!.value, closeTo(0.35, 1e-12));
+    debugPrint('✓ ' 'نرخ ۳۵٪ به صورت ۰٫۳۵ ذخیره شد');
   });
 
   testWidgets('حذف پروژه با تأیید', (tester) async {
     if (!hasFixtures) return;
     final app = await boot(tester);
     final before = app.pb.docs.projects().length;
-    await go(tester, 6);
+    await go(tester, nDocuments);
     await tester.tap(find.byTooltip('حذف پروژه').first);
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).last, 'حذف');

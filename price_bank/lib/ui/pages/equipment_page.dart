@@ -195,7 +195,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                     : DataGrid<PumpRow>(
                         rows: rows,
                         onTap: (r) => _open(context, r.item.id),
-                        rowColor: (c, r) => r.item.include ? null : const Color(0xFFF6EFE6),
+                        rowColor: (c, r) => r.item.include ? null : (AppColors.isDark ? const Color(0xFF2E2620) : const Color(0xFFF6EFE6)),
                         columns: _columns(unit).where((c) => !_hiddenCols.contains(c.$1)).map((c) => c.$2).toList(),
                       ),
               ),
@@ -413,9 +413,9 @@ class _EquipmentPageState extends State<EquipmentPage> {
             decoration: BoxDecoration(color: AppColors.petrol.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(10)),
             child: Text.rich(
               TextSpan(children: [
-                TextSpan(text: fa(rows.length), style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
+                TextSpan(text: fa(rows.length), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
                 TextSpan(text: ' از ${fa(all.length)} پمپ · '),
-                TextSpan(text: fa(priced), style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
+                TextSpan(text: fa(priced), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
                 const TextSpan(text: ' با قیمت تعدیل‌شده'),
               ]),
               style: t.textTheme.bodySmall,

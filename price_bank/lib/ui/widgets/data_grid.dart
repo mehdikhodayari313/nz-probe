@@ -153,20 +153,11 @@ class _DataGridState<T> extends State<DataGrid<T>> {
   }
 
   Widget _headerRow(BuildContext context, List<double> widths) {
-    final t = Theme.of(context);
-    final dark = t.brightness == Brightness.dark;
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        gradient: dark
-            ? null
-            : const LinearGradient(
-                colors: [Color(0xFFE3EFF2), Color(0xFFD7E8EC)],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ),
-        color: dark ? t.colorScheme.surfaceContainerHighest : null,
-        border: const Border(bottom: BorderSide(color: AppColors.petrol, width: 1.6)),
+        color: AppColors.headerBg,
+        border: Border(bottom: BorderSide(color: AppColors.petrol, width: 1.6)),
       ),
       child: Row(children: [
         for (var i = 0; i < widget.columns.length; i++) _header(context, i, widths[i], i == widget.columns.length - 1),
@@ -178,7 +169,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     final t = Theme.of(context);
     final c = widget.columns[i];
     final active = _sortCol == i;
-    final fg = t.brightness == Brightness.dark ? t.colorScheme.onSurface : AppColors.petrolDark;
+    final fg = AppColors.strong;
     final w = InkWell(
       onTap: c.sortKey == null
           ? null
@@ -218,10 +209,9 @@ class _DataGridState<T> extends State<DataGrid<T>> {
 
   Widget _row(BuildContext context, T r, int index, List<double> widths) {
     final t = Theme.of(context);
-    final dark = t.brightness == Brightness.dark;
     final sel = widget.selected?.call(r) ?? false;
     final custom = widget.rowColor?.call(context, r);
-    final zebra = dark ? t.colorScheme.surfaceContainerHigh : const Color(0xFFEFF5F7);
+    final zebra = AppColors.zebra;
     final bg = sel
         ? t.colorScheme.primaryContainer
         : (custom ?? (index.isOdd ? zebra : t.colorScheme.surface));

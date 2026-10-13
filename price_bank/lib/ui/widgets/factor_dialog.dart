@@ -106,7 +106,7 @@ class _FactorDialogState extends State<_FactorDialog> {
         );
     return AlertDialog(
       title: Row(children: [
-        const Icon(Icons.tune_rounded, color: AppColors.petrol),
+        Icon(Icons.tune_rounded, color: AppColors.petrol),
         const SizedBox(width: 8),
         Expanded(child: Text('ضریب ${widget.label}')),
       ]),

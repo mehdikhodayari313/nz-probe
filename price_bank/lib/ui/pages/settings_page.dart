@@ -5,6 +5,7 @@ import '../../app/app_state.dart';
 import '../../core/calc/series.dart';
 import '../../core/repo/settings_repo.dart';
 import '../format.dart';
+import '../shell.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 
@@ -37,7 +38,8 @@ class SettingsPage extends StatelessWidget {
         initiallyOpen: false,
         lines: [
           'سال هدف، جدول نرخ ارز، روش تعدیل و واحد نمایش (ریال/تومان) از نوار بالای برنامه هم قابل تغییرند.',
-          'با «جدول جدید» می‌توانید جدول نرخ ارز دلخواه (مثلاً نرخ بودجه یا نرخ قرارداد) بسازید و در محاسبات انتخاب کنید.',
+          'جدول نرخ ارز دلخواه (مثلاً نرخ بودجه یا نرخ قرارداد) در صفحه‌ی «شاخص‌ها و ارز» با دکمه‌ی «+ جدول نرخ ارز» ساخته و حذف می‌شود.',
+          'در «ظاهر برنامه» حالت روز/شب و رنگ اصلی برنامه را انتخاب کنید.',
           'همه‌ی پارامترها در تاریخچه ثبت می‌شوند. مقادیر پیش‌فرض همان مقادیر فایل v8 است.',
           'از دیتابیس به‌طور منظم پشتیبان بگیرید؛ فایل پشتیبان یک فایل کامل و مستقل است.',
         ],
@@ -61,6 +63,8 @@ class SettingsPage extends StatelessWidget {
           for (final (key, label, help) in _params) _ParamRow(keyName: key, label: label, help: help, enabled: admin),
         ]),
       ),
+      const SizedBox(height: 14),
+      const _AppearanceCard(),
       const SizedBox(height: 14),
       const _FxTypesCard(),
       const SizedBox(height: 14),
@@ -148,20 +152,6 @@ class _ParamRowState extends State<_ParamRow> {
 class _FxTypesCard extends StatelessWidget {
   const _FxTypesCard();
 
-  Future<void> _create(BuildContext context) async {
-    final app = AppScope.read(context);
-    final types = app.pb.settingsRepo.fxRateTypes();
-    final res = await showDialog<(String, String?)>(context: context, builder: (_) => _NewFxTableDialog(types: types));
-    if (res == null || !context.mounted) return;
-    try {
-      final code = app.pb.settingsRepo.createFxType(res.$1, copyFrom: res.$2);
-      app.dataChanged(calcInputs: true);
-      showSnack(context, 'جدول «${res.$1}» ساخته شد (کد $code). مقادیرش را در «شاخص‌ها و ارز» وارد یا اصلاح کنید و از نوار بالا انتخابش کنید.');
-    } on ArgumentError catch (e) {
-      showSnack(context, '${e.message}', error: true);
-    }
-  }
-
   Future<void> _rename(BuildContext context, FxRateType ft) async {
     final c = TextEditingController(text: ft.nameFa);
     final name = await showDialog<String>(
@@ -205,15 +195,13 @@ class _FxTypesCard extends StatelessWidget {
     final admin = app.user.isAdmin;
     return SectionCard(
       title: 'جدول‌های نرخ ارز',
-      subtitle: 'جدول فعال از نوار بالا یا با زدن روی هر ردیف انتخاب می‌شود. مقادیر هر جدول در «شاخص‌ها و ارز» ویرایش می‌شود.',
+      subtitle: 'جدول فعال از نوار بالا یا با زدن روی هر ردیف انتخاب می‌شود. ساخت، حذف و ورود مقادیر جدول‌ها در صفحه‌ی «شاخص‌ها و ارز» است.',
       icon: Icons.currency_exchange_rounded,
-      trailing: admin
-          ? FilledButton.icon(
-              onPressed: () => _create(context),
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('جدول جدید'),
-            )
-          : null,
+      trailing: OutlinedButton.icon(
+        onPressed: () => AppShell.go(context, AppShell.indices),
+        icon: const Icon(Icons.open_in_new_rounded, size: 18),
+        label: const Text('شاخص‌ها و ارز'),
+      ),
       child: Column(children: [
         for (final ft in types)
           Container(
@@ -233,15 +221,15 @@ class _FxTypesCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   child: Row(children: [
                     Icon(ft.code == app.settings.fxRateType ? Icons.radio_button_checked : Icons.radio_button_off,
-                        color: ft.code == app.settings.fxRateType ? const Color(0xFFB0700F) : th.colorScheme.outline, size: 20),
+                        color: ft.code == app.settings.fxRateType ? AppColors.amberText : th.colorScheme.outline, size: 20),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         Row(children: [
                           Flexible(child: Text(ft.nameFa, style: const TextStyle(fontWeight: FontWeight.w700))),
                           const SizedBox(width: 6),
-                          if (ft.userDefined) const Pill('تعریف کاربر', color: AppColors.teal),
-                          if (ft.code == 'V8') const Pill('داده‌ی پیش‌فرض فایل v8', color: AppColors.petrol),
+                          if (ft.userDefined) Pill('تعریف کاربر', color: AppColors.teal),
+                          if (ft.code == 'V8') Pill('داده‌ی پیش‌فرض فایل v8', color: AppColors.petrol),
                         ]),
                         Text('FX_EUR_${ft.code} / FX_USD_${ft.code}',
                             textDirection: TextDirection.ltr,
@@ -277,67 +265,6 @@ class _FxTypesCard extends StatelessWidget {
             ),
           ),
       ]),
-    );
-  }
-}
-
-/// ساخت جدول نرخ ارز جدید: نام + نقطه‌ی شروع (خالی یا کپی از یک جدول موجود).
-class _NewFxTableDialog extends StatefulWidget {
-  const _NewFxTableDialog({required this.types});
-  final List<FxRateType> types;
-
-  @override
-  State<_NewFxTableDialog> createState() => _NewFxTableDialogState();
-}
-
-class _NewFxTableDialogState extends State<_NewFxTableDialog> {
-  final _name = TextEditingController();
-  String? _copy = 'V8';
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('جدول نرخ ارز جدید'),
-      content: SizedBox(
-        width: 460,
-        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-          TextField(
-            controller: _name,
-            autofocus: true,
-            decoration: const InputDecoration(labelText: 'نام جدول', hintText: 'مثلاً: نرخ بودجه ۱۴۰۵، نرخ قرارداد پازنان'),
-            onChanged: (_) => setState(() {}),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String?>(
-            value: _copy,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'مقادیر اولیه'),
-            items: [
-              const DropdownMenuItem<String?>(value: null, child: Text('خالی (همه‌ی نرخ‌ها را خودم وارد می‌کنم)')),
-              for (final t in widget.types) DropdownMenuItem<String?>(value: t.code, child: Text('کپی از «${t.nameFa}»')),
-            ],
-            onChanged: (v) => setState(() => _copy = v),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            'دو سری «یورو به ریال» و «دلار به ریال» با این نام ساخته می‌شوند. بعد از ساخت، در «شاخص‌ها و ارز» مقادیر را سالانه، فصلی یا ماهانه وارد یا از اکسل بچسبانید.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(height: 1.8),
-          ),
-        ]),
-      ),
-      actions: [
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
-        FilledButton(
-          onPressed: _name.text.trim().isEmpty ? null : () => Navigator.pop(context, (_name.text.trim(), _copy)),
-          child: const Text('ساخت جدول'),
-        ),
-      ],
     );
   }
 }
@@ -392,5 +319,100 @@ class _DatabaseCard extends StatelessWidget {
     } catch (e) {
       showSnack(context, 'پشتیبان‌گیری ناموفق: $e', error: true);
     }
+  }
+}
+
+
+/// ظاهر برنامه: حالت روز/شب و رنگ اصلی (پالت).
+class _AppearanceCard extends StatelessWidget {
+  const _AppearanceCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = Theme.of(context);
+    final mode = app.settings.str('theme_mode', 'light');
+    final pal = app.settings.str('theme_palette', 'petrol');
+    return SectionCard(
+      title: 'ظاهر برنامه',
+      subtitle: 'حالت روز و شب و رنگ اصلی؛ بلافاصله اعمال و برای دفعه‌های بعد ذخیره می‌شود',
+      icon: Icons.palette_outlined,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          const SizedBox(width: 160, child: Text('حالت نمایش')),
+          SegmentedButton<String>(
+            showSelectedIcon: false,
+            segments: const [
+              ButtonSegment(value: 'light', icon: Icon(Icons.light_mode_rounded, size: 18), label: Text('روز')),
+              ButtonSegment(value: 'dark', icon: Icon(Icons.dark_mode_rounded, size: 18), label: Text('شب')),
+              ButtonSegment(value: 'system', icon: Icon(Icons.brightness_auto_rounded, size: 18), label: Text('مطابق ویندوز')),
+            ],
+            selected: {mode},
+            onSelectionChanged: (v) => app.setSetting('theme_mode', v.first, reason: 'ظاهر برنامه'),
+          ),
+        ]),
+        const SizedBox(height: 16),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          const SizedBox(width: 160, child: Padding(padding: EdgeInsets.only(top: 8), child: Text('رنگ اصلی'))),
+          Expanded(
+            child: Wrap(spacing: 10, runSpacing: 10, children: [
+              for (final p in appPalettes)
+                _Swatch(
+                  palette: p,
+                  selected: p.code == pal,
+                  onTap: () => app.setSetting('theme_palette', p.code, reason: 'ظاهر برنامه'),
+                ),
+            ]),
+          ),
+        ]),
+        const SizedBox(height: 8),
+        Text('رنگ‌های ارزها (یورو آبی، دلار سبز، ریال/تومان قهوه‌ای) در همه‌ی پالت‌ها ثابت می‌مانند.',
+            style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+      ]),
+    );
+  }
+}
+
+class _Swatch extends StatelessWidget {
+  const _Swatch({required this.palette, required this.selected, required this.onTap});
+  final AppPalette palette;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Tooltip(
+      message: palette.nameFa,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          width: 96,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? AppColors.amber : t.colorScheme.outlineVariant, width: selected ? 2 : 1),
+            color: t.colorScheme.surfaceContainerLow,
+          ),
+          child: Column(children: [
+            Row(children: [
+              Expanded(child: Container(height: 26, decoration: BoxDecoration(color: palette.navy, borderRadius: BorderRadius.circular(6)))),
+              const SizedBox(width: 3),
+              Expanded(child: Container(height: 26, decoration: BoxDecoration(color: palette.primary, borderRadius: BorderRadius.circular(6)))),
+              const SizedBox(width: 3),
+              Expanded(child: Container(height: 26, decoration: BoxDecoration(color: palette.accent2, borderRadius: BorderRadius.circular(6)))),
+            ]),
+            const SizedBox(height: 6),
+            Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+              if (selected) const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.amber),
+              if (selected) const SizedBox(width: 4),
+              Text(palette.nameFa, style: t.textTheme.labelMedium?.copyWith(fontWeight: selected ? FontWeight.w800 : null)),
+            ]),
+          ]),
+        ),
+      ),
+    );
   }
 }

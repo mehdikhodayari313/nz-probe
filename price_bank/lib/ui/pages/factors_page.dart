@@ -61,7 +61,7 @@ class FactorsPage extends StatelessWidget {
             defaultVerticalAlignment: TableCellVerticalAlignment.middle,
             children: [
               TableRow(
-                decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
+                decoration: BoxDecoration(color: AppColors.headerBg),
                 children: [for (final h in ['گزینه', 'ضریب اولیه', 'ضریب کالیبره', 'ضریب مورد استفاده', 'شرح']) _c(h, b: true)],
               ),
               for (final r in g.value)

@@ -56,7 +56,7 @@ class UsersPage extends StatelessWidget {
             defaultVerticalAlignment: TableCellVerticalAlignment.middle,
             children: [
               TableRow(
-                decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
+                decoration: BoxDecoration(color: AppColors.headerBg),
                 children: [for (final h in ['رشته', 'مشاهده', 'ویرایش', 'تأیید']) Padding(padding: const EdgeInsets.all(8), child: Text(h, style: const TextStyle(fontWeight: FontWeight.w700)))],
               ),
               for (final d in discs)

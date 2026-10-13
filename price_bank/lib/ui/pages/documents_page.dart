@@ -43,7 +43,7 @@ class DocumentsPage extends StatelessWidget {
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
             TableRow(
-              decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
+              decoration: BoxDecoration(color: AppColors.headerBg),
               children: [for (final h in ['نام پروژه', 'اقلام', 'ظرفیت (بشکه/روز)', 'محل', '']) _c(h, b: true)],
             ),
             for (final p in projects)
@@ -82,7 +82,7 @@ class DocumentsPage extends StatelessWidget {
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
             TableRow(
-              decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
+              decoration: BoxDecoration(color: AppColors.headerBg),
               children: [for (final h in ['پروژه', 'عنوان سند', 'بازنگری', 'سال صدور', 'نرخ تسعیر منبع', 'قیمت‌ها', '']) _c(h, b: true)],
             ),
             for (final d in docs)

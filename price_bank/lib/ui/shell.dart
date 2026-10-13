@@ -16,7 +16,7 @@ import 'pages/users_page.dart';
 import 'theme.dart';
 
 class _Dest {
-  const _Dest(this.icon, this.selectedIcon, this.label, this.builder, {this.section});
+  const _Dest(this.icon, this.selectedIcon, this.label, this.builder, {this.section, this.step});
   final IconData icon;
   final IconData selectedIcon;
   final String label;
@@ -24,21 +24,24 @@ class _Dest {
 
   /// عنوان گروه که بالای این گزینه نمایش داده می‌شود
   final String? section;
+
+  /// شماره‌ی گام «شروع کار» داشبورد
+  final int? step;
 }
 
+// ترتیب منوها = ترتیب گام‌های «شروع کار» داشبورد:
+// ۱ داده‌ها (داشبورد) ← ۲ شاخص‌ها و ارز ← ۳ روش تعدیل ← ۴ تجهیزات و تخمین
 final _destinations = <_Dest>[
   _Dest(Icons.space_dashboard_outlined, Icons.space_dashboard_rounded, 'داشبورد', () => const DashboardPage(),
-      section: 'بانک قیمت'),
+      section: 'گام‌های کار', step: 1),
+  _Dest(Icons.query_stats_outlined, Icons.query_stats_rounded, 'شاخص‌ها و ارز', () => const IndicesPage(), step: 2),
+  _Dest(Icons.science_outlined, Icons.science_rounded, 'روش‌های تعدیل', () => const MethodsPage(), step: 3),
   _Dest(Icons.precision_manufacturing_outlined, Icons.precision_manufacturing_rounded, 'تجهیزات',
-      () => const EquipmentPage()),
-  _Dest(Icons.calculate_outlined, Icons.calculate_rounded, 'تخمین و تعدیل', () => const EstimatorPage(),
-      section: 'محاسبات'),
-  _Dest(Icons.science_outlined, Icons.science_rounded, 'روش‌های تعدیل', () => const MethodsPage()),
-  _Dest(Icons.query_stats_outlined, Icons.query_stats_rounded, 'شاخص‌ها و ارز', () => const IndicesPage()),
-  _Dest(Icons.tune_outlined, Icons.tune_rounded, 'ضرایب', () => const FactorsPage()),
-  _Dest(Icons.folder_open_outlined, Icons.folder_rounded, 'پروژه‌ها و اسناد', () => const DocumentsPage(),
-      section: 'مدیریت'),
-  _Dest(Icons.history_outlined, Icons.history_rounded, 'تاریخچه', () => const HistoryPage()),
+      () => const EquipmentPage(), step: 4),
+  _Dest(Icons.calculate_outlined, Icons.calculate_rounded, 'تخمین و تعدیل', () => const EstimatorPage(), step: 4),
+  _Dest(Icons.tune_outlined, Icons.tune_rounded, 'ضرایب', () => const FactorsPage(), section: 'داده‌های پایه'),
+  _Dest(Icons.folder_open_outlined, Icons.folder_rounded, 'پروژه‌ها و اسناد', () => const DocumentsPage()),
+  _Dest(Icons.history_outlined, Icons.history_rounded, 'تاریخچه', () => const HistoryPage(), section: 'مدیریت'),
   _Dest(Icons.group_outlined, Icons.group_rounded, 'کاربران', () => const UsersPage()),
   _Dest(Icons.settings_outlined, Icons.settings_rounded, 'تنظیمات', () => const SettingsPage()),
 ];
@@ -50,7 +53,7 @@ class AppShell extends StatefulWidget {
   /// تغییر صفحه از داخل صفحه‌های دیگر.
   static void go(BuildContext context, int index) => context.findAncestorStateOfType<_AppShellState>()?._go(index);
 
-  static const dashboard = 0, equipment = 1, estimator = 2, methods = 3, indices = 4, factors = 5, documents = 6,
+  static const dashboard = 0, indices = 1, methods = 2, equipment = 3, estimator = 4, factors = 5, documents = 6,
       history = 7, users = 8, settings = 9;
 
   static const sidebarKey = Key('sidebar');
@@ -68,7 +71,7 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: LayoutBuilder(builder: (context, c) {
-        final compact = c.maxWidth < 1180;
+        final compact = c.maxWidth < 1000;
         return Row(children: [
           _Sidebar(index: _index, onSelect: _go, compact: compact),
           Expanded(
@@ -76,7 +79,15 @@ class _AppShellState extends State<AppShell> {
               _TopBar(title: _destinations[_index].label, icon: _destinations[_index].selectedIcon),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 180),
+                  duration: const Duration(milliseconds: 260),
+                  switchInCurve: Curves.easeOutCubic,
+                  transitionBuilder: (child, anim) => FadeTransition(
+                    opacity: anim,
+                    child: SlideTransition(
+                      position: Tween(begin: const Offset(0, 0.015), end: Offset.zero).animate(anim),
+                      child: child,
+                    ),
+                  ),
                   child: KeyedSubtree(key: ValueKey(_index), child: _destinations[_index].builder()),
                 ),
               ),
@@ -88,6 +99,8 @@ class _AppShellState extends State<AppShell> {
   }
 }
 
+/// نوار کناری: رنگ یکدست تیره، متن سفید، گزینه‌ی فعال با نوار کهربایی.
+/// در پنجره‌ی باریک، نام هر گزینه زیر آیکن نوشته می‌شود (هیچ‌وقت فقط آیکن نیست).
 class _Sidebar extends StatelessWidget {
   const _Sidebar({required this.index, required this.onSelect, required this.compact});
   final int index;
@@ -98,31 +111,25 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final t = Theme.of(context);
-    final w = compact ? 84.0 : 224.0;
+    final w = compact ? 96.0 : 220.0;
     return Container(
       key: AppShell.sidebarKey,
       width: w,
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppColors.navy, AppColors.petrolDark],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ),
-      ),
+      color: AppColors.navy,
       child: Column(children: [
         // نشان برنامه
         Padding(
-          padding: EdgeInsets.fromLTRB(compact ? 0 : 18, 22, compact ? 0 : 18, 18),
+          padding: EdgeInsets.fromLTRB(compact ? 0 : 16, 20, compact ? 0 : 16, 14),
           child: Row(mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
             Container(
-              width: 44,
-              height: 44,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [AppColors.amber, Color(0xFFF4C46B)]),
-                borderRadius: BorderRadius.circular(13),
-                boxShadow: [BoxShadow(color: AppColors.amber.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))],
+                color: AppColors.amber,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: AppColors.amber.withValues(alpha: 0.45), blurRadius: 16)],
               ),
-              child: const Icon(Icons.water_drop_rounded, color: AppColors.navy, size: 26),
+              child: Icon(Icons.water_drop_rounded, color: AppColors.navy, size: 25),
             ),
             if (!compact) ...[
               const SizedBox(width: 12),
@@ -131,34 +138,40 @@ class _Sidebar extends StatelessWidget {
                   Text('بانک قیمت',
                       style: t.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
                   Text('تجهیزات نمک‌زدایی',
-                      style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.6))),
+                      style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.65))),
                 ]),
               ),
             ],
           ]),
         ),
         Expanded(
-          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 10), children: [
+          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 8), children: [
             for (var i = 0; i < _destinations.length; i++) ...[
               if (_destinations[i].section != null)
                 Padding(
-                  padding: EdgeInsets.fromLTRB(compact ? 0 : 10, i == 0 ? 0 : 14, compact ? 0 : 10, 6),
+                  padding: EdgeInsets.fromLTRB(compact ? 4 : 10, i == 0 ? 2 : 14, compact ? 4 : 10, 6),
                   child: compact
-                      ? Divider(color: Colors.white.withValues(alpha: 0.12), height: 1)
+                      ? Divider(color: Colors.white.withValues(alpha: 0.15), height: 1)
                       : Text(_destinations[i].section!,
                           style: t.textTheme.labelSmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.45), fontWeight: FontWeight.w700)),
+                              color: Colors.white.withValues(alpha: 0.55), fontWeight: FontWeight.w700)),
                 ),
-              _NavItem(key: ValueKey('nav-$i'), dest: _destinations[i], selected: i == index, compact: compact, onTap: () => onSelect(i)),
+              _NavItem(
+                key: ValueKey('nav-$i'),
+                dest: _destinations[i],
+                selected: i == index,
+                compact: compact,
+                onTap: () => onSelect(i),
+              ),
             ],
           ]),
         ),
         // کاربر جاری
         Container(
-          margin: const EdgeInsets.all(10),
+          margin: const EdgeInsets.all(8),
           padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 10, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.06),
+            color: Colors.white.withValues(alpha: 0.07),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
@@ -175,8 +188,8 @@ class _Sidebar extends StatelessWidget {
                   Text(app.user.displayName,
                       overflow: TextOverflow.ellipsis,
                       style: t.textTheme.labelLarge?.copyWith(color: Colors.white)),
-                  Text('نسخه‌ی ۰٫۲ · آفلاین',
-                      style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.5))),
+                  Text('نسخه‌ی ۰٫۳ · آفلاین',
+                      style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.55))),
                 ]),
               ),
             ],
@@ -204,8 +217,24 @@ class _NavItemState extends State<_NavItem> {
   @override
   Widget build(BuildContext context) {
     final sel = widget.selected;
-    final fg = sel ? Colors.white : Colors.white.withValues(alpha: _hover ? 0.95 : 0.72);
-    final item = MouseRegion(
+    final fg = sel ? Colors.white : Colors.white.withValues(alpha: _hover ? 1 : 0.8);
+    final step = widget.dest.step;
+    final icon = Icon(sel ? widget.dest.selectedIcon : widget.dest.icon, color: sel ? AppColors.amber : fg, size: 21);
+    final badge = step == null
+        ? null
+        : Container(
+            width: 18,
+            height: 18,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: sel ? AppColors.amber : Colors.white.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Text(fa(step),
+                style: TextStyle(
+                    fontSize: 10.5, fontWeight: FontWeight.w800, color: sel ? AppColors.navy : Colors.white, height: 1.1)),
+          );
+    return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
       onExit: (_) => setState(() => _hover = false),
       cursor: SystemMouseCursors.click,
@@ -213,38 +242,61 @@ class _NavItemState extends State<_NavItem> {
         onTap: widget.onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 160),
-          height: 44,
+          height: widget.compact ? 58 : 44,
           margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
             color: sel
-                ? Colors.white.withValues(alpha: 0.13)
-                : (_hover ? Colors.white.withValues(alpha: 0.06) : Colors.transparent),
+                ? Colors.white.withValues(alpha: 0.14)
+                : (_hover ? Colors.white.withValues(alpha: 0.07) : Colors.transparent),
             borderRadius: BorderRadius.circular(11),
           ),
-          child: Row(mainAxisAlignment: widget.compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 160),
-              width: 4,
-              height: sel ? 22 : 0,
-              decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(4)),
-            ),
-            SizedBox(width: widget.compact ? 0 : 10),
-            Icon(sel ? widget.dest.selectedIcon : widget.dest.icon, color: sel ? AppColors.amber : fg, size: 21),
-            if (!widget.compact) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(widget.dest.label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        color: fg, fontSize: 13.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+          child: Stack(children: [
+            PositionedDirectional(
+              start: 0,
+              top: 0,
+              bottom: 0,
+              child: Center(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  width: 4,
+                  height: sel ? 24 : 0,
+                  decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(4)),
+                ),
               ),
-            ] else
-              const SizedBox(width: 4),
+            ),
+            if (widget.compact)
+              Center(
+                child: Column(mainAxisSize: MainAxisSize.min, children: [
+                  Row(mainAxisSize: MainAxisSize.min, children: [
+                    icon,
+                    if (badge != null) ...[const SizedBox(width: 3), badge],
+                  ]),
+                  const SizedBox(height: 3),
+                  Text(widget.dest.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: fg, fontSize: 10.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+                ]),
+              )
+            else
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
+                child: Row(children: [
+                  icon,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(widget.dest.label,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(color: fg, fontSize: 13.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+                  ),
+                  if (badge != null)
+                    Tooltip(message: 'گام ${fa(step)} از «شروع کار»', child: badge),
+                ]),
+              ),
           ]),
         ),
       ),
     );
-    return widget.compact ? Tooltip(message: widget.dest.label, child: Semantics(label: widget.dest.label, child: item)) : item;
   }
 }
 
@@ -323,7 +375,7 @@ class _TopBar extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(6)),
               child: Text(method.code,
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppColors.navy)),
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppColors.navy)),
             ),
             const SizedBox(width: 4),
             Icon(Icons.chevron_left_rounded, size: 18, color: t.colorScheme.outline),

@@ -106,7 +106,8 @@ class IndicesRepo {
 
   /// ورود گروهی از متن چسبانده‌شده (دو ستون: دوره و مقدار؛ جداکننده تب، ویرگول یا فاصله).
   /// برمی‌گرداند (تعداد ثبت‌شده، خطوط نامعتبر).
-  (int, List<String>) importText(String code, String text, {String status = 'manual', String? source}) {
+  /// [scale]: ضریب تبدیل مقدار چسبانده‌شده (مثلاً ۰٫۰۱ برای نرخ‌هایی که به درصد وارد می‌شوند).
+  (int, List<String>) importText(String code, String text, {String status = 'manual', String? source, double scale = 1}) {
     final bad = <String>[];
     var n = 0;
     db.transaction(() {
@@ -132,7 +133,7 @@ class IndicesRepo {
           bad.add(raw);
           continue;
         }
-        upsert(code, p, v, status: status, source: source, reason: 'ورود گروهی');
+        upsert(code, p, v * scale, status: status, source: source, reason: 'ورود گروهی');
         n++;
       }
     });

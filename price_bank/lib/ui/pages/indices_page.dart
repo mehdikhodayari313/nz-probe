@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_state.dart';
 import '../../core/calc/series.dart';
 import '../../core/repo/indices_repo.dart';
+import '../../core/repo/settings_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -54,9 +55,20 @@ class _IndicesPageState extends State<IndicesPage> {
             child: ListView(children: [
               for (final g in groups.entries) ...[
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  child: Text(indexGroupFa[g.key] ?? g.key,
-                      style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.primary, fontWeight: FontWeight.w700)),
+                  padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 8, 4),
+                  child: Row(children: [
+                    Expanded(
+                      child: Text(indexGroupFa[g.key] ?? g.key,
+                          style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.primary, fontWeight: FontWeight.w700)),
+                    ),
+                    if (g.key == 'fx' && app.user.isAdmin)
+                      TextButton.icon(
+                        key: const ValueKey('add-fx-table'),
+                        onPressed: () => _addFxTable(context),
+                        icon: const Icon(Icons.add_rounded, size: 18),
+                        label: const Text('جدول نرخ ارز'),
+                      ),
+                  ]),
                 ),
                 for (final s in g.value)
                   ListTile(
@@ -79,9 +91,33 @@ class _IndicesPageState extends State<IndicesPage> {
       Expanded(
         child: sel == null
             ? const EmptyState(icon: Icons.query_stats_rounded, title: 'سری‌ای انتخاب نشده')
-            : _SeriesDetail(key: ValueKey(sel.code), info: sel),
+            : _SeriesDetail(
+                key: ValueKey(sel.code),
+                info: sel,
+                onDeleted: () => setState(() => _selected = null),
+              ),
       ),
     ]);
+  }
+
+  /// ساخت جدول نرخ ارز جدید (دو سری یورو و دلار) و رفتن مستقیم به آن برای ورود مقادیر.
+  Future<void> _addFxTable(BuildContext context) async {
+    final app = AppScope.read(context);
+    final types = app.pb.settingsRepo.fxRateTypes();
+    final res = await showDialog<(String, String?, double?, double?)>(
+        context: context, builder: (_) => _NewFxTableDialog(types: types, year: app.settings.targetYear));
+    if (res == null || !context.mounted) return;
+    try {
+      final code = app.pb.settingsRepo.createFxType(res.$1, copyFrom: res.$2);
+      final y = Period.year(app.settings.targetYear);
+      if (res.$3 != null) app.pb.indices.upsert('FX_EUR_$code', y, res.$3!, status: 'manual', reason: 'ساخت جدول');
+      if (res.$4 != null) app.pb.indices.upsert('FX_USD_$code', y, res.$4!, status: 'manual', reason: 'ساخت جدول');
+      app.dataChanged(calcInputs: true);
+      setState(() => _selected = 'FX_EUR_$code');
+      showSnack(context, 'جدول «${res.$1}» ساخت شد. مقادیر سال‌های دیگر را همین‌جا وارد کنید؛ از نوار بالا قابل انتخاب است.');
+    } on ArgumentError catch (e) {
+      showSnack(context, '${e.message}', error: true);
+    }
   }
 
   Future<void> _addSeries(BuildContext context) async {
@@ -147,23 +183,47 @@ class _IndicesPageState extends State<IndicesPage> {
 }
 
 class _SeriesDetail extends StatefulWidget {
-  const _SeriesDetail({super.key, required this.info});
+  const _SeriesDetail({super.key, required this.info, required this.onDeleted});
   final IndexSeriesInfo info;
+  final VoidCallback onDeleted;
 
   @override
   State<_SeriesDetail> createState() => _SeriesDetailState();
 }
 
 class _SeriesDetailState extends State<_SeriesDetail> {
-  final _period = TextEditingController();
+  final _year = TextEditingController();
   final _value = TextEditingController();
   String _status = 'manual';
 
+  /// بازه‌ی دوره: Y = کل سال، Q1..Q4 = فصل، M1..M12 = ماه
+  String _span = 'Y';
+
   @override
   void dispose() {
-    _period.dispose();
+    _year.dispose();
     _value.dispose();
     super.dispose();
+  }
+
+  /// کد جدول نرخ ارز اگر این سری متعلق به یک جدول نرخ ارز باشد (FX_EUR_<کد>).
+  String? get _fxTable {
+    final m = RegExp(r'^FX_(EUR|USD)_(.+)$').firstMatch(widget.info.code);
+    return m?.group(2);
+  }
+
+  Future<void> _deleteFxTable(BuildContext context, String code) async {
+    final app = AppScope.read(context);
+    final ft = app.pb.settingsRepo.fxRateTypes().where((f) => f.code == code).firstOrNull;
+    if (ft == null) return;
+    final ok = await confirm(context, 'حذف جدول «${ft.nameFa}»',
+        'هر دو سری یورو و دلار این جدول با همه‌ی مقادیرشان حذف می‌شوند. اگر این جدول انتخاب شده باشد، «جدول پیش‌فرض» جایگزین می‌شود. حذف در تاریخچه ثبت می‌شود.',
+        ok: 'حذف جدول');
+    if (!ok || !context.mounted) return;
+    app.pb.settingsRepo.deleteFxType(code);
+    app.dataChanged(calcInputs: true);
+    widget.onDeleted();
+    showSnack(context, 'جدول «${ft.nameFa}» حذف شد.');
   }
 
   @override
@@ -186,6 +246,14 @@ class _SeriesDetailState extends State<_SeriesDetail> {
           s.calendar == 'gregorian' ? 'تقویم میلادی' : 'تقویم شمسی',
         ].join(' · '),
         actions: [
+          if (_fxTable != null && app.user.isAdmin &&
+              app.pb.settingsRepo.fxRateTypes().any((f) => f.code == _fxTable && f.userDefined))
+            OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(foregroundColor: Tones.bad(context)),
+              onPressed: () => _deleteFxTable(context, _fxTable!),
+              icon: const Icon(Icons.delete_outline_rounded),
+              label: const Text('حذف این جدول نرخ ارز'),
+            ),
           if (canEdit)
             OutlinedButton.icon(
               onPressed: () => _paste(context),
@@ -200,7 +268,8 @@ class _SeriesDetailState extends State<_SeriesDetail> {
         initiallyOpen: false,
         lines: [
           'هر مقدار برای یک «دوره» ثبت می‌شود: سال (۱۴۰۴)، فصل (1404Q1) یا ماه (1404-03). در محاسبه، اول مقدار ماه، بعد فصل و بعد سال جستجو می‌شود.',
-          'نرخ‌های ارز در «جدول»‌های جداگانه‌اند: «جدول پیش‌فرض» (داده‌ی فایل v8)، «بازار آزاد»، «مرکز مبادله / نیما» و هر جدولی که خودتان در «تنظیمات» بسازید. جدول مورد استفاده را از نوار بالا انتخاب کنید.',
+          'نرخ‌های ارز در «جدول»‌های جداگانه‌اند: «جدول پیش‌فرض» (داده‌ی فایل v8)، «بازار آزاد»، «مرکز مبادله / نیما» و هر جدولی که خودتان با دکمه‌ی «+ جدول نرخ ارز» (ستون کناری همین صفحه) بسازید. جدول مورد استفاده را از نوار بالا انتخاب کنید.',
+          'نرخ‌های رشد (مثل تورم) را به درصد وارد کنید: برای ۳۵٪ فقط ۳۵ بنویسید.',
           'PPI بخشی ایران (مرکز آمار، پایه ۱۳۹۵=۱۰۰) برای تجهیزات ساخت داخل (مخزن، ظرف، سازه، برق و ابزار دقیق) در نظر گرفته شده؛ مقادیر «نیاز به تأیید» را با PDF مرکز آمار تطبیق دهید.',
           'هر ویرایش با مقدار قبلی، کاربر و زمان در تاریخچه ثبت می‌شود. «چسباندن از اکسل»: دو ستون دوره و مقدار را از اکسل کپی و اینجا بچسبانید.',
           if (s.source != null) 'منبع این سری: ${s.source}',
@@ -210,7 +279,7 @@ class _SeriesDetailState extends State<_SeriesDetail> {
         SectionCard(
           title: 'روند',
           icon: Icons.timeline_rounded,
-          child: SizedBox(height: 180, child: _LineChart(values: values)),
+          child: SizedBox(height: 200, child: _LineChart(values: values, isRate: s.isRate)),
         ),
       const SizedBox(height: 14),
       if (canEdit)
@@ -219,11 +288,26 @@ class _SeriesDetailState extends State<_SeriesDetail> {
           icon: Icons.edit_calendar_rounded,
           child: Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
             SizedBox(
-              width: 200,
+              width: 120,
               child: TextField(
-                controller: _period,
+                controller: _year,
                 textDirection: TextDirection.ltr,
-                decoration: const InputDecoration(labelText: 'دوره', hintText: '1404 یا 1404Q1 یا 1404-03'),
+                decoration: InputDecoration(labelText: s.calendar == 'gregorian' ? 'سال میلادی' : 'سال', hintText: s.calendar == 'gregorian' ? '2025' : '1404'),
+              ),
+            ),
+            SizedBox(
+              width: 170,
+              child: DropdownButtonFormField<String>(
+                value: _span,
+                isExpanded: true,
+                menuMaxHeight: 420,
+                decoration: const InputDecoration(labelText: 'بازه'),
+                items: [
+                  const DropdownMenuItem(value: 'Y', child: Text('کل سال')),
+                  for (var q = 1; q <= 4; q++) DropdownMenuItem(value: 'Q$q', child: Text('فصل ${fa(q)}')),
+                  for (var m = 1; m <= 12; m++) DropdownMenuItem(value: 'M$m', child: Text('ماه ${jalaliMonthNames[m - 1]}')),
+                ],
+                onChanged: (v) => setState(() => _span = v ?? 'Y'),
               ),
             ),
             SizedBox(
@@ -231,7 +315,11 @@ class _SeriesDetailState extends State<_SeriesDetail> {
               child: TextField(
                 controller: _value,
                 textDirection: TextDirection.ltr,
-                decoration: InputDecoration(labelText: s.isRate ? 'نرخ (مثلاً 0.35 = ۳۵٪)' : 'مقدار'),
+                decoration: InputDecoration(
+                  labelText: s.isRate ? 'نرخ (درصد)' : 'مقدار',
+                  hintText: s.isRate ? 'مثلاً 35 یعنی ۳۵٪' : null,
+                  suffixText: s.isRate ? '٪' : null,
+                ),
               ),
             ),
             SizedBox(
@@ -263,7 +351,7 @@ class _SeriesDetailState extends State<_SeriesDetail> {
                 defaultVerticalAlignment: TableCellVerticalAlignment.middle,
                 children: [
                   TableRow(
-                    decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
+                    decoration: BoxDecoration(color: AppColors.headerBg),
                     children: [for (final h in ['دوره', 'مقدار', 'وضعیت', 'منبع / یادداشت', 'آخرین ویرایش', '']) _c(h, b: true)],
                   ),
                   for (final v in values.reversed)
@@ -309,12 +397,21 @@ class _SeriesDetailState extends State<_SeriesDetail> {
       );
 
   void _add(BuildContext context) {
-    final pp = Period.tryParse(_latin(_period.text));
-    final v = parseUserNumber(_value.text);
-    if (pp == null || v == null) {
-      showSnack(context, 'دوره (مثل 1404، 1404Q1 یا 1404-03) و مقدار عددی را درست وارد کنید.', error: true);
+    final y = int.tryParse(_latin(_year.text.trim()));
+    final raw = parseUserNumber(_value.text);
+    if (y == null || y < 1300 || y > 2100) {
+      showSnack(context, 'سال را به شکل چهاررقمی وارد کنید (مثلاً ۱۴۰۴).', error: true);
       return;
     }
+    if (raw == null) {
+      showSnack(context, 'مقدار عددی را وارد کنید.', error: true);
+      return;
+    }
+    final pp = _span == 'Y'
+        ? Period.year(y)
+        : (_span.startsWith('Q') ? Period.quarter(y, int.parse(_span.substring(1))) : Period.month(y, int.parse(_span.substring(1))));
+    // نرخ رشد به درصد وارد می‌شود و به کسر ذخیره می‌شود
+    final v = widget.info.isRate ? raw / 100 : raw;
     final app = AppScope.read(context);
     app.pb.indices.upsert(widget.info.code, pp, v, status: _status, reason: 'ورود دستی');
     app.dataChanged(calcInputs: true);
@@ -344,8 +441,10 @@ class _SeriesDetailState extends State<_SeriesDetail> {
         content: SizedBox(
           width: 520,
           child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text('دو ستون «دوره» و «مقدار» را از اکسل کپی کنید و اینجا بچسبانید. هر خط یک مقدار. مقادیر موجود همان دوره جایگزین می‌شوند.',
-                style: TextStyle(height: 1.8)),
+            Text(
+                'دو ستون «دوره» و «مقدار» را از اکسل کپی کنید و اینجا بچسبانید. هر خط یک مقدار. مقادیر موجود همان دوره جایگزین می‌شوند.'
+                '${widget.info.isRate ? '\nنرخ‌ها را به درصد بچسبانید (۳۵ یعنی ۳۵٪).' : ''}',
+                style: const TextStyle(height: 1.8)),
             const SizedBox(height: 10),
             TextField(
               controller: ctl,
@@ -363,58 +462,195 @@ class _SeriesDetailState extends State<_SeriesDetail> {
     );
     if (text == null || text.trim().isEmpty || !context.mounted) return;
     final app = AppScope.read(context);
-    final (n, bad) = app.pb.indices.importText(widget.info.code, text);
+    final (n, bad) = app.pb.indices.importText(widget.info.code, text, scale: widget.info.isRate ? 0.01 : 1);
     app.dataChanged(calcInputs: true);
     showSnack(context, '${fa(n)} مقدار ثبت شد${bad.isEmpty ? '' : '؛ ${fa(bad.length)} خط نامعتبر کنار گذاشته شد'}.',
         error: bad.isNotEmpty && n == 0);
   }
 }
 
-/// نمودار خطی ساده (بدون کتابخانه‌ی خارجی).
-class _LineChart extends StatelessWidget {
-  const _LineChart({required this.values});
-  final List<IndexValue> values;
+/// ساخت جدول نرخ ارز جدید: نام، مقادیر اولیه (خالی یا کپی) و در صورت تمایل نرخ سال هدف.
+class _NewFxTableDialog extends StatefulWidget {
+  const _NewFxTableDialog({required this.types, required this.year});
+  final List<FxRateType> types;
+  final int year;
+
+  @override
+  State<_NewFxTableDialog> createState() => _NewFxTableDialogState();
+}
+
+class _NewFxTableDialogState extends State<_NewFxTableDialog> {
+  final _name = TextEditingController();
+  final _eur = TextEditingController();
+  final _usd = TextEditingController();
+  String? _copy = 'V8';
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _eur.dispose();
+    _usd.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    return CustomPaint(
-      painter: _ChartPainter(
-        values: values,
-        line: t.colorScheme.primary,
-        grid: t.colorScheme.outlineVariant,
-        text: t.colorScheme.onSurfaceVariant,
+    return AlertDialog(
+      title: const Row(children: [
+        Icon(Icons.currency_exchange_rounded),
+        SizedBox(width: 8),
+        Text('جدول نرخ ارز جدید'),
+      ]),
+      content: SizedBox(
+        width: 480,
+        child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          TextField(
+            controller: _name,
+            autofocus: true,
+            decoration: const InputDecoration(labelText: 'نام جدول', hintText: 'مثلاً: نرخ بودجه ۱۴۰۵، نرخ قرارداد پازنان'),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String?>(
+            value: _copy,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'مقادیر سال‌های دیگر'),
+            items: [
+              const DropdownMenuItem<String?>(value: null, child: Text('خالی (همه را خودم وارد می‌کنم)')),
+              for (final ft in widget.types) DropdownMenuItem<String?>(value: ft.code, child: Text('کپی از «${ft.nameFa}»')),
+            ],
+            onChanged: (v) => setState(() => _copy = v),
+          ),
+          const SizedBox(height: 12),
+          Text('نرخ سال ${fa(widget.year)} (اختیاری — همین حالا)', style: t.textTheme.labelLarge),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(
+              child: TextField(
+                controller: _eur,
+                textDirection: TextDirection.ltr,
+                decoration: const InputDecoration(labelText: 'یورو (ریال)', hintText: '1130000'),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: TextField(
+                controller: _usd,
+                textDirection: TextDirection.ltr,
+                decoration: const InputDecoration(labelText: 'دلار (ریال)', hintText: '1000000'),
+              ),
+            ),
+          ]),
+          const SizedBox(height: 10),
+          Text(
+            'دو سری «یورو به ریال» و «دلار به ریال» با این نام ساخته می‌شوند و بلافاصله همین‌جا برای ورود یا اصلاح مقادیر باز می‌شوند.',
+            style: t.textTheme.bodySmall?.copyWith(height: 1.8, color: t.colorScheme.onSurfaceVariant),
+          ),
+        ]),
       ),
-      size: Size.infinite,
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+        FilledButton(
+          onPressed: _name.text.trim().isEmpty
+              ? null
+              : () => Navigator.pop(
+                  context, (_name.text.trim(), _copy, parseUserNumber(_eur.text), parseUserNumber(_usd.text))),
+          child: const Text('ساخت جدول'),
+        ),
+      ],
     );
   }
 }
 
-class _ChartPainter extends CustomPainter {
-  _ChartPainter({required this.values, required this.line, required this.grid, required this.text});
+/// نمودار خطی تعاملی (بدون کتابخانه‌ی خارجی): نشانگر ماوس نزدیک‌ترین نقطه را با مقدارش نشان می‌دهد.
+class _LineChart extends StatefulWidget {
+  const _LineChart({required this.values, required this.isRate});
   final List<IndexValue> values;
-  final Color line, grid, text;
+  final bool isRate;
+
+  @override
+  State<_LineChart> createState() => _LineChartState();
+}
+
+class _LineChartState extends State<_LineChart> {
+  int? _hover;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return LayoutBuilder(builder: (context, c) {
+      final n = widget.values.length;
+      const padL = 64.0, padR = 8.0;
+      final w = c.maxWidth - padL - padR;
+      int? nearest(Offset p) {
+        if (n == 0) return null;
+        final x = p.dx - padL;
+        final i = n == 1 ? 0 : (x / w * (n - 1)).round();
+        return i.clamp(0, n - 1);
+      }
+
+      return MouseRegion(
+        onHover: (e) => setState(() => _hover = nearest(e.localPosition)),
+        onExit: (_) => setState(() => _hover = null),
+        child: CustomPaint(
+          painter: _ChartPainter(
+            values: widget.values,
+            isRate: widget.isRate,
+            hover: _hover,
+            line: AppColors.petrol,
+            accent: AppColors.amber,
+            grid: t.colorScheme.outlineVariant,
+            text: t.colorScheme.onSurfaceVariant,
+            tipBg: AppColors.navy,
+          ),
+          size: Size.infinite,
+        ),
+      );
+    });
+  }
+}
+
+class _ChartPainter extends CustomPainter {
+  _ChartPainter({
+    required this.values,
+    required this.isRate,
+    required this.hover,
+    required this.line,
+    required this.accent,
+    required this.grid,
+    required this.text,
+    required this.tipBg,
+  });
+  final List<IndexValue> values;
+  final bool isRate;
+  final int? hover;
+  final Color line, accent, grid, text, tipBg;
+
+  String _fmt(double v) => isRate ? '${faNum(v * 100, decimals: 1)}٪' : fa(compactNum(v));
 
   @override
   void paint(Canvas canvas, Size size) {
-    const padL = 64.0, padB = 22.0, padT = 8.0, padR = 8.0;
+    const padL = 64.0, padB = 22.0, padT = 10.0, padR = 8.0;
     final w = size.width - padL - padR, h = size.height - padB - padT;
     final vs = values.map((v) => v.value).toList();
     var lo = vs.reduce((a, b) => a < b ? a : b), hi = vs.reduce((a, b) => a > b ? a : b);
     if (hi == lo) {
-      hi += 1;
-      lo -= 1;
+      hi += hi.abs() * 0.1 + 1e-9;
+      lo -= lo.abs() * 0.1 + 1e-9;
     }
-    final gp = Paint()..color = grid..strokeWidth = 1;
-    TextPainter tp(String s) => TextPainter(
-          text: TextSpan(text: s, style: TextStyle(color: text, fontSize: 10, fontFamily: 'Vazirmatn')),
-          textDirection: TextDirection.ltr,
+    final gp = Paint()
+      ..color = grid
+      ..strokeWidth = 1;
+    TextPainter tp(String s, {Color? color, double size = 10, FontWeight? weight}) => TextPainter(
+          text: TextSpan(
+              text: s, style: TextStyle(color: color ?? text, fontSize: size, fontFamily: 'Vazirmatn', fontWeight: weight)),
+          textDirection: TextDirection.rtl,
         )..layout();
     for (var i = 0; i <= 3; i++) {
       final y = padT + h * i / 3;
       canvas.drawLine(Offset(padL, y), Offset(padL + w, y), gp);
-      final v = hi - (hi - lo) * i / 3;
-      final p = tp(fa(compactNum(v)));
+      final p = tp(_fmt(hi - (hi - lo) * i / 3));
       p.paint(canvas, Offset(padL - p.width - 6, y - p.height / 2));
     }
     // محور افقی چپ‌به‌راست (زمان) حتی در رابط راست‌به‌چپ
@@ -432,18 +668,39 @@ class _ChartPainter extends CustomPainter {
       ..lineTo(pts.last.dx, padT + h)
       ..lineTo(pts.first.dx, padT + h)
       ..close();
-    canvas.drawPath(fill, Paint()..color = line.withValues(alpha: 0.08));
-    canvas.drawPath(path, Paint()..color = line..strokeWidth = 2..style = PaintingStyle.stroke);
+    canvas.drawPath(fill, Paint()..color = line.withValues(alpha: 0.10));
+    canvas.drawPath(
+        path,
+        Paint()
+          ..color = line
+          ..strokeWidth = 2.2
+          ..style = PaintingStyle.stroke);
     for (final p in pts) {
-      canvas.drawCircle(p, 2.6, Paint()..color = line);
+      canvas.drawCircle(p, 2.8, Paint()..color = line);
     }
     final step = (values.length / 8).ceil().clamp(1, 1000);
     for (var i = 0; i < values.length; i += step) {
       final p = tp(fa(values[i].period.key));
       p.paint(canvas, Offset(pts[i].dx - p.width / 2, padT + h + 5));
     }
+    // نقطه‌ی زیر نشانگر ماوس
+    final hv = hover;
+    if (hv != null && hv >= 0 && hv < pts.length) {
+      final p = pts[hv];
+      canvas.drawLine(Offset(p.dx, padT), Offset(p.dx, padT + h), Paint()..color = accent.withValues(alpha: 0.6));
+      canvas.drawCircle(p, 7, Paint()..color = accent.withValues(alpha: 0.3));
+      canvas.drawCircle(p, 4.5, Paint()..color = accent);
+      final label = tp('${fa(values[hv].period.label)}:  ${isRate ? _fmt(values[hv].value) : faSmart(values[hv].value)}',
+          color: Colors.white, size: 11.5, weight: FontWeight.w700);
+      final bw = label.width + 16, bh = label.height + 10;
+      var bx = p.dx - bw / 2;
+      bx = bx.clamp(padL, size.width - bw);
+      final by = (p.dy - bh - 10).clamp(0.0, size.height - bh);
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(bx, by, bw, bh), const Radius.circular(7)), Paint()..color = tipBg);
+      label.paint(canvas, Offset(bx + 8, by + 5));
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter old) => old.values != values;
+  bool shouldRepaint(covariant _ChartPainter old) => old.values != values || old.hover != hover || old.line != line;
 }

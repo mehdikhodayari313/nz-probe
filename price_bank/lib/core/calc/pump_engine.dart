@@ -65,6 +65,21 @@ class PumpCalcSettings {
   final double? eurTargetOverride;
   final double? usdTargetOverride;
 
+  PumpCalcSettings copyWith({double? pumpEfficiency, String? method, double? eurTargetOverride}) => PumpCalcSettings(
+        targetYear: targetYear,
+        targetMonth: targetMonth,
+        fxType: fxType,
+        ppiSeries: ppiSeries,
+        floorEur: floorEur,
+        floorBaseYear: floorBaseYear,
+        costExponent: costExponent,
+        pumpEfficiency: pumpEfficiency ?? this.pumpEfficiency,
+        eurCheckLimit: eurCheckLimit,
+        eurTargetOverride: eurTargetOverride ?? this.eurTargetOverride,
+        usdTargetOverride: usdTargetOverride,
+        method: method ?? this.method,
+      );
+
   String get fxEurCode => 'FX_EUR_$fxType';
   String get fxUsdCode => 'FX_USD_$fxType';
 }

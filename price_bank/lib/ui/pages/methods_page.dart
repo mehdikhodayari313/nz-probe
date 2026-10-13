@@ -71,7 +71,7 @@ class _MethodsPageState extends State<MethodsPage> {
       PageHeader(
         icon: Icons.science_rounded,
         title: 'روش‌های تعدیل قیمت',
-        subtitle: 'روش فعال: ${active.code} — ${active.nameFa} · پیش‌فرض و پیشنهادی: M6',
+        subtitle: 'روش فعال: ${active.code} (${active.nameFa}) · پیش‌فرض و پیشنهادی: M6 (PPI یورو + کف قیمت)',
         actions: [
           if (active.code != defaultMethodCode && canEdit)
             OutlinedButton.icon(
@@ -93,6 +93,28 @@ class _MethodsPageState extends State<MethodsPage> {
           'تغییر روش روی همه‌ی صفحه‌ها (تجهیزات، داشبورد، تخمین و ماشین‌حساب) اثر دارد و در تاریخچه ثبت می‌شود.',
         ],
       ),
+      SectionCard(
+        title: 'کد روش‌ها',
+        subtitle: 'در همه‌ی صفحه‌ها روش‌ها با این کدها نام برده می‌شوند',
+        icon: Icons.label_outline_rounded,
+        child: Wrap(spacing: 8, runSpacing: 8, children: [
+          for (final m in escalationMethods)
+            Container(
+              padding: const EdgeInsetsDirectional.fromSTEB(4, 4, 12, 4),
+              decoration: BoxDecoration(
+                color: m.code == active.code ? AppColors.amberSoft : t.colorScheme.surfaceContainerLow,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: m.code == active.code ? AppColors.amber : t.colorScheme.outlineVariant),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                _CodeBadge(m.code, small: true, color: m.selectable ? null : t.colorScheme.outline),
+                const SizedBox(width: 8),
+                Text(m.nameFa, style: t.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+              ]),
+            ),
+        ]),
+      ),
+      const SizedBox(height: 16),
       _AccuracyChart(active: active.code),
       const SizedBox(height: 16),
       LayoutBuilder(builder: (context, c) {
@@ -162,7 +184,7 @@ class _CodeBadge extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [c, Color.lerp(c, Colors.white, 0.25)!]),
+        color: c,
         borderRadius: BorderRadius.circular(small ? 8 : 12),
       ),
       child: Text(code,
@@ -232,9 +254,9 @@ class _AccuracyChart extends StatelessWidget {
       icon: Icons.leaderboard_rounded,
       child: Column(children: [
         Row(children: [
-          const SizedBox(width: 44),
-          const SizedBox(width: 180),
-          Expanded(child: Text('خطای میانه (کمتر = بهتر)', style: t.textTheme.labelSmall)),
+          SizedBox(width: 44, child: Text('کد', textAlign: TextAlign.center, style: t.textTheme.labelSmall)),
+          SizedBox(width: 196, child: Text('روش', style: t.textTheme.labelSmall)),
+          Expanded(child: Text('خطای میانه‌ی برآورد (کمتر = بهتر)', style: t.textTheme.labelSmall)),
           SizedBox(width: 70, child: Text('سوگیری', textAlign: TextAlign.center, style: t.textTheme.labelSmall)),
           SizedBox(width: 170, child: Text('در بازه‌ی ±۲۵٪', textAlign: TextAlign.center, style: t.textTheme.labelSmall)),
         ]),
@@ -249,39 +271,35 @@ class _AccuracyChart extends StatelessWidget {
             ),
             child: Row(children: [
               SizedBox(width: 44, child: _CodeBadge(m.code, small: true, color: m.selectable ? null : t.colorScheme.outline)),
+              const SizedBox(width: 8),
               SizedBox(
-                width: 180,
+                width: 188,
                 child: Text(m.nameFa,
                     overflow: TextOverflow.ellipsis,
                     style: t.textTheme.bodySmall?.copyWith(fontWeight: m.code == active ? FontWeight.w800 : FontWeight.w500)),
               ),
               Expanded(
-                child: Row(children: [
-                  Expanded(
-                    child: LayoutBuilder(builder: (context, c) {
-                      return Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: Container(
-                          height: 14,
-                          width: c.maxWidth * m.stats.mdape / maxErr,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: m.code == best
-                                  ? [Tones.good(context), Tones.good(context).withValues(alpha: 0.6)]
-                                  : [AppColors.petrol, AppColors.teal],
-                            ),
-                            borderRadius: BorderRadius.circular(7),
-                          ),
+                child: LayoutBuilder(builder: (context, c) {
+                  // نوار و عدد کنار هم: عدد درست در انتهای نوار
+                  final barMax = (c.maxWidth - 70).clamp(40.0, 520.0);
+                  return Row(children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0, end: m.stats.mdape / maxErr),
+                      duration: const Duration(milliseconds: 600),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, v, _) => Container(
+                        height: 14,
+                        width: barMax * v,
+                        decoration: BoxDecoration(
+                          color: m.code == best ? Tones.good(context) : (m.selectable ? AppColors.petrol : t.colorScheme.outline),
+                          borderRadius: BorderRadius.circular(7),
                         ),
-                      );
-                    }),
-                  ),
-                  SizedBox(
-                    width: 64,
-                    child: Text(pct(m.stats.mdape),
-                        textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                  ),
-                ]),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(pct(m.stats.mdape), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                  ]);
+                }),
               ),
               SizedBox(
                 width: 70,
@@ -363,7 +381,7 @@ class _MethodCard extends StatelessWidget {
           ),
         );
     final imp = impact;
-    return Container(
+    return HoverLift(child: Container(
       decoration: BoxDecoration(
         color: t.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -371,7 +389,6 @@ class _MethodCard extends StatelessWidget {
           color: active ? AppColors.amber : t.colorScheme.outlineVariant,
           width: active ? 2 : 1,
         ),
-        boxShadow: softShadow(context),
       ),
       padding: const EdgeInsets.all(16),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -382,7 +399,7 @@ class _MethodCard extends StatelessWidget {
             child: Text(m.nameFa, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
           ),
           if (m.code == defaultMethodCode) Pill('پیشنهادی', color: Tones.good(context), icon: Icons.verified_rounded),
-          if (active) ...[const SizedBox(width: 4), const Pill('فعال', color: Color(0xFFB0700F), icon: Icons.check_circle_rounded)],
+          if (active) ...[const SizedBox(width: 4), Pill('فعال', color: AppColors.amberText, icon: Icons.check_circle_rounded)],
           if (!m.selectable) Pill('فقط مقایسه', color: t.colorScheme.outline),
         ]),
         const SizedBox(height: 10),
@@ -439,7 +456,7 @@ class _MethodCard extends StatelessWidget {
                   label: const Text('انتخاب این روش'),
                 ),
       ]),
-    );
+    ));
   }
 
   Widget _kv(BuildContext context, String k, String v) {

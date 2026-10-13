@@ -33,6 +33,9 @@ Future<void> main(List<String> args) async {
   runApp(PriceBankApp(state: state, startupError: startupError));
 }
 
+/// تم‌های ساخته‌شده (برای هر پالت و حالت یک بار)
+final _themes = <String, ThemeData>{};
+
 class PriceBankApp extends StatelessWidget {
   const PriceBankApp({super.key, required this.state, this.startupError});
   final AppState? state;
@@ -41,22 +44,38 @@ class PriceBankApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // AppScope بالای MaterialApp است تا صفحه‌هایی که با Navigator باز می‌شوند هم به وضعیت برنامه دسترسی داشته باشند.
-    final app = MaterialApp(
-      title: 'بانک قیمت تجهیزات نمک‌زدایی',
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('fa'),
-      supportedLocales: const [Locale('fa'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      theme: buildTheme(Brightness.light),
-      darkTheme: buildTheme(Brightness.dark),
-      themeMode: ThemeMode.light,
-      home: state == null ? _StartupError(error: startupError) : const AppShell(),
+    // ظاهر (روز/شب و رنگ اصلی) از تنظیمات خوانده می‌شود و با هر تغییر دوباره ساخته می‌شود.
+    Widget app(String mode, String palette) {
+      final dark = mode == 'dark' ||
+          (mode == 'system' && WidgetsBinding.instance.platformDispatcher.platformBrightness == Brightness.dark);
+      AppColors.apply(palette, dark: dark);
+      final theme = _themes['$palette|$dark'] ??= buildTheme(dark ? Brightness.dark : Brightness.light);
+      return MaterialApp(
+        title: 'بانک قیمت تجهیزات نمک‌زدایی',
+        debugShowCheckedModeBanner: false,
+        locale: const Locale('fa'),
+        supportedLocales: const [Locale('fa'), Locale('en')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        theme: theme,
+        darkTheme: theme,
+        themeMode: dark ? ThemeMode.dark : ThemeMode.light,
+        home: state == null ? _StartupError(error: startupError) : const AppShell(),
+      );
+    }
+
+    if (state == null) return app('light', 'petrol');
+    return AppScope(
+      state: state!,
+      child: ListenableBuilder(
+        listenable: state!,
+        builder: (context, _) =>
+            app(state!.settings.str('theme_mode', 'light'), state!.settings.str('theme_palette', 'petrol')),
+      ),
     );
-    return state == null ? app : AppScope(state: state!, child: app);
   }
 }
 

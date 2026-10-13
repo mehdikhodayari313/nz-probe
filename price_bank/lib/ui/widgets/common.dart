@@ -22,13 +22,9 @@ class PageHeader extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppColors.petrol, AppColors.teal],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+                color: AppColors.petrol,
                 borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: AppColors.petrol.withValues(alpha: 0.25), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: AppColors.petrol.withValues(alpha: 0.30), blurRadius: 12, offset: const Offset(0, 4))],
               ),
               child: Icon(icon, color: Colors.white, size: 24),
             ),
@@ -211,54 +207,107 @@ class KpiTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     final c = color ?? t.colorScheme.primary;
-    return Container(
-      width: width,
-      decoration: BoxDecoration(
-        color: t.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: t.colorScheme.outlineVariant.withValues(alpha: 0.8)),
-        boxShadow: softShadow(context),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        type: MaterialType.transparency,
-        child: InkWell(
-          onTap: onTap,
-          child: Stack(children: [
+    return HoverLift(
+      radius: 16,
+      child: Container(
+        width: width,
+        decoration: BoxDecoration(
+          color: t.colorScheme.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: t.colorScheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            onTap: onTap,
+            child: Stack(children: [
               PositionedDirectional(start: 0, top: 0, bottom: 0, child: Container(width: 4, color: c)),
               Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(18, 12, 14, 12),
-                  child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [
-                      Expanded(
-                        child: Text(label,
-                            style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 2),
-                      ),
-                      if (icon != null)
-                        Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(color: c.withValues(alpha: 0.10), shape: BoxShape.circle),
-                          child: Icon(icon, size: 16, color: c),
-                        ),
-                    ]),
-                    const SizedBox(height: 6),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(value, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: c)),
+                padding: const EdgeInsetsDirectional.fromSTEB(18, 12, 14, 12),
+                child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(
+                      child: Text(label,
+                          style: t.textTheme.labelMedium
+                              ?.copyWith(color: t.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2),
                     ),
-                    if (sub != null)
-                      Text(sub!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                    if (icon != null)
+                      Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(color: c.withValues(alpha: 0.12), shape: BoxShape.circle),
+                        child: Icon(icon, size: 16, color: c),
+                      ),
                   ]),
+                  const SizedBox(height: 6),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(value, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: c)),
+                  ),
+                  if (sub != null)
+                    Text(sub!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+                ]),
               ),
             ]),
+          ),
         ),
       ),
     );
   }
+}
+
+/// بلند شدن نرم کارت زیر نشانگر ماوس (سایه‌ی عمیق‌تر و جابه‌جایی چند پیکسلی).
+class HoverLift extends StatefulWidget {
+  const HoverLift({super.key, required this.child, this.radius = 16, this.lift = 3});
+  final Widget child;
+  final double radius;
+  final double lift;
+
+  @override
+  State<HoverLift> createState() => _HoverLiftState();
+}
+
+class _HoverLiftState extends State<HoverLift> {
+  bool _h = false;
+
+  @override
+  Widget build(BuildContext context) => MouseRegion(
+        onEnter: (_) => setState(() => _h = true),
+        onExit: (_) => setState(() => _h = false),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          transform: Matrix4.translationValues(0, _h ? -widget.lift : 0, 0),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(widget.radius),
+            boxShadow: softShadow(context, hover: _h),
+          ),
+          child: widget.child,
+        ),
+      );
+}
+
+/// ظاهر شدن نرم (محو + کمی بالا آمدن) هنگام ورود به صفحه.
+class FadeIn extends StatelessWidget {
+  const FadeIn({super.key, required this.child, this.delay = 0});
+  final Widget child;
+  final int delay; // ترتیب (۰، ۱، ۲، …)
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0, end: 1),
+        duration: Duration(milliseconds: 320 + delay * 60),
+        curve: Curves.easeOutCubic,
+        builder: (context, v, child) => Opacity(
+          opacity: v,
+          child: Transform.translate(offset: Offset(0, (1 - v) * 12), child: child),
+        ),
+        child: child,
+      );
 }
 
 /// نشان ارز (یورو/دلار/ریال/تومان) تا هیچ عددی بدون واحد خوانده نشود.
@@ -330,12 +379,13 @@ class _RangePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final cy = size.height / 2;
     final rect = Rect.fromLTWH(0, cy - barH / 2, size.width, barH);
-    final grad = LinearGradient(
-      colors: rtl
-          ? [color.withValues(alpha: 0.75), color.withValues(alpha: 0.25)]
-          : [color.withValues(alpha: 0.25), color.withValues(alpha: 0.75)],
-    );
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(barH)), Paint()..shader = grad.createShader(rect));
+    canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(barH)), Paint()..color = color.withValues(alpha: 0.22));
+    if (pos != null) {
+      // بخش کمینه تا مقدار مورد انتظار پررنگ‌تر
+      final xm = rtl ? size.width * (1 - pos!) : size.width * pos!;
+      final filled = rtl ? Rect.fromLTRB(xm, rect.top, size.width, rect.bottom) : Rect.fromLTRB(0, rect.top, xm, rect.bottom);
+      canvas.drawRRect(RRect.fromRectAndRadius(filled, Radius.circular(barH)), Paint()..color = color.withValues(alpha: 0.6));
+    }
     if (pos != null) {
       final r = size.height / 2 - 1;
       final x = rtl ? size.width - r - (size.width - 2 * r) * pos! : r + (size.width - 2 * r) * pos!;

@@ -158,6 +158,15 @@ void main() {
       expect(s.resolve('FX_EUR_NIMA', 1405)!.value, 900000);
     });
 
+    test('دوره به شکل ماه-سال و چسباندن نرخ به درصد', () {
+      expect(Period.tryParse('07-1405')!.key, '1405-07');
+      expect(Period.tryParse('1405/7')!.key, '1405-07');
+      final (n, _) = pb.indices.importText('INF_FX_M3', '1407\t12', scale: 0.01);
+      expect(n, 1);
+      pb.invalidateCalc();
+      expect(pb.seriesSnapshot.resolve('INF_FX_M3', 1407)!.value, closeTo(0.12, 1e-12));
+    });
+
     test('تفکیک عنوان سند از محل داخل سند', () {
       expect(V8Importer.splitSourceDocument("File PC-ME 14040105 Pazanan2 Reconstruction.xlsx, sheet 'PUMPS', spec B10"),
           ('PC-ME 14040105 Pazanan2 Reconstruction.xlsx', "sheet 'PUMPS', spec B10"));

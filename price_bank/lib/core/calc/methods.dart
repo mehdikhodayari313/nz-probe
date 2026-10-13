@@ -133,7 +133,7 @@ const escalationMethods = <EscalationMethod>[
   EscalationMethod(
     code: 'M6',
     nameFa: 'PPI یورو + کف قیمت',
-    summaryFa: 'همان M4، با کف قیمت برای پمپ‌های گریز از مرکز API 610 با کلاس متریال S یا D.',
+    summaryFa: 'همان روش M4 (PPI پمپ منطقه‌ی یورو)، به‌علاوه‌ی کف قیمت برای پمپ‌های گریز از مرکز API 610 با کلاس متریال S یا D.',
     formulaFa: 'یورو(هدف) = MAX[ یورو × PPI(هدف)/PPI(پایه) ، کف × PPI(هدف)/PPI(سال کف) ]',
     factorRef: 1.34541911611766,
     stats: MethodStats(bias: -0.0703, mdape: 0.1307, mape: 0.2085, within25: 10, totalRatio: 1.0098),

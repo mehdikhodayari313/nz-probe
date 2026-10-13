@@ -64,6 +64,12 @@ class Period implements Comparable<Period> {
       final mo = int.parse(m.group(2)!);
       if (mo >= 1 && mo <= 12) return Period.month(int.parse(m.group(1)!), mo);
     }
+    // ماه-سال (مثل «07-1405» یا «7/1405»)
+    final mr = RegExp(r'^(\d{1,2})\s*[-/]\s*(\d{4})$').firstMatch(t);
+    if (mr != null) {
+      final mo = int.parse(mr.group(1)!);
+      if (mo >= 1 && mo <= 12) return Period.month(int.parse(mr.group(2)!), mo);
+    }
     return null;
   }
 

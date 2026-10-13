@@ -419,7 +419,7 @@ class _CalcTab extends StatelessWidget {
           columnWidths: const {0: FlexColumnWidth(2), 1: FlexColumnWidth(2), 2: FlexColumnWidth(3)},
           children: [
             TableRow(
-              decoration: const BoxDecoration(color: Color(0xFFE3EFF2)),
+              decoration: BoxDecoration(color: AppColors.headerBg),
               children: [
                 _cell(context, 'نوع نرخ', bold: true),
                 _cell(context, 'نرخ یوروی سال هدف', bold: true),

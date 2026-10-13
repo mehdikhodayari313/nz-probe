@@ -48,18 +48,8 @@ class DashboardPage extends StatelessWidget {
       ),
       if (rows.isEmpty) _ImportCard(),
       if (rows.isEmpty) const SizedBox(height: 16),
-      const HelpPanel(
-        id: 'dashboard',
-        title: 'شروع کار',
-        initiallyOpen: false,
-        lines: [
-          'گام ۱ — اگر هنوز داده‌ای ندارید، فایل Pumps_Price_Bank_v8.xlsx را از کارت «ورود داده‌های v8» وارد کنید (فقط یک بار).',
-          'گام ۲ — در «شاخص‌ها و ارز» نرخ‌های ارز و شاخص‌ها را تکمیل یا تأیید کنید؛ در «تنظیمات» می‌توانید جدول نرخ ارز تازه با نام دلخواه بسازید.',
-          'گام ۳ — سال هدف، جدول نرخ ارز و روش تعدیل را از نوار بالا انتخاب کنید؛ همه‌ی قیمت‌ها فوراً دوباره محاسبه می‌شوند.',
-          'گام ۴ — در «تجهیزات» جستجو، فیلتر و ویرایش کنید؛ در «تخمین و تعدیل» قیمت پمپ جدید یا قیمت قدیمی را به سال هدف ببرید.',
-          'همه‌ی تغییرات با نام کاربر، زمان و دلیل در «تاریخچه» ثبت می‌شوند.',
-        ],
-      ),
+      _StartSteps(hasData: rows.isNotEmpty, method: method.code),
+      const SizedBox(height: 16),
       Wrap(spacing: 12, runSpacing: 12, children: [
         KpiTile(
           label: 'پمپ‌های ثبت‌شده',
@@ -99,6 +89,8 @@ class DashboardPage extends StatelessWidget {
           onTap: () => AppShell.go(context, AppShell.documents),
         ),
       ]),
+      const SizedBox(height: 16),
+      _ProjectChart(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
@@ -225,8 +217,8 @@ class _ProjectTotals extends StatelessWidget {
           : Column(children: [
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                decoration: const BoxDecoration(
-                  color: Color(0xFFE3EFF2),
+                decoration: BoxDecoration(
+                  color: AppColors.headerBg,
                   border: Border(bottom: BorderSide(color: AppColors.petrol, width: 1.4)),
                 ),
                 child: Row(children: [
@@ -242,7 +234,7 @@ class _ProjectTotals extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                   decoration: BoxDecoration(
-                    color: i.isOdd ? const Color(0xFFF3F8FA) : null,
+                    color: i.isOdd ? AppColors.zebra : null,
                     border: Border(bottom: BorderSide(color: t.colorScheme.outlineVariant)),
                   ),
                   child: Row(children: [
@@ -272,7 +264,7 @@ class _ProjectTotals extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(color: AppColors.amberSoft, borderRadius: BorderRadius.circular(8)),
                                 child: Text('×${faNum(list[i].irrTgt / list[i].irrSrc, decimals: 1)}',
-                                    style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF8A5A00))),
+                                    style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.amberText)),
                               )
                             : Text('—', style: TextStyle(color: t.colorScheme.outline)),
                       ),
@@ -464,11 +456,8 @@ class _ImportCardState extends State<_ImportCard> {
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [t.colorScheme.primaryContainer, t.colorScheme.tertiaryContainer],
-          begin: AlignmentDirectional.centerStart,
-          end: AlignmentDirectional.centerEnd,
-        ),
+        color: t.colorScheme.primaryContainer,
+        border: Border.all(color: AppColors.petrol.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(children: [
@@ -497,4 +486,212 @@ class _ImportCardState extends State<_ImportCard> {
       ]),
     );
   }
+}
+
+
+/// چهار گام «شروع کار» — هم‌ترتیب با منوی کناری؛ هر گام صفحه‌ی مربوط را باز می‌کند.
+class _StartSteps extends StatelessWidget {
+  const _StartSteps({required this.hasData, required this.method});
+  final bool hasData;
+  final String method;
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = <(int, IconData, String, String, int?)>[
+      (1, Icons.upload_file_rounded, 'ورود داده‌ها',
+          hasData ? 'داده‌های v8 وارد شده‌اند ✓' : 'فایل Pumps_Price_Bank_v8.xlsx را از کارت بالا وارد کنید (یک بار).', null),
+      (2, Icons.query_stats_rounded, 'شاخص‌ها و ارز',
+          'نرخ ارز و شاخص‌ها را تکمیل کنید؛ جدول نرخ ارز تازه با نام دلخواه هم همان‌جا ساخته می‌شود.', AppShell.indices),
+      (3, Icons.science_rounded, 'روش تعدیل و سال هدف',
+          'روش فعال: $method. سال هدف، جدول نرخ ارز و روش را از نوار بالا انتخاب کنید.', AppShell.methods),
+      (4, Icons.precision_manufacturing_rounded, 'تجهیزات و تخمین',
+          'جستجو، فیلتر و ویرایش پمپ‌ها؛ تخمین پمپ جدید و انتقال قیمت قدیم به سال هدف.', AppShell.equipment),
+    ];
+    return SectionCard(
+      title: 'شروع کار',
+      subtitle: 'چهار گام — به همین ترتیب در منوی کناری',
+      icon: Icons.route_rounded,
+      child: LayoutBuilder(builder: (context, c) {
+        final cols = c.maxWidth > 1000 ? 4 : 2;
+        final w = (c.maxWidth - (cols - 1) * 12) / cols;
+        return Wrap(spacing: 12, runSpacing: 12, children: [
+          for (final (n, icon, title, body, target) in steps)
+            SizedBox(width: w, child: _StepCard(n: n, icon: icon, title: title, body: body, done: n == 1 && hasData, target: target)),
+        ]);
+      }),
+    );
+  }
+}
+
+class _StepCard extends StatelessWidget {
+  const _StepCard({required this.n, required this.icon, required this.title, required this.body, required this.done, this.target});
+  final int n;
+  final IconData icon;
+  final String title;
+  final String body;
+  final bool done;
+  final int? target;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = done ? Tones.good(context) : AppColors.petrol;
+    return HoverLift(
+      radius: 14,
+      child: Material(
+        color: t.colorScheme.surfaceContainerLow,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: t.colorScheme.outlineVariant),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: target == null ? null : () => AppShell.go(context, target!),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                width: 34,
+                height: 34,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+                child: done
+                    ? const Icon(Icons.check_rounded, color: Colors.white, size: 20)
+                    : Text(fa(n), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Icon(icon, size: 16, color: c),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(title, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))),
+                    if (target != null) Icon(Icons.chevron_left_rounded, size: 18, color: t.colorScheme.outline),
+                  ]),
+                  const SizedBox(height: 4),
+                  Text(body, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.7)),
+                ]),
+              ),
+            ]),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// نمودار ستونی تعاملی: جمع قیمت هر پروژه در سال منبع و سال هدف.
+/// نشانگر ماوس روی هر ستون، مبلغ دقیق را نشان می‌دهد؛ ستون‌ها با انیمیشن رشد می‌کنند.
+class _ProjectChart extends StatefulWidget {
+  const _ProjectChart({required this.rows, required this.unit, required this.targetYear});
+  final List<PumpRow> rows;
+  final MoneyUnit unit;
+  final int targetYear;
+
+  @override
+  State<_ProjectChart> createState() => _ProjectChartState();
+}
+
+class _ProjectChartState extends State<_ProjectChart> {
+  int? _hover;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final data = <String, (double, double)>{};
+    for (final r in widget.rows) {
+      final res = r.result;
+      if (!(res.irrSource.isNumber && res.irrTarget.isNumber)) continue;
+      final q = r.item.quantity ?? 1;
+      final k = r.item.projectName ?? 'بدون پروژه';
+      final e = data[k] ?? (0, 0);
+      data[k] = (e.$1 + res.irrSource.number! * q, e.$2 + res.irrTarget.number! * q);
+    }
+    final list = data.entries.toList()..sort((a, b) => b.value.$2.compareTo(a.value.$2));
+    if (list.isEmpty) return const SizedBox();
+    final maxV = list.map((e) => e.value.$2 > e.value.$1 ? e.value.$2 : e.value.$1).reduce((a, b) => a > b ? a : b);
+    const chartH = 190.0;
+    final srcColor = AppColors.petrol.withValues(alpha: 0.45);
+    const tgtColor = AppColors.amber;
+
+    Widget bar(double v, Color c, String tip, bool hl) => Tooltip(
+          message: tip,
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: maxV <= 0 ? 0 : v / maxV),
+            duration: const Duration(milliseconds: 700),
+            curve: Curves.easeOutCubic,
+            builder: (context, f, _) => AnimatedContainer(
+              duration: const Duration(milliseconds: 150),
+              width: hl ? 26 : 22,
+              height: (chartH - 20) * f + 2,
+              decoration: BoxDecoration(
+                color: c,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
+                boxShadow: hl ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 12)] : null,
+              ),
+            ),
+          ),
+        );
+
+    return SectionCard(
+      title: 'مقایسه‌ی پروژه‌ها: سال منبع در برابر سال ${fa(widget.targetYear)}',
+      subtitle: 'نشانگر ماوس را روی هر ستون نگه دارید تا مبلغ دقیق دیده شود (${unitLabel(widget.unit)}، قیمت × تعداد)',
+      icon: Icons.bar_chart_rounded,
+      trailing: Wrap(spacing: 12, children: [
+        _legendDot(context, srcColor, 'سال منبع'),
+        _legendDot(context, tgtColor, 'سال ${fa(widget.targetYear)}'),
+      ]),
+      child: SizedBox(
+        height: chartH + 64,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
+            for (var i = 0; i < list.length; i++)
+              MouseRegion(
+                onEnter: (_) => setState(() => _hover = i),
+                onExit: (_) => setState(() => _hover = null),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 150),
+                  width: 150,
+                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                  padding: const EdgeInsets.only(top: 8),
+                  decoration: BoxDecoration(
+                    color: _hover == i ? AppColors.petrol.withValues(alpha: 0.06) : null,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
+                    Text('×${faNum(list[i].value.$1 > 0 ? list[i].value.$2 / list[i].value.$1 : 0, decimals: 1)}',
+                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.amberText)),
+                    const SizedBox(height: 4),
+                    Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                      bar(list[i].value.$1, srcColor,
+                          '${list[i].key}\nسال منبع: ${money(list[i].value.$1, widget.unit)}', _hover == i),
+                      const SizedBox(width: 6),
+                      bar(list[i].value.$2, tgtColor,
+                          '${list[i].key}\nسال ${fa(widget.targetYear)}: ${money(list[i].value.$2, widget.unit)}', _hover == i),
+                    ]),
+                    Container(height: 1.5, color: t.colorScheme.outlineVariant),
+                    const SizedBox(height: 6),
+                    SizedBox(
+                      height: 34,
+                      child: Text(list[i].key,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: t.textTheme.labelSmall?.copyWith(fontWeight: _hover == i ? FontWeight.w800 : FontWeight.w500)),
+                    ),
+                  ]),
+                ),
+              ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _legendDot(BuildContext context, Color c, String s) => Row(mainAxisSize: MainAxisSize.min, children: [
+        Container(width: 12, height: 12, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3))),
+        const SizedBox(width: 5),
+        Text(s, style: Theme.of(context).textTheme.labelSmall),
+      ]);
 }
