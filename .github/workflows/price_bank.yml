@@ -92,6 +92,17 @@ jobs:
             if (Test-Path $src) { Copy-Item $src dist/price_bank -Force }
           }
           (Get-FileHash dist/price_bank/price_bank.exe -Algorithm SHA256).Hash | Set-Content dist/price_bank/price_bank.exe.sha256
+      - name: Publish zip to branch ci-pb-dist (for networks where artifact downloads are blocked)
+        shell: bash
+        working-directory: .
+        run: |
+          mkdir -p /tmp/dist
+          (cd price_bank/dist && 7z a -tzip -mx=9 /tmp/dist/price_bank_windows.zip price_bank > /dev/null)
+          ls -la /tmp/dist
+          cd /tmp/dist && git init -q && git config user.name ci-bot && git config user.email ci-bot@users.noreply.github.com
+          echo "${GITHUB_SHA}" > commit.txt
+          git add -A && git commit -qm "PB windows build ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-pb-dist
       - uses: actions/upload-artifact@v4
         with:
           name: price_bank_windows
