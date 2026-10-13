@@ -2,7 +2,11 @@ name: build
 
 on:
   push:
+    branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   windows:
@@ -17,8 +21,11 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Flutter version
-        run: flutter --version
+      - name: Prepare results folder
+        run: |
+          New-Item -ItemType Directory -Force ci | Out-Null
+          flutter --version 2>&1 | Tee-Object -FilePath ci/flutter_version.txt
+          "${{ github.sha }}" | Set-Content ci/commit.txt
 
       - name: Create platform folders
         run: |
@@ -26,17 +33,32 @@ jobs:
           (Get-Content windows/runner/main.cpp) -replace 'L"nz_probe"', 'L"NZ Probe - Desalting Price Bank"' | Set-Content windows/runner/main.cpp
 
       - name: Get packages
-        run: flutter pub get
+        run: flutter pub get 2>&1 | Tee-Object -FilePath ci/pub_get.txt
 
       - name: Analyze
-        run: flutter analyze --no-fatal-infos
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings 2>&1 | Tee-Object -FilePath ci/analyze.txt
         continue-on-error: true
 
       - name: Unit tests
-        run: flutter test --reporter expanded
+        run: |
+          flutter test --reporter expanded 2>&1 | Tee-Object -FilePath ci/test.txt
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Build Windows release
-        run: flutter build windows --release
+        run: |
+          flutter build windows --release 2>&1 | Tee-Object -FilePath ci/build.txt
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Self-test the built exe
+        run: |
+          $out = "build/windows/x64/runner/Release"
+          if (-not (Test-Path $out)) { $out = "build/windows/runner/Release" }
+          $report = Join-Path (Get-Location) "ci/selftest.txt"
+          $p = Start-Process -FilePath "$out/nz_probe.exe" -ArgumentList "--selftest", "`"$report`"" -PassThru
+          if (-not $p.WaitForExit(180000)) { $p.Kill(); "TIMEOUT" | Set-Content ci/selftest_exit.txt; exit 1 }
+          "exit code: $($p.ExitCode)" | Set-Content ci/selftest_exit.txt
+          Get-Content ci/selftest_exit.txt
+          if ($p.ExitCode -ne 0) { exit 1 }
 
       - name: Package
         run: |
@@ -49,13 +71,27 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           Compress-Archive -Path "$out/*" -DestinationPath dist/nz_probe_windows.zip -Force
           (Get-FileHash dist/nz_probe_windows.zip -Algorithm SHA256).Hash | Set-Content dist/nz_probe_windows.zip.sha256
-          Get-ChildItem dist
+          Get-ChildItem $out -Recurse | Select-Object FullName, Length | Out-String | Set-Content ci/package_files.txt
+          Get-ChildItem dist | Out-String | Set-Content ci/dist.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: nz_probe_windows
           path: dist/
           retention-days: 30
+
+      - name: Publish results to branch ci-results
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p /tmp/res && cp -r ci/. /tmp/res/
+          cd /tmp/res
+          git init -q
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git add -A
+          git commit -qm "CI results for ${GITHUB_SHA} (${{ job.status }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-results-windows
 
   android:
     name: Build (Android APK)
@@ -79,11 +115,26 @@ jobs:
 
       - name: Build APK
         run: |
+          mkdir -p ci
+          set -o pipefail
           flutter pub get
-          flutter build apk --release
+          flutter build apk --release 2>&1 | tee ci/build_android.txt
 
       - uses: actions/upload-artifact@v4
         with:
           name: nz_probe_android
           path: build/app/outputs/flutter-apk/app-release.apk
           retention-days: 30
+
+      - name: Publish results to branch ci-results-android
+        if: always()
+        run: |
+          mkdir -p /tmp/res && cp -r ci/. /tmp/res/ 2>/dev/null || true
+          ls -la build/app/outputs/flutter-apk/ > /tmp/res/apk.txt 2>&1 || true
+          cd /tmp/res
+          git init -q
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@users.noreply.github.com"
+          git add -A
+          git commit -qm "Android CI results for ${GITHUB_SHA} (${{ job.status }})"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" HEAD:refs/heads/ci-results-android
