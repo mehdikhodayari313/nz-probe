@@ -55,7 +55,8 @@ void main() {
       expect(groupOf(a, 'HEATER').items.first.tag, 'H-111 A/B');
       expect(groupOf(a, 'TANK').items.first.tag, 'TK-111');
       expect(groupOf(a, 'COMPRESSOR').items.single.tag, 'PK-211 A/B');
-      Iterable<String> tags(String code) => groupOf(a, code).items.map((i) => i.tag);
+      Iterable<String> tags(String code) =>
+          a.sheets.where((s) => s.categoryCode == code).expand((s) => s.items).map((i) => i.tag);
       expect(tags('AIR_DRYER'), ['PK-212']);
       expect(tags('CIP'), containsAll(['PK-250', 'PK-251']));
       expect(tags('CRANE'), containsAll(['CN-114 / CN-124', 'CN-151', 'CN-231', 'CN-251 / CN-261']));
