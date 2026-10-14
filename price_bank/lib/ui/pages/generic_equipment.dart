@@ -225,7 +225,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                   ),
                 ),
                 if (_profile != null)
-                  for (final f in _profile!.enumFields) _enumFilter(context, all, f),
+                  for (final f in _profile!.enumFields) _enumFilter(context, all, f.key, f.labelFa, f.list),
                 if (_profile != null)
                   _rangeFilter(context, '_size', '${_profile!.driver.labelFa} (${_profile!.driver.unit})'),
                 if (_profile != null)
@@ -315,7 +315,8 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
             },
             sortKey: (r) {
               final v = r.item.values[f.key];
-              return v is num ? v.toDouble() : v?.toString();
+              if (f.type == 'number') return v is num ? v.toDouble() : double.negativeInfinity;
+              return v?.toString() ?? '';
             },
           ),
         if (_profile != null)
@@ -395,18 +396,18 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         ),
       ];
 
-  Widget _enumFilter(BuildContext context, List<GenericRow> all, FieldDef f) {
+  Widget _enumFilter(BuildContext context, List<GenericRow> all, String key, String labelFa, String? listKey) {
     final t = Theme.of(context);
     final counts = <String, int>{};
     for (final r in all) {
-      final v = r.item.values[f.key]?.toString();
+      final v = r.item.values[key]?.toString();
       if (v == null || v.isEmpty) continue;
       counts[v] = (counts[v] ?? 0) + 1;
     }
-    final opts = f.listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(f.listKey!);
+    final opts = listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(listKey);
     final labels = {for (final o in opts) o.value: o.labelFa};
     final values = [for (final o in opts) o.value, for (final v in counts.keys) if (!labels.containsKey(v)) v];
-    final cur = _enumF[f.key];
+    final cur = _enumF[key];
     String show(String v) => (labels[v] == null || labels[v] == v) ? v : '${labels[v]}';
     return SizedBox(
       width: 178,
@@ -414,7 +415,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         value: values.contains(cur) ? cur : null,
         isExpanded: true,
         decoration: InputDecoration(
-          labelText: f.labelFa,
+          labelText: labelFa,
           fillColor: cur != null ? t.colorScheme.primaryContainer : null,
         ),
         selectedItemBuilder: (_) => [const Text('همه'), for (final v in values) Text(show(v), overflow: TextOverflow.ellipsis)],
@@ -434,7 +435,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
               ]),
             ),
         ],
-        onChanged: (v) => setState(() => _enumF[f.key] = v),
+        onChanged: (v) => setState(() => _enumF[key] = v),
       ),
     );
   }

@@ -286,7 +286,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
     ],
     rules: [
       _dims(r'^size', 'diameter_mm', 'height_mm'),
-      MtoRule(r'roof', (v, o) {
+      MtoRule(r'^roof', (v, o) {
         final l = v.toLowerCase();
         o['roof_type'] ??= l.contains('dome')
             ? 'Dome'
