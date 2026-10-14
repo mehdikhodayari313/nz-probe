@@ -55,6 +55,17 @@ void main() {
       expect(groupOf(a, 'HEATER').items.first.tag, 'H-111 A/B');
       expect(groupOf(a, 'TANK').items.first.tag, 'TK-111');
       expect(groupOf(a, 'COMPRESSOR').items.single.tag, 'PK-211 A/B');
+      Iterable<String> tags(String code) => groupOf(a, code).items.map((i) => i.tag);
+      expect(tags('AIR_DRYER'), ['PK-212']);
+      expect(tags('CIP'), containsAll(['PK-250', 'PK-251']));
+      expect(tags('CRANE'), containsAll(['CN-114 / CN-124', 'CN-151', 'CN-231', 'CN-251 / CN-261']));
+      expect(tags('FLARE'), containsAll(['PK-171', 'ST-172', 'PK-231']));
+      expect(tags('FILTER'), containsAll(['PK-132', 'F-151']));
+      expect(tags('WATER_TREAT'), ['PK-152']);
+      expect(tags('MISC_PKG'), ['PK-143']);
+      expect(tags('DEAERATOR'), ['E-151']);
+      expect(tags('IGF'), ['PK-131']);
+      expect(a.skippedSheets, contains('PROC-TITLE'));
     });
 
     test('ورود به بانک: فیلدهای قالب، وزن از شیت نصب', () {
@@ -132,6 +143,9 @@ void main() {
       expect(groupOf(a, 'INST_EQ').items.first.goingEur, 52603);
       expect(groupOf(a, 'PIPE_BULK').items.first.name, startsWith('StudBolt&nuts'));
       expect(groupOf(a, 'LAB').items.first.name, 'Microwave Digestion System');
+      final pl = a.sheets.where((s) => s.source == 'P.PL').expand((s) => s.items).first;
+      expect(pl.goingEur, isNotNull);
+      expect(pl.specs['Unit'] ?? pl.description, isNotEmpty);
     });
 
     test('ورود به بانک: مشخصات متن آزاد، وزن، رده‌های عمومی', () {

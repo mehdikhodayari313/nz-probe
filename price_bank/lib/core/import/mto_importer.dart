@@ -150,7 +150,6 @@ const mtoSheetCategory = <String, String>{
   'DRYER': 'AIR_DRYER',
   'CRANE': 'CRANE',
   'STACK': 'FLARE',
-  'IWWTP': 'WATER_TREAT',
   'R.O': 'WATER_TREAT',
   'STRIPP': 'MISC_PKG',
   'HVAC': 'HVAC',

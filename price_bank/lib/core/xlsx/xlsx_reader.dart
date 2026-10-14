@@ -97,30 +97,37 @@ class XlsxSheet {
   /// محدوده‌های ادغام‌شده: (ردیف۱، ستون۱، ردیف۲، ستون۲)
   final List<(int, int, int, int)> merges;
 
+  Map<int, (int, int, int, int)>? _mergeIndex;
+  Map<int, (int, int, int, int)> get _mi {
+    final m = _mergeIndex;
+    if (m != null) return m;
+    final out = <int, (int, int, int, int)>{};
+    for (final g in merges) {
+      if ((g.$3 - g.$1 + 1) * (g.$4 - g.$2 + 1) > 20000) continue; // ادغام‌های غیرعادی بزرگ
+      for (var r = g.$1; r <= g.$3; r++) {
+        for (var c = g.$2; c <= g.$4; c++) {
+          out[r * 20000 + c] = g;
+        }
+      }
+    }
+    return _mergeIndex = out;
+  }
+
   /// متن سلول؛ اگر سلول جزو محدوده‌ی ادغام‌شده باشد، متن سلول بالا-چپ همان محدوده.
   String mergedText(int row, int col) {
     final own = text(row, col);
     if (own.isNotEmpty) return own;
-    for (final (r1, c1, r2, c2) in merges) {
-      if (row >= r1 && row <= r2 && col >= c1 && col <= c2) return text(r1, c1);
-    }
-    return '';
+    final g = mergeAt(row, col);
+    return g == null ? '' : text(g.$1, g.$2);
   }
 
   /// محدوده‌ی ادغامی که سلول در آن است (ردیف۱، ستون۱، ردیف۲، ستون۲)
-  (int, int, int, int)? mergeAt(int row, int col) {
-    for (final m in merges) {
-      if (row >= m.$1 && row <= m.$3 && col >= m.$2 && col <= m.$4) return m;
-    }
-    return null;
-  }
+  (int, int, int, int)? mergeAt(int row, int col) => merges.isEmpty ? null : _mi[row * 20000 + col];
 
   /// آیا سلول جزو محدوده‌ی ادغام‌شده است (به جز سلول بالا-چپ)؟
   bool isMergedTail(int row, int col) {
-    for (final (r1, c1, r2, c2) in merges) {
-      if (row >= r1 && row <= r2 && col >= c1 && col <= c2 && !(row == r1 && col == c1)) return true;
-    }
-    return false;
+    final g = mergeAt(row, col);
+    return g != null && !(row == g.$1 && col == g.$2);
   }
 
   final String name;

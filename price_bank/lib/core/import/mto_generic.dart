@@ -513,8 +513,9 @@ class MtoGeneric {
     final remarks = l.first(MtoColRole.remarks);
     final specs = l.all(MtoColRole.spec).toList();
     final prices = l.columns.where((c) => c.role.isPrice).toList();
-    final ctxText = l.context.join(' ');
-    final sheetCat = suggestCategory(sh.name) ?? (ctxText.isEmpty ? null : suggestCategoryFromText(ctxText));
+    // رده‌ی شیت: عنوان بالای جدول (مثل «IGF PACKAGES») بر نام کوتاه شیت (مثل «IWWTP-A») مقدم است
+    final ctxCat = [for (final c in l.context) suggestCategory(c) ?? suggestCategoryFromText(c)].whereType<String>().firstOrNull;
+    final sheetCat = ctxCat ?? suggestCategory(sh.name);
     final contextSpecs = [
       for (final c in l.context)
         if (suggestCategory(c) == null && suggestCategoryFromText(c) == null) c,
