@@ -22,12 +22,29 @@ Future<void> showMtoImportDialog(BuildContext context) async {
   if (path == null || !context.mounted) return;
   final name = res!.files.single.name;
   MtoAnalysis a;
+  // فایل‌های بزرگ (ده‌ها شیت) چند ثانیه طول می‌کشد: پیام «در حال خواندن»
+  showDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => const AlertDialog(
+      content: Row(children: [
+        SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5)),
+        SizedBox(width: 16),
+        Expanded(child: Text('در حال خواندن فایل و تشخیص جدول‌ها…')),
+      ]),
+    ),
+  );
+  await Future<void>.delayed(const Duration(milliseconds: 80));
   try {
     a = MtoImporter.analyze(XlsxWorkbook.openFile(path), fileName: name);
   } catch (e) {
-    if (context.mounted) showSnack(context, 'فایل خوانده نشد: $e', error: true);
+    if (context.mounted) {
+      Navigator.of(context).pop();
+      showSnack(context, 'فایل خوانده نشد: $e', error: true);
+    }
     return;
   }
+  if (context.mounted) Navigator.of(context).pop();
   if (!context.mounted) return;
   // قالب ناشناخته هم رد نمی‌شود: پیش‌نمایش با امکان تعریف دستی سطر عنوان و نقش ستون‌ها باز می‌شود
   await showDialog<void>(context: context, builder: (_) => MtoPreviewDialog(analysis: a));
@@ -146,6 +163,7 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                 Text('اقلام: ${fa(rep.items)} · استعلام‌ها: ${fa(rep.quotes)} · برآوردها: ${fa(rep.estimates)}'),
                 Text('فروشندگان جدید: ${fa(rep.vendors)} · فیلدهای مشخصات جدید: ${fa(rep.specFields)}'),
                 if (rep.skippedDuplicates > 0) Text('تکراری (همان تگ در همان پروژه، وارد نشد): ${fa(rep.skippedDuplicates)}'),
+                if (rep.weights > 0) Text('وزن تجهیز ثبت‌شده (از MTO یا شیت‌های نصب): ${fa(rep.weights)}'),
                 const SizedBox(height: 8),
                 Wrap(spacing: 6, runSpacing: 6, children: [
                   for (final e in rep.perCategory.entries) Pill('${cats[e.key] ?? e.key}: ${fa(e.value)}'),
