@@ -32,7 +32,7 @@ class DashboardPage extends StatelessWidget {
     final quotes = rows.fold<int>(0, (a, r) => a + r.item.observations.where((o) => o.kind == 'quote').length);
     // رده‌هایی که روش تعدیل اختصاصی دارند
     final custom = [
-      for (final c in app.pb.estimableCategories())
+      for (final c in app.pb.bankCategories())
         if (c.code != 'PUMP' && s.catMethod(c.code) != null) '${c.nameFa}: ${s.catMethod(c.code)}',
     ];
 
@@ -680,7 +680,7 @@ class _CategoriesCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final t = Theme.of(context);
-    final cats = app.pb.estimableCategories();
+    final cats = app.pb.bankCategories();
     final agg = <int, (int, int, double, int)>{}; // تعداد، با قیمت، جمع ریالی هدف، استعلام
     for (final r in rows) {
       final e = agg[r.categoryId] ?? (0, 0, 0.0, 0);

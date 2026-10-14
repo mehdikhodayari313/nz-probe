@@ -107,6 +107,14 @@ class XlsxSheet {
     return '';
   }
 
+  /// محدوده‌ی ادغامی که سلول در آن است (ردیف۱، ستون۱، ردیف۲، ستون۲)
+  (int, int, int, int)? mergeAt(int row, int col) {
+    for (final m in merges) {
+      if (row >= m.$1 && row <= m.$3 && col >= m.$2 && col <= m.$4) return m;
+    }
+    return null;
+  }
+
   /// آیا سلول جزو محدوده‌ی ادغام‌شده است (به جز سلول بالا-چپ)؟
   bool isMergedTail(int row, int col) {
     for (final (r1, c1, r2, c2) in merges) {

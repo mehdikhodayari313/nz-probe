@@ -12,6 +12,16 @@ import 'catalog_repo.dart';
 const genericCategoryCodes = [
   'COMPRESSOR', 'DESALTER', 'HEATER', 'VESSEL', 'TANK', 'HEX', 'CIP', 'IGF', 'FILTER', 'FLARE', 'DEAERATOR',
   'AIR_DRYER', 'CRANE',
+  // رده‌های عمومی (بدون قالب تخصصی): برای ورود کامل MTO و PEP (برق، ابزار دقیق، پایپینگ، آزمایشگاه، …)
+  'WATER_TREAT', 'HVAC', 'FIRE_SAFETY', 'MISC_PKG', 'LAB', 'VALVE', 'PIPE_BULK', 'ELEC_EQ', 'INST_EQ',
+];
+
+/// رده‌های افزوده (برای دیتابیس‌های قدیمی که این رده‌ها را ندارند): (کد، رشته، والد، نام فارسی، نام انگلیسی)
+const _extraCategories = [
+  ('WATER_TREAT', 'MECH', 'MECH_PKG', 'پکیج تصفیه آب و پساب', 'Water / Waste Water Treatment'),
+  ('HVAC', 'MECH', 'MECH_PKG', 'تهویه مطبوع (HVAC)', 'HVAC'),
+  ('FIRE_SAFETY', 'MECH', 'MECH_PKG', 'تجهیزات ایمنی و آتش‌نشانی', 'Fire Fighting & Safety'),
+  ('MISC_PKG', 'MECH', 'MECH_PKG', 'سایر پکیج‌ها و تجهیزات', 'Other Packages & Equipment'),
 ];
 
 // (کلید، برچسب، گروه، نام گروه، ذخیره، نوع، فهرست، واحد، ترتیب)
@@ -30,6 +40,15 @@ const _baseFields = <(String, String, String, String, String, String, String?, S
 
 void ensureGenericTemplates(Db db) {
   db.transaction(() {
+    for (final (code, disc, parent, fa, en) in _extraCategories) {
+      if (db.scalar('SELECT id FROM categories WHERE code = ?', [code]) != null) continue;
+      final pid = db.scalar('SELECT id FROM categories WHERE code = ?', [parent]) as int?;
+      final sort = (db.scalar('SELECT COALESCE(MAX(sort), 0) + 1 FROM categories') as int?) ?? 0;
+      db.execute(
+        'INSERT INTO categories(code, discipline_code, parent_id, name_fa, name_en, sort, enabled) VALUES (?,?,?,?,?,?,1)',
+        [code, disc, pid, fa, en, sort],
+      );
+    }
     for (final code in genericCategoryCodes) {
       final id = db.scalar('SELECT id FROM categories WHERE code = ?', [code]) as int?;
       if (id == null) continue;

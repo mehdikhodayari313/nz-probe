@@ -45,6 +45,12 @@ class MtoItem {
   String? refCurrency;
   double? goingIrr, goingEur, goingUsd;
   double? oldIrr, oldEur, oldUsd;
+
+  /// وزن (کیلوگرم): از واحد Kg/Ton یا ستون وزن
+  double? weightKg;
+
+  /// رده خودکار حدس زده شده (نه انتخاب کاربر)
+  bool autoCategory = true;
   final Map<String, String> specs = {}; // برچسب ← مقدار (به ترتیب شرح)
   final List<String> scopeLines = [];
   final List<MtoQuote> quotes = [];
@@ -88,6 +94,20 @@ class MtoAnalysis {
 
   /// شیت‌هایی که جدول اقلام در آن‌ها پیدا نشد (برای تعریف دستی سطر عنوان)
   List<String> get unreadSheets => skippedSheets;
+
+  /// وزن تجهیزات از شیت‌های نصب و اجرا (تگ ← کیلوگرم)
+  final Map<String, double> weights = {};
+  final List<String> installSheets = [];
+
+  /// رده‌ی انتخابی کاربر برای هر قلم («شیت#ردیف» ← کد رده)
+  final Map<String, String?> itemCategory = {};
+
+  /// جابه‌جایی یک قلم به رده‌ی دیگر (قالب‌های عمومی)
+  void moveItem(MtoSheet from, MtoItem it, String? code) {
+    if (from.source == null) return;
+    itemCategory['${from.source}#${it.row}'] = code;
+    MtoImporter.relayout(this, from.source!);
+  }
   String format = 'unknown';
   String? docRef;
   String? revision;
@@ -103,7 +123,7 @@ class MtoAnalysis {
 }
 
 class MtoImportReport {
-  int items = 0, quotes = 0, estimates = 0, vendors = 0, specFields = 0, skippedDuplicates = 0;
+  int items = 0, quotes = 0, estimates = 0, vendors = 0, specFields = 0, skippedDuplicates = 0, weights = 0;
   bool alreadyImported = false;
   final Map<String, int> perCategory = {};
   final List<String> warnings = [];
@@ -129,6 +149,27 @@ const mtoSheetCategory = <String, String>{
   'AIR DRYER': 'AIR_DRYER',
   'DRYER': 'AIR_DRYER',
   'CRANE': 'CRANE',
+  'STACK': 'FLARE',
+  'IWWTP': 'WATER_TREAT',
+  'R.O': 'WATER_TREAT',
+  'STRIPP': 'MISC_PKG',
+  'HVAC': 'HVAC',
+  'LAB': 'LAB',
+};
+
+/// نام کوتاه شیت‌های PEP (مثل «P.EL»، «P.IN»): بخش نام ← رده
+const _sheetTokens = <String, String>{
+  'EL': 'ELEC_EQ',
+  'ELEC': 'ELEC_EQ',
+  'IN': 'INST_EQ',
+  'INST': 'INST_EQ',
+  'PI': 'PIPE_BULK',
+  'PL': 'PIPE_BULK',
+  'PIPING': 'PIPE_BULK',
+  'LAB': 'LAB',
+  'HVAC': 'HVAC',
+  'VALVE': 'VALVE',
+  'VALVES': 'VALVE',
 };
 
 String? suggestCategory(String sheetName) {
@@ -137,6 +178,9 @@ String? suggestCategory(String sheetName) {
   final keys = mtoSheetCategory.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
   for (final k in keys) {
     if (u.startsWith(k) || u.contains(k)) return mtoSheetCategory[k];
+  }
+  for (final t in u.split(RegExp(r'[.\-\s_()&,]+'))) {
+    if (_sheetTokens[t] case final c?) return c;
   }
   return null;
 }
@@ -172,9 +216,25 @@ class MtoImporter {
       if (sh == null) continue;
       final hdr = _headerRow(sh);
       if (hdr == null) {
-        // قالب‌های دیگر: تشخیص خودکار سطر عنوان و نقش ستون‌ها
+        // قالب‌های دیگر: نوع شیت، سپس تشخیص خودکار سطر عنوان و نقش ستون‌ها
+        final kind = MtoGeneric.kindOf(sh);
+        if (kind == MtoSheetKind.install) {
+          final w = MtoGeneric.weightsFrom(sh);
+          if (w.isNotEmpty) a.installSheets.add(info.name);
+          for (final e in w.entries) {
+            a.weights.putIfAbsent(e.key, () => e.value);
+          }
+          a.skippedSheets.add(info.name);
+          continue;
+        }
+        if (kind == MtoSheetKind.skip) {
+          _docInfo(a, sh, 40);
+          a.skippedSheets.add(info.name);
+          continue;
+        }
         final l = MtoGeneric.detect(sh);
-        final groups = l == null ? const <MtoSheet>[] : MtoGeneric.parse(sh, l, defaultYear: a.issueYear);
+        final groups =
+            l == null ? const <MtoSheet>[] : MtoGeneric.parse(sh, l, defaultYear: a.issueYear, overrides: a.itemCategory);
         if (l == null || groups.isEmpty || groups.every((g) => g.items.isEmpty)) {
           a.skippedSheets.add(info.name);
           continue;
@@ -194,13 +254,23 @@ class MtoImporter {
     }
     if (a.sheets.isNotEmpty) a.format = a.layouts.isEmpty ? 'mto_quote_blocks' : 'generic';
     a.suggestedProject = suggestProjectName(a.projectTitle);
+    _fileInfo(a, wb);
+    // سال پیش‌فرض قیمت‌های بدون سال (تاریخ سند) برای گروه‌هایی که پیش از یافتن تاریخ خوانده شدند
+    for (final s in a.sheets) {
+      if (s.layout != null && s.goingYear == null) s.goingYear = s.layout!.sheetYear ?? a.issueYear;
+      for (final it in s.items) {
+        for (final q in it.quotes) {
+          q.year ??= s.goingYear;
+        }
+      }
+    }
     return a;
   }
 
   /// شماره‌ی سند و عنوان پروژه از سطرهای بالای جدول (هر ستونی از ۱ تا ۶)
   static void _docInfo(MtoAnalysis a, XlsxSheet sh, int hdr) {
-    for (var r = 1; r < hdr; r++) {
-      for (var c = 1; c <= 6 && c <= sh.maxCol; c++) {
+    for (var r = 1; r < hdr && r <= sh.maxRow; r++) {
+      for (var c = 1; c <= 60 && c <= sh.maxCol; c++) {
         final t = sh.text(r, c);
         if (t.isEmpty) continue;
         final l = t.toLowerCase();
@@ -220,6 +290,14 @@ class MtoImporter {
         if (a.projectTitle == null && RegExp(r'^(project\s*(title|name)?|نام\s*پروژه|عنوان\s*پروژه|پروژه)\s*[:：]', caseSensitive: false).hasMatch(l)) {
           a.projectTitle = t.substring(t.indexOf(RegExp(r'[:：]')) + 1).trim();
         }
+        // «… for Construct New KOOPAL (ASMARI & BANGESTAN) Desalting Unit» یا «… نمک‌زدایی مارون ۳ بنگستان»
+        if (a.projectTitle == null &&
+            RegExp(r'(construct\w*|revamp\w*|upgrad\w*)\s.*desalt', caseSensitive: false).hasMatch(t.replaceAll('\n', ' '))) {
+          a.projectTitle = t.replaceAll('\n', ' ').trim();
+        }
+        if (a.projectTitle == null && RegExp(r'نمک\s*\u200c?\s*زدایی\s+\S').hasMatch(t) && t.length < 120) {
+          a.projectTitle = t.trim();
+        }
       }
     }
   }
@@ -237,9 +315,9 @@ class MtoImporter {
     final prev = {for (final s in a.sheets.where((s) => s.source == sheet)) s.categoryCode: s.selected};
     final idx = a.sheets.indexWhere((s) => s.source == sheet);
     a.sheets.removeWhere((s) => s.source == sheet);
-    final groups = MtoGeneric.parse(sh, l, defaultYear: a.issueYear);
+    final groups = MtoGeneric.parse(sh, l, defaultYear: a.issueYear, overrides: a.itemCategory);
     for (final g in groups) {
-      g.selected = prev[g.categoryCode] ?? true;
+      g.selected = prev[g.categoryCode] ?? g.selected;
     }
     a.sheets.insertAll(idx < 0 ? a.sheets.length : idx, groups);
     a.skippedSheets.remove(sheet);
@@ -247,13 +325,86 @@ class MtoImporter {
     if (a.sheets.isNotEmpty && a.format == 'unknown') a.format = 'generic';
   }
 
+  /// اطلاعات از نام فایل و جدول بازنگری جلد: شماره‌ی سند، بازنگری، تاریخ، نام پروژه
+  static void _fileInfo(MtoAnalysis a, XlsxWorkbook wb) {
+    final f = a.fileName;
+    final ref = RegExp(r'(\d{3,6}-[A-Z0-9]{2,6}-[A-Z]{2}-[A-Z]{2}-\d{2,4})[ _-]?(R\d{1,2})?', caseSensitive: false).firstMatch(f);
+    if (a.docRef == null && ref != null) {
+      a.docRef = ref.group(2) == null ? ref.group(1) : '${ref.group(1)}-${ref.group(2)}';
+      a.revision ??= ref.group(2)?.toUpperCase();
+    }
+    if (a.issueYear == null) {
+      final ym = RegExp(r'(?<!\d)(1[34]\d\d)(0[1-9]|1[0-2])(?!\d)').firstMatch(f);
+      if (ym != null) {
+        a.issueYear = int.parse(ym.group(1)!);
+        a.issueMonth = int.parse(ym.group(2)!);
+      }
+    }
+    if (a.issueYear == null) _revisionDate(a, wb);
+    if (a.suggestedProject == null) {
+      // «PEP-Rev.140205 … Gachsaran_4» ← «Gachsaran 4»
+      const stop = {'PEP', 'REV', 'MTO', 'AND', 'COST', 'ESTIMATION', 'REPORT', 'XLSX', 'XLS', 'BASIC', 'FEED', 'RE', 'ME', 'R'};
+      final words = [
+        for (final m in RegExp(r'[A-Za-z]{3,}(?:[ _-]?\d{1,2}(?!\d))?').allMatches(f.replaceAll(RegExp(r'\.xls[xm]?$'), '')))
+          m.group(0)!.replaceAll('_', ' '),
+      ].where((w) => !stop.contains(w.split(RegExp(r'[ _-]')).first.toUpperCase()) && !RegExp(r'^R\d').hasMatch(w)).toList();
+      if (words.isNotEmpty) {
+        final w = words.first;
+        a.suggestedProject = w == w.toUpperCase() && w.length > 4 ? '${w[0]}${w.substring(1).toLowerCase()}' : w;
+      }
+    }
+  }
+
+  /// تاریخ بازنگری سند از جدول «REV. / DATE» برگه‌ی جلد (مثل R03 · JAN. 2016 ← ۱۳۹۴/۱۰)
+  static void _revisionDate(MtoAnalysis a, XlsxWorkbook wb) {
+    const months = {'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6, 'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12};
+    DateTime? best;
+    for (final info in wb.sheets.take(3)) {
+      final sh = wb.sheet(info.name);
+      if (sh == null) continue;
+      for (var r = 1; r <= sh.maxRow && r <= 120; r++) {
+        final cells = sh.rowCells(r);
+        if (cells.isEmpty || !RegExp(r'^R(ev)?\.?\s*\d{1,2}$', caseSensitive: false).hasMatch(cells.first.text.trim())) continue;
+        final rev = cells.first.text.trim().toUpperCase();
+        for (final c in cells.skip(1)) {
+          DateTime? d;
+          final m = RegExp(r'\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\.?\s*,?\s*(\d{4})', caseSensitive: false).firstMatch(c.text);
+          if (m != null) d = DateTime(int.parse(m.group(2)!), months[m.group(1)!.toUpperCase()]!, 15);
+          final v = c.value;
+          if (d == null && v is double && v > 30000 && v < 80000) d = DateTime(1899, 12, 30).add(Duration(days: v.floor()));
+          if (d == null) continue;
+          if (a.revision != null && rev == a.revision) {
+            best = d;
+            break;
+          }
+          if (a.revision == null && (best == null || d.isAfter(best))) best = d;
+        }
+      }
+    }
+    if (best == null) return;
+    final j = Gregorian(best.year, best.month, best.day).toJalali();
+    a.issueYear = j.year;
+    a.issueMonth = j.month;
+  }
+
   /// «Revamping of Pazanan II Desalting Unit» ← «Pazanan 2»
   static String? suggestProjectName(String? title) {
     if (title == null || title.isEmpty) return null;
-    var t = title.replaceFirst(RegExp(r'^(Revamping|Reconstruction|Construction|Upgrading)\s+of\s+', caseSensitive: false), '');
+    final fa = RegExp(r'نمک\s*\u200c?\s*زدایی\s+(.{2,40})$').firstMatch(title.trim());
+    if (fa != null) return fa.group(1)!.trim();
+    final m = RegExp(r'(?:for\s+)?(?:construct\w*|revamp\w*|upgrad\w*)\s+(?:of\s+)?(?:new\s+)?(.+?)\s+(?:desalt|dehydrat)',
+            caseSensitive: false)
+        .firstMatch(title.replaceAll('\n', ' '));
+    var t = m != null
+        ? m.group(1)!
+        : title.replaceFirst(RegExp(r'^(Revamping|Reconstruction|Construction|Upgrading)\s+of\s+', caseSensitive: false), '');
+    // «KOOPAL (ASMARI & BANGESTAN)» ← «Koopal (Asmari & Bangestan)»
+    if (t == t.toUpperCase()) {
+      t = t.toLowerCase().replaceAllMapped(RegExp(r'(^|[\s(])([a-z])'), (x) => '${x.group(1)}${x.group(2)!.toUpperCase()}');
+    }
     t = t.replaceFirst(RegExp(r'\s+(Desalt|Desalting|Dehydration)\b.*$', caseSensitive: false), '').trim();
     const roman = {'I': '1', 'II': '2', 'III': '3', 'IV': '4', 'V': '5'};
-    t = t.replaceAllMapped(RegExp(r'\b(IV|V|I{1,3})\b'), (m) => roman[m.group(1)] ?? m.group(1)!);
+    t = t.replaceAllMapped(RegExp(r'\b(IV|V|I{1,3})\b'), (x) => roman[x.group(1)] ?? x.group(1)!);
     return t.isEmpty ? null : t;
   }
 
@@ -533,7 +684,7 @@ class MtoImporter {
           if (isPump) {
             values['remarks'] = '${it.description}${values['remarks'] == '' ? '' : '\n${values['remarks']}'}';
             // دبی، هد، فشار رانش، کلاس متریال، استاندارد، … در فیلدهای قالب پمپ
-            for (final e in extractPumpSpecs(it.specs, it.name).entries) {
+            for (final e in {...extractFreeSpecs(it.description, 'PUMP'), ...extractPumpSpecs(it.specs, it.name)}.entries) {
               values.putIfAbsent(e.key, () => e.value);
             }
           } else {
@@ -542,6 +693,17 @@ class MtoImporter {
             if (profile != null) {
               // فیلدهای ساختاریافته‌ی قالب رده (ابعاد، فشار، جنس، …)
               values.addAll(profile.extract(it.specs, context: '${it.name}\n${s.title}', scope: it.scopeLines));
+              // مشخصات متن آزاد («536 m3/hr, 19.5 bar D.P., ID=5300 mm») برای فیلدهای هنوز خالی
+              for (final e in extractFreeSpecs(it.description, cat.code).entries) {
+                if (profile.field(e.key) != null) values.putIfAbsent(e.key, () => e.value);
+              }
+              // وزن: از MTO (واحد Kg/Ton) یا شیت‌های نصب و اجرا (همان تگ)
+              final wk = profile.weightKey;
+              final w = it.weightKg ?? a.weights[normTag(it.tag)];
+              if (wk != null && w != null && w > 0) {
+                values.putIfAbsent(wk, () => w);
+                rep.weights++;
+              }
             }
             for (final e in it.specs.entries) {
               if (profile != null && profile.maps(e.key)) continue;

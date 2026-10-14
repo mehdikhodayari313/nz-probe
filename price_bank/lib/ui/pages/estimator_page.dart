@@ -448,7 +448,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final unit = app.unit;
-    if (!app.pb.estimableCategories().any((c) => c.code == _cat)) _cat = 'PUMP';
+    if (!app.pb.bankCategories().any((c) => c.code == _cat)) _cat = 'PUMP';
     final isPump = _cat == 'PUMP';
     final st = app.settings;
     final s = app.settings.toPumpSettings();
@@ -512,6 +512,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                     'روش تعدیل پیش‌فرض و شاخص PPI از «تنظیمات رده» همین تجهیز خوانده می‌شود؛ کف قیمت فقط برای پمپ است.')),
             Expanded(
               child: EquipmentCategoryPicker(
+                all: true,
                 value: _cat,
                 onChanged: (v) => setState(() {
                   _cat = v;

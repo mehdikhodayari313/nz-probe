@@ -94,7 +94,7 @@ class AppState extends ChangeNotifier {
         for (final r in pumps)
           EquipRow(r.item.categoryId, r.item, r.result.eurSource.number, r.result.irrSource.number,
               r.result.eurTarget.number, r.result.irrTarget.number),
-        for (final c in pb.estimableCategories())
+        for (final c in pb.bankCategories())
           if (c.code != 'PUMP')
             for (final r in genericRows(c.id))
               EquipRow(c.id, r.item, r.result.eurSource.number, r.result.irrSource.number, r.result.eurTarget.number,

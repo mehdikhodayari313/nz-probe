@@ -285,6 +285,17 @@ class PriceBank {
           r['category_id'] as int: r['n'] as int,
       };
 
+  /// همه‌ی رده‌های فعال بانک (پمپ + رده‌های پایانی فعال، با یا بدون قالب تخصصی)
+  List<Category> bankCategories() {
+    final all = catalog.categories();
+    final parents = {for (final c in all) c.parentId};
+    return [
+      pumpCategory,
+      for (final c in all)
+        if (c.enabled && c.code != 'PUMP' && !parents.contains(c.id)) c,
+    ];
+  }
+
   /// رده‌های قابل تخمین/تعدیل: پمپ + رده‌های دارای قالب تخصصی
   List<Category> estimableCategories() => [
         pumpCategory,

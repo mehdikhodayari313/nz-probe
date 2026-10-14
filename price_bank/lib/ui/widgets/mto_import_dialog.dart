@@ -193,6 +193,11 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
             if (a.docRef != null) Pill('سند: ${a.docRef}', color: AppColors.teal),
             if (a.issueYear != null) Pill('تاریخ فایل: ${fa(a.issueYear)}${a.issueMonth == null ? '' : '/${fa(a.issueMonth)}'}'),
             Pill('${fa(a.itemCount)} قلم · ${fa(a.quoteCount)} استعلام', color: Tones.good(context)),
+            if (a.weights.isNotEmpty)
+              Pill('وزن ${fa(a.weights.length)} تجهیز از شیت‌های نصب',
+                  icon: Icons.scale_rounded,
+                  color: AppColors.teal,
+                  tooltip: 'از شیت‌های «اجرا و نصب» (${a.installSheets.join('، ')}) وزن تجهیزات خوانده شد و در فیلد «وزن خالی» همان تگ ثبت می‌شود.'),
             Pill(
               a.format == 'mto_quote_blocks'
                   ? 'قالب: MTO با بلوک‌های استعلام'
@@ -345,7 +350,11 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                     IconButton(
                       tooltip: 'مشاهده‌ی اقلام، قیمت‌ها و مشخصات خوانده‌شده',
                       icon: const Icon(Icons.visibility_outlined, size: 20),
-                      onPressed: () => showDialog<void>(context: context, builder: (_) => _ItemsPreview(sheet: s)),
+                      onPressed: () async {
+                        final changed = await showDialog<bool>(
+                            context: context, builder: (_) => _ItemsPreview(sheet: s, analysis: a, leafs: leafs));
+                        if (changed == true && mounted) setState(() {});
+                      },
                     ),
                     if (s.source != null)
                       TextButton.icon(
@@ -614,8 +623,10 @@ class _LayoutDialogState extends State<_LayoutDialog> {
 
 /// اقلام خوانده‌شده‌ی یک شیت: تگ، نام، تعداد، قیمت‌ها، استعلام‌ها و مشخصات.
 class _ItemsPreview extends StatelessWidget {
-  const _ItemsPreview({required this.sheet});
+  const _ItemsPreview({required this.sheet, required this.analysis, required this.leafs});
   final MtoSheet sheet;
+  final MtoAnalysis analysis;
+  final List<Category> leafs;
 
   @override
   Widget build(BuildContext context) {
@@ -638,6 +649,7 @@ class _ItemsPreview extends StatelessWidget {
             child: Row(children: [
               SizedBox(width: 120, child: Text('تگ', style: head)),
               Expanded(flex: 3, child: Text('نام و مشخصات', style: head)),
+              if (sheet.source != null) SizedBox(width: 170, child: Text('رده', style: head)),
               SizedBox(width: 50, child: Text('تعداد', style: head)),
               Expanded(flex: 2, child: Text('قیمت مبنا${sheet.goingYear == null ? '' : ' (${fa(sheet.goingYear)})'}', style: head)),
               Expanded(flex: 2, child: Text('استعلام‌ها', style: head)),
@@ -667,9 +679,29 @@ class _ItemsPreview extends StatelessWidget {
                           if (sheet.items[i].specs.isNotEmpty)
                             Text('${fa(sheet.items[i].specs.length)} مشخصه: ${sheet.items[i].specs.keys.take(4).join('، ')}',
                                 maxLines: 1, overflow: TextOverflow.ellipsis, style: t.textTheme.labelSmall),
+                          if ((sheet.items[i].weightKg ?? analysis.weights[normTag(sheet.items[i].tag)]) case final w?)
+                            Text('وزن: ${faSmart(w)} kg', style: t.textTheme.labelSmall?.copyWith(color: AppColors.teal)),
                         ]),
                       ),
                     ),
+                    if (sheet.source != null)
+                      SizedBox(
+                        width: 170,
+                        child: DropdownButtonFormField<String?>(
+                          itemHeight: null,
+                          isExpanded: true,
+                          isDense: true,
+                          value: leafs.any((c) => c.code == sheet.categoryCode) ? sheet.categoryCode : null,
+                          items: [
+                            const DropdownMenuItem<String?>(value: null, child: DdText('— نامشخص —')),
+                            for (final c in leafs) DropdownMenuItem<String?>(value: c.code, child: DdText(c.nameFa)),
+                          ],
+                          onChanged: (v) {
+                            analysis.moveItem(sheet, sheet.items[i], v);
+                            Navigator.pop(context, true);
+                          },
+                        ),
+                      ),
                     SizedBox(width: 50, child: Text(faSmart(sheet.items[i].quantity), style: const TextStyle(fontSize: 12.5))),
                     Expanded(
                         flex: 2,
@@ -696,7 +728,7 @@ class _ItemsPreview extends StatelessWidget {
           ),
         ]),
       ),
-      actions: [FilledButton(onPressed: () => Navigator.pop(context), child: const Text('بستن'))],
+      actions: [FilledButton(onPressed: () => Navigator.pop(context, false), child: const Text('بستن'))],
     );
   }
 }

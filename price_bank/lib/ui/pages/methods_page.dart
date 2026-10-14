@@ -93,7 +93,7 @@ class _MethodsPageState extends State<MethodsPage> {
     final app = AppScope.of(context);
     final t = Theme.of(context);
     final s = app.settings;
-    final cats = app.pb.estimableCategories();
+    final cats = app.pb.bankCategories();
     if (!cats.any((c) => c.code == _code)) _code = 'PUMP';
     final cat = cats.firstWhere((c) => c.code == _code);
     final counts = app.pb.categoryCounts();

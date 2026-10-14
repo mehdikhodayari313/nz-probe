@@ -5,7 +5,10 @@ import 'common.dart';
 
 /// انتخاب رده‌ی تجهیز (پمپ + رده‌های دارای قالب) با تعداد اقلام هر رده.
 class EquipmentCategoryPicker extends StatelessWidget {
-  const EquipmentCategoryPicker({super.key, required this.value, required this.onChanged, this.label});
+  const EquipmentCategoryPicker({super.key, required this.value, required this.onChanged, this.label, this.all = false});
+
+  /// همه‌ی رده‌های بانک (نه فقط رده‌های قابل تخمین)
+  final bool all;
   final String value;
   final ValueChanged<String> onChanged;
   final String? label;
@@ -13,7 +16,7 @@ class EquipmentCategoryPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final cats = app.pb.estimableCategories();
+    final cats = all ? app.pb.bankCategories() : app.pb.estimableCategories();
     final counts = app.pb.categoryCounts();
     return DropdownButtonFormField<String>(itemHeight: null, 
       key: const ValueKey('category-picker'),

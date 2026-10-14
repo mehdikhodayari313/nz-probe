@@ -920,13 +920,38 @@ const _categoryWords = <(String, String)>[
   (r'filter|strainer|فیلتر|صافی', 'FILTER'),
   (r'flare|burn\s*pit|stack|فلر|مشعل', 'FLARE'),
   (r'crane|hoist|monorail|جرثقیل|بالابر', 'CRANE'),
+  (r'\bfire\b|safety|hydrant|extinguish|deluge|eye ?wash|breathing|first ?aid|آتش|ایمنی', 'FIRE_SAFETY'),
+  (r'valve|شیرآلات|شیر ', 'VALVE'),
+  (r'\bpipe|piping|fitting|flange|elbow|stud ?bolt|gasket|لوله|اتصالات', 'PIPE_BULK'),
+  (r'transformer|switchgear|\bcable|\bpanel|\bups\b|lighting|generator|capacitor|ترانس|تابلو|کابل|ژنراتور', 'ELEC_EQ'),
+  (r'transmitter|analy[sz]er|gauge|instrument|\bplc\b|\bdcs\b|corrosion (probe|coupon)|logger|ابزار ?دقیق', 'INST_EQ'),
+  (r'\blab\b|laborator|آزمایشگاه', 'LAB'),
 ];
+
+/// کلیدواژه‌های خاص که بر جایگاه واژه مقدم‌اند (مثل «Pig Launcher & Receiver» که ظرف نیست)
+const _priorityWords = <(String, String)>[
+  (r'pig\s*(launcher|receiver)|stripp', 'MISC_PKG'),
+  (r'iwwtp|waste ?water|water ?treatment|reverse ?osmosis|\br\.\s?o\.|تصفیه', 'WATER_TREAT'),
+  (r'hvac|air ?condition|fan ?coil|تهویه', 'HVAC'),
+];
+
+/// رده از کلیدواژه‌های خاص (پکیج تصفیه، HVAC، Pig Launcher) که بر عنوان بخش هم مقدم‌اند
+String? priorityCategoryFromText(String text) {
+  final t = text.split('\n').first.toLowerCase();
+  for (final (p, code) in _priorityWords) {
+    if (RegExp(p, caseSensitive: false).hasMatch(t)) return code;
+  }
+  return null;
+}
 
 /// پیشنهاد رده از روی متن آزاد (فارسی یا انگلیسی)؛ null = تشخیص داده نشد.
 /// اسم اصلی برنده است: در انگلیسی آخرین کلیدواژه (Drum در «Pump Suction Drum»)،
 /// در فارسی اولین کلیدواژه («پمپ» در «پمپ تزریق مواد»).
 String? suggestCategoryFromText(String text) {
   final t = text.split('\n').first.toLowerCase().replaceAll('ي', 'ی').replaceAll('ك', 'ک');
+  for (final (p, code) in _priorityWords) {
+    if (RegExp(p, caseSensitive: false).hasMatch(t)) return code;
+  }
   final fa = RegExp(r'[\u0600-\u06FF]');
   String? en, faBest;
   var enPos = -1, faPos = 1 << 30;
@@ -944,4 +969,93 @@ String? suggestCategoryFromText(String text) {
     }
   }
   return faBest ?? en;
+}
+
+// -----------------------------------------------------------------------------
+// مشخصات به شکل متن آزاد (مثل «536 m3/hr , 19.5 bar D.P. T/T=18000 mm , ID=5300 mm»)
+// ← فیلدهای قالب هر رده. فقط مقادیری که خالی‌اند پر می‌شوند.
+
+double? _firstNum(RegExp re, String t, {int group = 1}) {
+  final m = re.firstMatch(t);
+  if (m == null) return null;
+  return double.tryParse(m.group(group)!.replaceAll(',', ''));
+}
+
+double? _mm(RegExp re, String t) {
+  final m = re.firstMatch(t);
+  if (m == null) return null;
+  final v = double.tryParse(m.group(1)!.replaceAll(',', ''));
+  if (v == null) return null;
+  final unit = (m.groupCount >= 2 ? m.group(2) : null)?.toLowerCase();
+  return (unit == 'm' || (unit == null && v < 60)) ? v * 1000 : v;
+}
+
+/// استخراج از متن آزاد برای رده‌ی [code]؛ خروجی: کلید فیلد ← مقدار
+Map<String, Object?> extractFreeSpecs(String text, String code) {
+  final t = text.replaceAll('\n', ' ').replaceAll('³', '3').replaceAll('٫', '.');
+  final o = <String, Object?>{};
+  const n = r'(\d+(?:[.,]\d+)?)';
+  final id = _mm(RegExp('\\bI\\.?D\\.?\\s*[=:]?\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  final d = _mm(RegExp('(?<![A-Za-z/])D(?:IA\\.?|iameter)?\\s*=\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  final tt = _mm(RegExp('(?:T/T|TL(?:-TL)?|T\\.L\\.)\\s*[=:]\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  final l = _mm(RegExp('(?<![A-Za-z/])L(?:ength)?\\s*=\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  final h = _mm(RegExp('(?<![A-Za-z/])H(?:eight)?\\s*=\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  final flow = _firstNum(RegExp('$n\\s*(?:n\\s*)?m3\\s*/\\s*h', caseSensitive: false), t);
+  final kw = _firstNum(RegExp('$n\\s*kw\\b', caseSensitive: false), t);
+  final dp = _firstNum(RegExp('D\\.?P\\.?\\s*[=:]?\\s*$n', caseSensitive: false), t) ??
+      _firstNum(RegExp('$n\\s*bar\\s*(?:g\\b)?\\s*D\\.?P', caseSensitive: false), t) ??
+      _firstNum(RegExp('$n\\s*barg\\b', caseSensitive: false), t);
+  final bar = _firstNum(RegExp('$n\\s*bar', caseSensitive: false), t);
+  final lph = RegExp('$n\\s*(?:-|to|~)\\s*$n\\s*lit\\w*\\s*/\\s*h', caseSensitive: false).firstMatch(t);
+  final lph1 = _firstNum(RegExp('$n\\s*(?:lit\\w*|l)\\s*/\\s*h', caseSensitive: false), t);
+  final injP = _firstNum(RegExp('injection\\s*pressure\\s*[=:]?\\s*$n', caseSensitive: false), t);
+  final bpd = _firstNum(RegExp('$n\\s*s?bpd', caseSensitive: false), t);
+  final ton = _firstNum(RegExp('$n\\s*(?:ton|tonne|t)\\b', caseSensitive: false), t);
+
+  void put(String k, Object? v) {
+    if (v != null) o[k] ??= v;
+  }
+
+  switch (code) {
+    case 'VESSEL':
+      put('id_mm', id ?? d);
+      put('tl_mm', tt ?? l ?? h);
+      put('design_pressure_barg', dp);
+    case 'TANK':
+      put('diameter_mm', d ?? id);
+      put('height_mm', h ?? tt);
+      put('design_pressure_barg', dp);
+    case 'DESALTER':
+      put('vessel_id_mm', id ?? d);
+      put('vessel_tl_mm', tt ?? l);
+      put('design_pressure_barg', dp);
+    case 'HEX':
+      put('duty_kw', kw);
+      put('design_pressure_barg', dp);
+    case 'HEATER':
+      put('duty_kw', kw);
+      put('design_pressure_coil_barg', dp);
+      put('shell_id_mm', id ?? d);
+      put('shell_tl_mm', tt ?? l);
+    case 'CIP':
+      put('injection_rate_lph',
+          lph != null ? double.tryParse(lph.group(2)!.replaceAll(',', '')) : lph1);
+      put('discharge_pressure_barg', injP ?? dp ?? bar);
+    case 'DEAERATOR' || 'AIR_DRYER':
+      put('flow_m3h', flow);
+      put('design_pressure_barg', dp);
+    case 'IGF' || 'FILTER':
+      put('flow_m3h', flow ?? (bpd == null ? null : bpd * 0.158987 / 24));
+      put('design_pressure_barg', dp);
+    case 'COMPRESSOR':
+      put('flow_m3h', flow);
+      put('discharge_pressure_barg', dp ?? bar);
+    case 'CRANE':
+      put('capacity_kg', ton == null ? null : ton * 1000);
+    case 'PUMP':
+      put('capacity_m3h', flow);
+      put('discharge_pressure_barg', bar);
+      put('power_kw', kw);
+  }
+  return o;
 }

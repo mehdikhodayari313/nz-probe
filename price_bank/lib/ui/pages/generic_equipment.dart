@@ -569,7 +569,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
     final app = AppScope.of(context);
     final t = Theme.of(context);
     final cat = app.pb.catalog.categoryByCode(widget.code)!;
-    final p = equipmentProfiles[widget.code]!;
+    final p = equipmentProfiles[widget.code];
     final s = app.settings;
     final ppiSeries = app.pb.indices.series().where((x) => x.group.startsWith('ppi') && x.calendar == 'jalali').toList();
     Widget row(String label, Widget w, {String? help}) => Padding(
@@ -629,6 +629,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
             ),
             help: 'برای تجهیزات ساخت داخل (ظرف، مخزن، سازه) می‌توانید PPI بخشی ایران (مثلاً ISIC 25 محصولات فلزی) را انتخاب کنید؛ ابتدا مقادیر آن را در «شاخص‌ها و ارز» کامل کنید.',
           ),
+          if (p != null) ...[
           row(
             'توان اندازه n',
             TextField(
@@ -660,6 +661,9 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
           ),
           Text('پارامتر اندازه‌ی این رده: ${p.driver.labelFa} (${p.driver.unit}). ضرایب نرمال‌سازی: ${p.factorGroups.isEmpty ? 'ندارد' : p.factorGroups.join('، ')} — در صفحه‌ی «ضرایب».',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8)),
+          ] else
+            Text('این رده قالب تخصصی (پارامتر اندازه) ندارد؛ فقط روش تعدیل و شاخص آن قابل تنظیم است.',
+                style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8)),
         ])),
       ),
       actions: [
