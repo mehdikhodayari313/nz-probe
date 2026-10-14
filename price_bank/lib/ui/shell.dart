@@ -397,13 +397,13 @@ class _TopBar extends StatelessWidget {
         _Control(
           label: 'سال هدف',
           tooltip: 'همه‌ی قیمت‌ها به این سال تعدیل می‌شوند (شاخص و نرخ ارز همین سال).',
-          child: DropdownButton<int>(
+          child: DropdownButton<int>(itemHeight: null, 
             value: years.contains(s.targetYear) ? s.targetYear : null,
             underline: const SizedBox(),
             isDense: true,
             style: t.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
             borderRadius: BorderRadius.circular(10),
-            items: [for (final y in years) DropdownMenuItem(value: y, child: Text(fa(y)))],
+            items: [for (final y in years) DropdownMenuItem(value: y, child: DdText(fa(y)))],
             onChanged: (y) => app.setSetting('target_year', '$y', reason: 'تغییر سال هدف از نوار بالا'),
           ),
         ),
@@ -414,16 +414,19 @@ class _TopBar extends StatelessWidget {
               '«جدول پیش‌فرض» همان نرخ‌های فایل اکسل است؛ جدول جدید را در «تنظیمات» بسازید و در «شاخص‌ها و ارز» تکمیل کنید.',
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 170),
-            child: DropdownButton<String>(
+            child: DropdownButton<String>(itemHeight: null, 
               value: fxTypes.any((f) => f.code == s.fxRateType) ? s.fxRateType : null,
               underline: const SizedBox(),
               isDense: true,
               isExpanded: true,
               style: t.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
               borderRadius: BorderRadius.circular(10),
-              items: [
+              selectedItemBuilder: (_) => [
                 for (final f in fxTypes)
-                  DropdownMenuItem(value: f.code, child: Text(f.nameFa, overflow: TextOverflow.ellipsis)),
+                  Tooltip(message: f.nameFa, child: Text(f.nameFa, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              ],
+              items: [
+                for (final f in fxTypes) DropdownMenuItem(value: f.code, child: DdText(f.nameFa)),
               ],
               onChanged: (v) => app.setSetting('fx_rate_type', v, reason: 'تغییر جدول نرخ ارز از نوار بالا'),
             ),

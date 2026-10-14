@@ -51,10 +51,10 @@ class SettingsPage extends StatelessWidget {
           Row(children: [
             const SizedBox(width: 300, child: Text('شاخص تعدیل پمپ (PPI)')),
             Expanded(
-              child: DropdownButtonFormField<String>(
+              child: DropdownButtonFormField<String>(itemHeight: null, 
                 value: ppiSeries.any((x) => x.code == s.ppiSeries) ? s.ppiSeries : null,
                 isExpanded: true,
-                items: [for (final x in ppiSeries) DropdownMenuItem(value: x.code, child: Text('${x.nameFa}  (${x.code})'))],
+                items: [for (final x in ppiSeries) DropdownMenuItem(value: x.code, child: DdText('${x.nameFa}  (${x.code})'))],
                 onChanged: admin ? (v) => app.setSetting('ppi_series', v, reason: 'تغییر شاخص تعدیل پمپ') : null,
               ),
             ),

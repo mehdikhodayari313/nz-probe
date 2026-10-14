@@ -264,6 +264,23 @@ void main() {
     expect(find.text('فقط برای پمپ'), findsOneWidget);
     debugPrint('✓ ' 'ضرایب رده و بازگشت به همان جا');
 
+    // روش‌های تعدیل: انتخاب ظرف ← صحت‌سنجی از داده‌های بانک و انتخاب روش ظرف
+    await go(tester, nMethods);
+    await tester.tap(find.byKey(const ValueKey('method-cat-VESSEL')));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('مقایسه‌ی دقت روش‌ها — ظرف تحت فشار'), findsOneWidget);
+    final selM0 = find.byKey(const ValueKey('select-M0'));
+    await tester.scrollUntilVisible(selM0, 300,
+        scrollable: find.ancestor(of: find.textContaining('مقایسه‌ی دقت روش‌ها'), matching: find.byType(Scrollable)).first);
+    await tester.pumpAndSettle();
+    await tester.tap(selM0);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ثبت'));
+    await tester.pumpAndSettle();
+    expect(app.settings.catMethod('VESSEL'), 'M0');
+    expect(app.settings.escalationMethod, 'M6');
+    debugPrint('✓ ' 'روش‌های تعدیل رده‌ی ظرف');
+
     // صفحه‌ی قلم
     final id = app.genericRows(vessel.id).firstWhere((r) => r.item.tag == 'V-141').item.id;
     nav.push(MaterialPageRoute<void>(builder: (_) => GenericItemPage(itemId: id)));
@@ -285,6 +302,37 @@ void main() {
     await tester.tap(find.text('ویرایش'));
     await tester.pumpAndSettle();
     debugPrint('✓ ' 'مبنا شدن استعلام و حالت ویرایش');
+  });
+
+  testWidgets('ورود MTO با قالب دیگر: ستون‌ها، مشاهده‌ی اقلام و ورود', (tester) async {
+    final app = await boot(tester, withData: false);
+    final a = MtoImporter.analyze(XlsxWorkbook.openFile('test/fixtures/MTO_generic_sample_14031020.xlsx'),
+        fileName: 'MTO_generic_sample_14031020.xlsx');
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    showDialog<void>(context: nav.context, builder: (_) => MtoPreviewDialog(analysis: a));
+    await tester.pumpAndSettle();
+    expect(find.text('قالب: تشخیص خودکار ستون‌ها'), findsOneWidget);
+    final dlgScroll = find.descendant(of: find.byType(AlertDialog), matching: find.byType(Scrollable)).first;
+    await tester.scrollUntilVisible(find.textContaining('تعریف دستی'), 200, scrollable: dlgScroll);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('layout-Equipment List')).first, -200, scrollable: dlgScroll);
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('layout-Equipment List')).first);
+    await tester.pumpAndSettle();
+    expect(find.text('ستون‌های شیت «Equipment List»'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('layout-apply')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.visibility_outlined).first);
+    await tester.pumpAndSettle();
+    expect(find.text('V-101'), findsOneWidget);
+    await tester.tap(find.text('بستن'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('ورود ۴ قلم'));
+    await tester.pumpAndSettle();
+    expect(find.text('ورود MTO کامل شد'), findsOneWidget);
+    await tester.tap(find.text('بسیار خوب'));
+    await tester.pumpAndSettle();
+    expect(app.pb.items.count(app.pb.catalog.categoryByCode('VESSEL')!.id), 2);
+    debugPrint('✓ ' 'ورود MTO قالب دیگر');
   });
 
   testWidgets('جزئیات پمپ: همه‌ی زبانه‌ها و حالت ویرایش', (tester) async {

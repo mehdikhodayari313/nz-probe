@@ -101,6 +101,13 @@ void main() {
     final pumps = pb.computePumps().where((x) => x.item.projectName == 'Sample').toList();
     expect(pumps.length, 4);
     expect(pumps.every((x) => x.result.eurSource.isNumber), isTrue);
+    // مشخصات پمپ از شرح MTO در فیلدهای قالب پمپ (برای جستجو و تخمین)
+    final p111 = pumps.firstWhere((x) => x.item.tag == 'P-111 A/B');
+    expect(p111.item.values['capacity_m3h'], 45);
+    expect(p111.item.values['diff_head_m'], 139.1);
+    expect(p111.item.values['material_class'], 'D-1');
+    expect(p111.item.values['api610_type'], 'VS6');
+    expect(p111.item.values['pump_standard'], 'API 610');
 
     // تغییر قیمت اصلی به یک استعلام
     final q = r.item.observations.firstWhere((o) => o.kind == 'quote');
@@ -208,6 +215,25 @@ void main() {
     expect(p.extract({'Empty Weight': '12.5 ton'})['empty_weight_kg'], 12500);
     expect(p.extract({'Weight (Empty / Operating)': '5200 / 9100 kg'})['empty_weight_kg'], 5200);
     expect(p.extract({'Operating Weight': '20000 kg'}).containsKey('empty_weight_kg'), isFalse);
+    pb.close();
+  });
+
+  test('صحت‌سنجی روش‌ها با داده‌های بانک (قیمت قدیمی در برابر استعلام جدید)', () {
+    final pb = PriceBank.memory(loadSeed());
+    pb.mtoImporter().run(MtoImporter.analyze(wb, fileName: 'x.xlsx'), projectName: 'Sample');
+    final bt = pb.backtestCategory('VESSEL');
+    expect(bt.n, greaterThan(0));
+    final p = bt.pairs.firstWhere((x) => x.item.tag == 'V-141');
+    expect(p.oldYear, 1393);
+    expect(p.quoteYear, 1404);
+    // M0: برآورد = یوروی قیمت قدیمی بدون تعدیل
+    final old = p.item.observations.firstWhere((o) => o.costYear == 1393);
+    expect(p.predEur['M0'], closeTo(pb.genericEngine(categoryCode: 'VESSEL').calculate(PriceBank.genericInputFor(old)).eurSource.number!, 1e-6));
+    expect(p.predEur['M4']! > p.predEur['M0']!, isTrue);
+    final st = bt.stats('M4')!;
+    expect(st.mdape, greaterThanOrEqualTo(0));
+    expect(bt.best, isNotNull);
+    expect(pb.backtestCategory('CRANE').methods, PriceBank.genericMethodCodes);
     pb.close();
   });
 

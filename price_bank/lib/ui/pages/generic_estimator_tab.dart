@@ -131,14 +131,14 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
         _row(
           context,
           'پر کردن از یک قلم بانک (اختیاری)',
-          DropdownButtonFormField<int?>(
+          DropdownButtonFormField<int?>(itemHeight: null, 
             value: rows.any((r) => r.item.id == _fromItem) ? _fromItem : null,
             isExpanded: true,
             items: [
-              const DropdownMenuItem<int?>(value: null, child: Text('—')),
+              const DropdownMenuItem<int?>(value: null, child: DdText('—')),
               for (final r in rows)
                 DropdownMenuItem<int?>(
-                    value: r.item.id, child: Text('${r.item.tag ?? ''} · ${r.item.name}', overflow: TextOverflow.ellipsis)),
+                    value: r.item.id, child: DdText('${r.item.tag ?? ''} · ${r.item.name}', overflow: TextOverflow.ellipsis)),
             ],
             onChanged: (v) => setState(() {
               final r = rows.where((r) => r.item.id == v).firstOrNull;
@@ -154,11 +154,11 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
             '${f.labelFa}${f.unit == null ? '' : ' (${f.unit})'}',
             f.type == 'number'
                 ? TextField(controller: _c(f.key), textDirection: TextDirection.ltr, onChanged: (_) => setState(() {}))
-                : DropdownButtonFormField<String?>(
+                : DropdownButtonFormField<String?>(itemHeight: null, 
                     value: app.pb.catalog.options(f.list!).any((o) => o.value == _enum[f.key]) ? _enum[f.key] : null,
                     isExpanded: true,
                     items: [
-                      const DropdownMenuItem<String?>(value: null, child: Text('—')),
+                      const DropdownMenuItem<String?>(value: null, child: DdText('—')),
                       for (final o in app.pb.catalog.options(f.list!))
                         DropdownMenuItem<String?>(
                             value: o.value,

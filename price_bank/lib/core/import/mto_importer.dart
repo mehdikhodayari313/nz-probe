@@ -13,6 +13,7 @@
 import 'package:shamsi_date/shamsi_date.dart';
 
 import '../catalog/profiles.dart';
+import 'mto_generic.dart';
 import '../db/db.dart';
 import '../repo/audit.dart';
 import '../repo/catalog_repo.dart';
@@ -42,8 +43,8 @@ class MtoItem {
   String get name => description.split('\n').first.trim();
   double? quantity;
   String? refCurrency;
-  double? goingIrr, goingEur;
-  double? oldIrr, oldEur;
+  double? goingIrr, goingEur, goingUsd;
+  double? oldIrr, oldEur, oldUsd;
   final Map<String, String> specs = {}; // برچسب ← مقدار (به ترتیب شرح)
   final List<String> scopeLines = [];
   final List<MtoQuote> quotes = [];
@@ -56,6 +57,14 @@ class MtoSheet {
   MtoSheet(this.name, this.title);
   final String name;
   final String title;
+
+  /// نام نمایشی (وقتی یک شیت به چند رده تقسیم شده: «شیت › رده»)
+  String? label;
+  String get display => label ?? name;
+
+  /// شیت منبع و قالب ستون‌ها (فقط قالب‌های عمومی؛ برای اصلاح نقش ستون‌ها در پیش‌نمایش)
+  String? source;
+  MtoLayout? layout;
   String? categoryCode;
   bool selected = true;
   int? goingYear, goingMonth;
@@ -70,6 +79,15 @@ class MtoSheet {
 class MtoAnalysis {
   MtoAnalysis(this.fileName);
   final String fileName;
+
+  /// کتاب کار (برای خواندن دوباره‌ی شیت پس از اصلاح نقش ستون‌ها)
+  XlsxWorkbook? workbook;
+
+  /// قالب ستون‌های شیت‌های غیرپازنانی: نام شیت ← قالب
+  final Map<String, MtoLayout> layouts = {};
+
+  /// شیت‌هایی که جدول اقلام در آن‌ها پیدا نشد (برای تعریف دستی سطر عنوان)
+  List<String> get unreadSheets => skippedSheets;
   String format = 'unknown';
   String? docRef;
   String? revision;
@@ -141,7 +159,7 @@ class MtoImporter {
   // تحلیل فایل (بدون تغییر دیتابیس)
 
   static MtoAnalysis analyze(XlsxWorkbook wb, {required String fileName}) {
-    final a = MtoAnalysis(fileName);
+    final a = MtoAnalysis(fileName)..workbook = wb;
     final fm = RegExp(r'(1[34]\d\d)(\d\d)(\d\d)').firstMatch(fileName);
     if (fm != null) {
       a.issueYear = int.parse(fm.group(1)!);
@@ -154,21 +172,19 @@ class MtoImporter {
       if (sh == null) continue;
       final hdr = _headerRow(sh);
       if (hdr == null) {
-        a.skippedSheets.add(info.name);
+        // قالب‌های دیگر: تشخیص خودکار سطر عنوان و نقش ستون‌ها
+        final l = MtoGeneric.detect(sh);
+        final groups = l == null ? const <MtoSheet>[] : MtoGeneric.parse(sh, l, defaultYear: a.issueYear);
+        if (l == null || groups.isEmpty || groups.every((g) => g.items.isEmpty)) {
+          a.skippedSheets.add(info.name);
+          continue;
+        }
+        _docInfo(a, sh, l.headerRow);
+        a.layouts[info.name] = l;
+        a.sheets.addAll(groups);
         continue;
       }
-      // اطلاعات سند از سطرهای بالای شیت
-      for (var r = 1; r < hdr; r++) {
-        final t = sh.text(r, 1);
-        if (a.docRef == null && t.toLowerCase().startsWith('doc. ref')) {
-          a.docRef = t.replaceFirst(RegExp(r'^doc\.?\s*ref\.?\s*(no\.?)?\s*[:：]?\s*', caseSensitive: false), '').trim();
-          final rv = RegExp(r'-(R\d{1,3})\s*$').firstMatch(a.docRef!);
-          a.revision = rv?.group(1);
-        }
-        if (a.projectTitle == null && t.toLowerCase().startsWith('project title')) {
-          a.projectTitle = t.substring(t.indexOf(':') + 1).trim();
-        }
-      }
+      _docInfo(a, sh, hdr);
       final s = _parseSheet(sh, hdr);
       if (s.items.isEmpty) {
         a.skippedSheets.add(info.name);
@@ -176,9 +192,59 @@ class MtoImporter {
       }
       a.sheets.add(s);
     }
-    if (a.sheets.isNotEmpty) a.format = 'mto_quote_blocks';
+    if (a.sheets.isNotEmpty) a.format = a.layouts.isEmpty ? 'mto_quote_blocks' : 'generic';
     a.suggestedProject = suggestProjectName(a.projectTitle);
     return a;
+  }
+
+  /// شماره‌ی سند و عنوان پروژه از سطرهای بالای جدول (هر ستونی از ۱ تا ۶)
+  static void _docInfo(MtoAnalysis a, XlsxSheet sh, int hdr) {
+    for (var r = 1; r < hdr; r++) {
+      for (var c = 1; c <= 6 && c <= sh.maxCol; c++) {
+        final t = sh.text(r, c);
+        if (t.isEmpty) continue;
+        final l = t.toLowerCase();
+        if (a.docRef == null &&
+            RegExp(r'^(doc\.?\s*(ref|no)|document\s*(no|number|ref)|شماره\s*(سند|مدرک))', caseSensitive: false).hasMatch(l)) {
+          var v = t.replaceFirst(
+              RegExp(r'^(doc\.?\s*(ref|no)\.?|document\s*(no|number|ref)\.?|شماره\s*(سند|مدرک))\s*(no\.?)?\s*[:：]?\s*',
+                  caseSensitive: false),
+              '');
+          v = v.trim();
+          if (v.isEmpty && c + 1 <= sh.maxCol) v = sh.text(r, c + 1);
+          if (v.isNotEmpty) {
+            a.docRef = v;
+            a.revision = RegExp(r'-(R\d{1,3})\s*$').firstMatch(v)?.group(1);
+          }
+        }
+        if (a.projectTitle == null && RegExp(r'^(project\s*(title|name)?|نام\s*پروژه|عنوان\s*پروژه|پروژه)\s*[:：]', caseSensitive: false).hasMatch(l)) {
+          a.projectTitle = t.substring(t.indexOf(RegExp(r'[:：]')) + 1).trim();
+        }
+      }
+    }
+  }
+
+  /// خواندن دوباره‌ی یک شیت پس از اصلاح نقش ستون‌ها (یا تعریف دستی سطر عنوان) در پیش‌نمایش.
+  static void relayout(MtoAnalysis a, String sheet, {int? headerRow}) {
+    final sh = a.workbook?.sheet(sheet);
+    if (sh == null) return;
+    var l = a.layouts[sheet];
+    if (headerRow != null || l == null) {
+      l = MtoGeneric.layoutAt(sh, headerRow ?? 1);
+      a.layouts[sheet] = l;
+    }
+    // انتخاب‌های کاربر (تیک و رده) برای همان رده‌ها حفظ می‌شود
+    final prev = {for (final s in a.sheets.where((s) => s.source == sheet)) s.categoryCode: s.selected};
+    final idx = a.sheets.indexWhere((s) => s.source == sheet);
+    a.sheets.removeWhere((s) => s.source == sheet);
+    final groups = MtoGeneric.parse(sh, l, defaultYear: a.issueYear);
+    for (final g in groups) {
+      g.selected = prev[g.categoryCode] ?? true;
+    }
+    a.sheets.insertAll(idx < 0 ? a.sheets.length : idx, groups);
+    a.skippedSheets.remove(sheet);
+    if (groups.isEmpty && !a.skippedSheets.contains(sheet)) a.skippedSheets.add(sheet);
+    if (a.sheets.isNotEmpty && a.format == 'unknown') a.format = 'generic';
   }
 
   /// «Revamping of Pazanan II Desalting Unit» ← «Pazanan 2»
@@ -318,7 +384,7 @@ class MtoImporter {
           if (cell.formula != null) {
             it.warnings.add('${sh.name}!${cell.ref}: قیمت به صورت فرمول ${cell.formula} — مبنای ضریب بررسی شود');
           }
-          _applyDate(q, dateCell, it, sh.name);
+          applyQuoteDate(q, dateCell, it, sh.name);
           it.quotes.add(q);
           any = true;
         }
@@ -351,7 +417,7 @@ class MtoImporter {
     it.scopeLines.addAll(d.scope);
   }
 
-  static void _applyDate(MtoQuote q, XlsxCell? c, MtoItem it, String sheet) {
+  static void applyQuoteDate(MtoQuote q, XlsxCell? c, MtoItem it, String sheet) {
     if (c == null) return;
     DateTime? g;
     final v = c.value;
@@ -399,6 +465,8 @@ class MtoImporter {
     int oldYear = defaultOldYear,
     int? oldMonth = defaultOldMonth,
     double? oldFx = defaultOldFx,
+    int? goingYear,
+    int? goingMonth,
   }) {
     final rep = MtoImportReport();
     final project = projectName.trim();
@@ -464,6 +532,10 @@ class MtoImporter {
           };
           if (isPump) {
             values['remarks'] = '${it.description}${values['remarks'] == '' ? '' : '\n${values['remarks']}'}';
+            // دبی، هد، فشار رانش، کلاس متریال، استاندارد، … در فیلدهای قالب پمپ
+            for (final e in extractPumpSpecs(it.specs, it.name).entries) {
+              values.putIfAbsent(e.key, () => e.value);
+            }
           } else {
             values['mto_description'] = it.description;
             final profile = equipmentProfiles[cat.code];
@@ -493,10 +565,14 @@ class MtoImporter {
             (goingCurEff, goingAmt) = ('EUR', it.goingEur);
           } else if (it.refCurrency == 'IRR' && it.goingIrr != null) {
             (goingCurEff, goingAmt) = ('IRR', it.goingIrr);
+          } else if (it.refCurrency == 'USD' && it.goingUsd != null) {
+            (goingCurEff, goingAmt) = ('USD', it.goingUsd);
           } else if (it.goingEur != null) {
             (goingCurEff, goingAmt) = ('EUR', it.goingEur);
           } else if (it.goingIrr != null) {
             (goingCurEff, goingAmt) = ('IRR', it.goingIrr);
+          } else if (it.goingUsd != null) {
+            (goingCurEff, goingAmt) = ('USD', it.goingUsd);
           }
           if (goingAmt != null) {
             items.addObservation(id,
@@ -505,10 +581,12 @@ class MtoImporter {
                 primary: true,
                 currency: goingCurEff,
                 amount: goingAmt,
-                costYear: s.goingYear ?? a.issueYear,
-                costMonth: s.goingMonth,
-                sourceLocation: '${s.name}!E${it.row}:F${it.row}',
-                notes: 'قیمت مبنای مشاور (GOING UNIT PRICE ${s.goingLabel})');
+                costYear: s.goingYear ?? goingYear ?? a.issueYear,
+                costMonth: s.goingYear != null ? s.goingMonth : (goingYear != null ? goingMonth : a.issueMonth),
+                sourceLocation: s.layout == null ? '${s.name}!E${it.row}:F${it.row}' : '${s.name} ردیف ${it.row}',
+                notes: s.layout == null
+                    ? 'قیمت مبنای مشاور (GOING UNIT PRICE ${s.goingLabel})'
+                    : 'قیمت مبنا/برآورد MTO${s.goingLabel.isEmpty ? '' : ' (${s.goingLabel})'}');
             hasPrimary = true;
             rep.estimates++;
           }
@@ -522,7 +600,7 @@ class MtoImporter {
                 primary: !hasPrimary,
                 currency: q.currency,
                 amount: q.amount,
-                costYear: q.year ?? s.goingYear ?? a.issueYear,
+                costYear: q.year ?? s.goingYear ?? goingYear ?? a.issueYear,
                 costYearText: q.year == null ? q.dateText : null,
                 costMonth: q.month,
                 sourceLocation: s.name,
@@ -536,7 +614,7 @@ class MtoImporter {
           // ۳) قیمت بازنگری قبلی
           final oy = s.oldYear ?? oldYear;
           final om = s.oldYear == null ? oldMonth : s.oldMonth;
-          for (final (amt, cur) in [(it.oldIrr, 'IRR'), (it.oldEur, 'EUR')]) {
+          for (final (amt, cur) in [(it.oldIrr, 'IRR'), (it.oldEur, 'EUR'), (it.oldUsd, 'USD')]) {
             if (amt == null) continue;
             items.addObservation(id,
                 documentId: oldDoc(),

@@ -70,6 +70,44 @@ void ensureGenericTemplates(Db db) {
     }
   });
   _reparseExisting(db);
+  _reparseMtoPumps(db);
+}
+
+/// پمپ‌هایی که پیش از این نسخه از MTO وارد شده‌اند (شرح فقط در «ملاحظات»):
+/// دبی، هد، فشار رانش، کلاس متریال، استاندارد، … از شرح به فیلدهای قالب پمپ منتقل می‌شود.
+void _reparseMtoPumps(Db db) {
+  final catId = db.scalar("SELECT id FROM categories WHERE code = 'PUMP'") as int?;
+  if (catId == null) return;
+  final rows = db.query(
+    "SELECT i.id, i.name, i.remarks FROM items i WHERE i.category_id = ? AND i.remarks LIKE '%:%' "
+    "AND EXISTS (SELECT 1 FROM price_obs o JOIN documents d ON d.id = o.document_id "
+    "            WHERE o.item_id = i.id AND d.doc_type = 'mto') "
+    "AND NOT EXISTS (SELECT 1 FROM item_values v WHERE v.item_id = i.id AND v.field_key = 'capacity_m3h')",
+    [catId],
+  );
+  if (rows.isEmpty) return;
+  db.transaction(() {
+    for (final r in rows) {
+      final id = r['id'] as int;
+      final d = parseMtoDescription(r['remarks'] as String? ?? '');
+      final values = extractPumpSpecs(d.specs, r['name'] as String? ?? '');
+      var n = 0;
+      for (final e in values.entries) {
+        final v = e.value;
+        db.execute(
+          'INSERT OR IGNORE INTO item_values(item_id, field_key, value_text, value_num) VALUES (?,?,?,?)',
+          [id, e.key, v is num ? null : v.toString(), v is num ? v.toDouble() : null],
+        );
+        n++;
+      }
+      if (n > 0) {
+        db.execute(
+          'INSERT INTO audit_log(ts, entity, entity_id, field, new_value, reason) VALUES (?,?,?,?,?,?)',
+          [nowIso(), 'item', '$id', 'مشخصات', '$n فیلد', 'استخراج خودکار مشخصات پمپ از شرح MTO'],
+        );
+      }
+    }
+  });
 }
 
 /// اقلامی که پیش از تعریف قالب‌ها وارد شده‌اند: استخراج فیلدهای ساختاریافته از «شرح کامل MTO»

@@ -236,7 +236,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
             child: Row(children: [
               SizedBox(width: 170, child: Text(label, style: t.textTheme.bodySmall)),
               Expanded(
-                child: DropdownButtonFormField<String>(
+                child: DropdownButtonFormField<String>(itemHeight: null, 
                   value: app.pb.catalog.options(list).any((o) => o.value == _p[key]) ? _p[key] : null,
                   isExpanded: true,
                   items: [
@@ -532,7 +532,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                     'پیش‌فرض = روش این رده در «تنظیمات رده» و اگر تعیین نشده، روش فعال برنامه (نوار بالا). '
                         'تغییر در اینجا فقط روی همین محاسبه اثر دارد.')),
             Expanded(
-              child: DropdownButtonFormField<String>(
+              child: DropdownButtonFormField<String>(itemHeight: null, 
                 key: ValueKey('transfer-method-$_cat'),
                 value: method.code,
                 isExpanded: true,
@@ -542,7 +542,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                       value: m.code,
                       child: Row(children: [
                         Expanded(
-                          child: Text(methodLabelFor(m, pump: isPump, ppiName: ppiName), overflow: TextOverflow.ellipsis),
+                          child: DdText(methodLabelFor(m, pump: isPump, ppiName: ppiName), overflow: TextOverflow.ellipsis),
                         ),
                         if (m.code == (catMethod ?? s.method)) const Pill('پیش‌فرض رده'),
                       ]),
@@ -580,13 +580,13 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                   'خودکار: فقط برای «گریز از مرکز API 610» با کلاس متریال S یا D و فقط در روش M6.'),
             ),
             Expanded(
-              child: DropdownButtonFormField<FloorMode>(
+              child: DropdownButtonFormField<FloorMode>(itemHeight: null, 
                 value: _floor,
                 isExpanded: true,
                 items: const [
-                  DropdownMenuItem(value: FloorMode.auto, child: Text('خودکار (طبق نوع پمپ و کلاس متریال)')),
-                  DropdownMenuItem(value: FloorMode.yes, child: Text('همیشه اعمال شود')),
-                  DropdownMenuItem(value: FloorMode.no, child: Text('اعمال نشود')),
+                  DropdownMenuItem(value: FloorMode.auto, child: DdText('خودکار (طبق نوع پمپ و کلاس متریال)')),
+                  DropdownMenuItem(value: FloorMode.yes, child: DdText('همیشه اعمال شود')),
+                  DropdownMenuItem(value: FloorMode.no, child: DdText('اعمال نشود')),
                 ],
                 onChanged: (v) => setState(() => _floor = v ?? FloorMode.auto),
               ),
@@ -664,7 +664,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         child: Row(children: [
           SizedBox(width: 210, child: _label(context, label, help)),
           Expanded(
-            child: DropdownButtonFormField<String>(
+            child: DropdownButtonFormField<String>(itemHeight: null, 
               value: items.contains(value) ? value : null,
               isExpanded: true,
               items: [

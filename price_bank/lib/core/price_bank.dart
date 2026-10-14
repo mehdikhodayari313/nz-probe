@@ -3,6 +3,7 @@
 
 import 'dart:math' as math;
 
+import 'calc/backtest.dart';
 import 'calc/estimator.dart';
 import 'calc/generic_estimator.dart';
 import 'catalog/profiles.dart';
@@ -225,6 +226,42 @@ class PriceBank {
       ));
     }
     return rows;
+  }
+
+  /// روش‌های قابل انتخاب برای رده‌های غیرپمپ (M6 در این رده‌ها همان M4 است).
+  static const genericMethodCodes = ['M0', 'M1', 'M2', 'M4', 'M5'];
+
+  /// صحت‌سنجی روش‌های تعدیل با اقلام همین رده که هم قیمت قدیمی و هم استعلام جدید دارند.
+  BacktestResult backtestCategory(String categoryCode, {List<String> methods = genericMethodCodes}) {
+    final cat = catalog.categoryByCode(categoryCode);
+    final pairs = <BacktestPair>[];
+    if (cat == null) return BacktestResult(pairs, methods);
+    final base = genericEngine(categoryCode: categoryCode);
+    final engines = <String, GenericEngine>{};
+    for (final it in items.loadCategory(cat.id)) {
+      final pr = backtestPairOf(it);
+      if (pr == null) continue;
+      final actual = [
+        for (final q in pr.quotes)
+          if (base.calculate(genericInputFor(q)).eurSource.number case final v?) v,
+      ];
+      if (actual.isEmpty) continue;
+      final p = BacktestPair(
+        item: it,
+        oldYear: pr.old.costYear!,
+        quoteYear: pr.year,
+        quoteCount: actual.length,
+        actualEur: actual.reduce((a, b) => a + b) / actual.length,
+      );
+      if (p.actualEur <= 0) continue;
+      for (final m in methods) {
+        final e = engines['$m|${pr.year}'] ??= genericEngine(categoryCode: categoryCode, method: m, targetYear: pr.year);
+        final v = e.calculate(genericInputFor(pr.old)).eurTarget.number;
+        if (v != null) p.predEur[m] = v;
+      }
+      pairs.add(p);
+    }
+    return BacktestResult(pairs, methods);
   }
 
   static PumpInput inputFor(ItemRecord item) {

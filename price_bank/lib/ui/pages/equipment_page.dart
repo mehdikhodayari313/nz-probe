@@ -513,7 +513,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
 
     return SizedBox(
       width: 178,
-      child: DropdownButtonFormField<String?>(
+      child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
         value: values.contains(current) ? current : null,
         isExpanded: true,
         menuMaxHeight: 420,
@@ -523,14 +523,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
           fillColor: current != null ? t.colorScheme.primaryContainer : null,
         ),
         selectedItemBuilder: (_) => [
-          const Text('همه'),
-          for (final v in values) Text(show(v), overflow: TextOverflow.ellipsis),
+          const DdText('همه'),
+          for (final v in values) DdText(show(v)),
         ],
         items: [
           DropdownMenuItem<String?>(
             value: null,
             child: Row(children: [
-              const Expanded(child: Text('همه')),
+              const Expanded(child: DdText('همه')),
               Text(fa(all.length), style: TextStyle(fontSize: 11.5, color: t.colorScheme.outline)),
             ]),
           ),
@@ -539,7 +539,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
               value: v,
               child: Row(children: [
                 Expanded(
-                  child: Text(show(v),
+                  child: DdText(show(v),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: (counts[v] ?? 0) == 0 ? t.colorScheme.outline : null)),
                 ),

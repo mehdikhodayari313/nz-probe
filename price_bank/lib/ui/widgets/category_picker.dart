@@ -15,7 +15,7 @@ class EquipmentCategoryPicker extends StatelessWidget {
     final app = AppScope.of(context);
     final cats = app.pb.estimableCategories();
     final counts = app.pb.categoryCounts();
-    return DropdownButtonFormField<String>(
+    return DropdownButtonFormField<String>(itemHeight: null, 
       key: const ValueKey('category-picker'),
       value: cats.any((c) => c.code == value) ? value : cats.first.code,
       isExpanded: true,

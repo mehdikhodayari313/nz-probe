@@ -610,12 +610,89 @@ class CountedLabel extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     return Row(children: [
-      Expanded(
-        child: Text(text,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: dimZero && count == 0 ? t.colorScheme.outline : null)),
-      ),
-      if (count != null) CountBadge(count!),
+      Expanded(child: DdText(text, style: TextStyle(color: dimZero && count == 0 ? t.colorScheme.outline : null))),
+      if (count != null) ...[const SizedBox(width: 6), CountBadge(count!)],
     ]);
   }
 }
+
+/// متن گزینه‌ی دراپ‌داون:
+/// در فهرستِ باز، کامل و در صورت نیاز چندخطی؛ در کادرِ مقدار انتخاب‌شده، یک‌خطی و متن کامل با نگه داشتن ماوس.
+class DdText extends StatelessWidget {
+  const DdText(this.text, {super.key, this.style, this.overflow, this.textAlign, this.textDirection});
+  final String text;
+  final TextStyle? style;
+  final TextOverflow? overflow; // برای سازگاری با Text؛ نادیده گرفته می‌شود
+  final TextAlign? textAlign;
+  final TextDirection? textDirection;
+
+  /// آیا این ویجت داخل کادر دراپ‌داون (نه فهرست باز آن) است؟
+  static bool inField(BuildContext context) =>
+      context.findAncestorWidgetOfExactType<InputDecorator>() != null ||
+      context.findAncestorWidgetOfExactType<IndexedStack>() != null;
+
+  @override
+  Widget build(BuildContext context) {
+    if (inField(context)) {
+      return Tooltip(
+        message: text,
+        waitDuration: const Duration(milliseconds: 350),
+        child: Text(text,
+            maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: style, textAlign: textAlign,
+            textDirection: textDirection),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Text(text, softWrap: true, style: style, textAlign: textAlign, textDirection: textDirection),
+    );
+  }
+}
+
+/// دکمه‌ی انتخاب رده با تعداد اقلام.
+class CategoryChip extends StatelessWidget {
+  const CategoryChip({super.key, required this.label, required this.count, required this.selected, required this.onTap});
+  final String label;
+  final int count;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Material(
+      color: selected ? AppColors.petrol : t.colorScheme.surfaceContainerLow,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: selected ? AppColors.petrol : t.colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (selected) const Padding(
+              padding: EdgeInsetsDirectional.only(end: 6),
+              child: Icon(Icons.check_rounded, size: 16, color: Colors.white),
+            ),
+            Text(label,
+                style: TextStyle(fontWeight: FontWeight.w700, color: selected ? Colors.white : t.colorScheme.onSurface)),
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              decoration: BoxDecoration(
+                color: selected ? Colors.white.withValues(alpha: 0.22) : AppColors.petrol.withValues(alpha: 0.10),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(fa(count),
+                  style: TextStyle(
+                      fontSize: 11.5, fontWeight: FontWeight.w800, color: selected ? Colors.white : AppColors.petrolDark)),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+

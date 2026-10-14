@@ -91,7 +91,29 @@ class XlsxSheetInfo {
 
 /// یک شیت خوانده‌شده.
 class XlsxSheet {
-  XlsxSheet._(this.name, this.hidden, this._rows, this.maxRow, this.maxCol, this.cellCount, this._comments);
+  XlsxSheet._(this.name, this.hidden, this._rows, this.maxRow, this.maxCol, this.cellCount, this._comments,
+      [this.merges = const []]);
+
+  /// محدوده‌های ادغام‌شده: (ردیف۱، ستون۱، ردیف۲، ستون۲)
+  final List<(int, int, int, int)> merges;
+
+  /// متن سلول؛ اگر سلول جزو محدوده‌ی ادغام‌شده باشد، متن سلول بالا-چپ همان محدوده.
+  String mergedText(int row, int col) {
+    final own = text(row, col);
+    if (own.isNotEmpty) return own;
+    for (final (r1, c1, r2, c2) in merges) {
+      if (row >= r1 && row <= r2 && col >= c1 && col <= c2) return text(r1, c1);
+    }
+    return '';
+  }
+
+  /// آیا سلول جزو محدوده‌ی ادغام‌شده است (به جز سلول بالا-چپ)؟
+  bool isMergedTail(int row, int col) {
+    for (final (r1, c1, r2, c2) in merges) {
+      if (row >= r1 && row <= r2 && col >= c1 && col <= c2 && !(row == r1 && col == c1)) return true;
+    }
+    return false;
+  }
 
   final String name;
   final bool hidden;
@@ -352,7 +374,16 @@ class XlsxWorkbook {
         if (col > maxCol) maxCol = col;
       }
     }
-    return XlsxSheet._(info.name, info.hidden, rows, maxRow, maxCol, count, comments);
+    final merges = <(int, int, int, int)>[];
+    for (final m in _descendants(doc.rootElement, 'mergeCell')) {
+      final ref = m.getAttribute('ref') ?? '';
+      final parts = ref.split(':');
+      if (parts.length != 2) continue;
+      final a = parseCellRef(parts[0]), b = parseCellRef(parts[1]);
+      if (a == null || b == null) continue;
+      merges.add((a.$1, a.$2, b.$1, b.$2));
+    }
+    return XlsxSheet._(info.name, info.hidden, rows, maxRow, maxCol, count, comments, merges);
   }
 
   XlsxCell? _parseCell(XmlElement c, int row, int col) {

@@ -119,7 +119,7 @@ class _FactorsPageState extends State<FactorsPage> {
         icon: Icons.category_outlined,
         child: Wrap(spacing: 8, runSpacing: 8, children: [
           for (final c in cats)
-            _CatChip(
+            CategoryChip(
               key: ValueKey('factor-cat-${c.code}'),
               label: c.nameFa,
               count: counts[c.id] ?? 0,
@@ -212,53 +212,6 @@ class _FactorsPageState extends State<FactorsPage> {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         child: Text(s, style: TextStyle(fontWeight: b ? FontWeight.w700 : null, fontSize: small ? 11.5 : 13)),
       );
-}
-
-/// دکمه‌ی انتخاب رده با تعداد اقلام.
-class _CatChip extends StatelessWidget {
-  const _CatChip({super.key, required this.label, required this.count, required this.selected, required this.onTap});
-  final String label;
-  final int count;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    return Material(
-      color: selected ? AppColors.petrol : t.colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: selected ? AppColors.petrol : t.colorScheme.outlineVariant),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (selected) const Padding(
-              padding: EdgeInsetsDirectional.only(end: 6),
-              child: Icon(Icons.check_rounded, size: 16, color: Colors.white),
-            ),
-            Text(label,
-                style: TextStyle(fontWeight: FontWeight.w700, color: selected ? Colors.white : t.colorScheme.onSurface)),
-            const SizedBox(width: 6),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6),
-              decoration: BoxDecoration(
-                color: selected ? Colors.white.withValues(alpha: 0.22) : AppColors.petrol.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(fa(count),
-                  style: TextStyle(
-                      fontSize: 11.5, fontWeight: FontWeight.w800, color: selected ? Colors.white : AppColors.petrolDark)),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
 }
 
 /// پارامترهای تخمین رده: پارامتر اندازه، توان n و توان وزن (با دکمه‌ی ویرایش در «تنظیمات رده»).

@@ -101,10 +101,10 @@ class UsersPage extends StatelessWidget {
               const SizedBox(height: 10),
               TextField(controller: name, decoration: const InputDecoration(labelText: 'نام نمایشی')),
               const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<String>(itemHeight: null, isExpanded: true, 
                 value: role,
                 decoration: const InputDecoration(labelText: 'نقش'),
-                items: [for (final e in roleFa.entries) DropdownMenuItem(value: e.key, child: Text(e.value))],
+                items: [for (final e in roleFa.entries) DropdownMenuItem(value: e.key, child: DdText(e.value))],
                 onChanged: (v) => setD(() => role = v!),
               ),
             ]),

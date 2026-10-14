@@ -210,12 +210,12 @@ class _EnumEditor extends StatelessWidget {
               '${r['v']}': r['n'] as int,
           };
     final hasValue = value != null && values.contains(value);
-    return DropdownButtonFormField<String?>(
+    return DropdownButtonFormField<String?>(itemHeight: null, 
       value: hasValue ? value : null,
       isExpanded: true,
       hint: Text(value == null ? 'انتخاب کنید' : '$value (خارج از فهرست)'),
       items: [
-        const DropdownMenuItem<String?>(value: null, child: Text('— خالی —')),
+        const DropdownMenuItem<String?>(value: null, child: DdText('— خالی —')),
         for (final o in opts)
           DropdownMenuItem<String?>(
             value: o.value,

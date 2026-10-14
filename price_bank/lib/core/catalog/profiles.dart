@@ -770,3 +770,178 @@ String? factorOption(String group, Map<String, Object?> v) {
   }
   return null;
 }
+
+// -----------------------------------------------------------------------------
+// پمپ: مشخصات شرح MTO ← فیلدهای قالب ۵۹ فیلدی پمپ (دبی، هد، فشار رانش، کلاس متریال، …)
+
+const _pumpStd = ['API 610', 'API 674', 'API 675', 'API 676', 'ISO 13709', 'ISO 5199', 'ISO 2858', 'NFPA 20', 'JIS B 8325'];
+const _pumpIps = ['IPS-G-PM-105', 'IPS-M-PM-115', 'IPS-M-PM-125', 'IPS-M-PM-140'];
+const _pumpMat = ['I-1', 'I-2', 'S-1', 'S-3', 'S-4', 'S-5', 'S-6', 'S-8', 'S-9', 'C-6', 'A-7', 'A-8', 'D-1', 'D-2'];
+
+/// آیا برچسب مشخصه‌ی MTO در قالب پمپ جا دارد؟ (بقیه در «ملاحظات» می‌مانند)
+bool pumpMaps(String label) => RegExp(
+        r'^type|flow|capacity|head|discharge press|power|motor|material|nace|design code|standard|driver|speed|rpm',
+        caseSensitive: false)
+    .hasMatch(label);
+
+Map<String, Object?> extractPumpSpecs(Map<String, String> specs, String name) {
+  final o = <String, Object?>{};
+  String? firstIn(List<String> list, String text) {
+    final u = text.toUpperCase().replaceAll(RegExp(r'\s+'), ' ');
+    for (final x in list) {
+      if (u.contains(x.toUpperCase())) return x;
+    }
+    return null;
+  }
+
+  for (final e in specs.entries) {
+    final k = e.key.toLowerCase();
+    final v = e.value.trim();
+    final l = v.toLowerCase();
+    final n = _nums(v);
+    if (k.startsWith('type')) {
+      o['pump_family'] ??= l.contains('submers')
+          ? 'Centrifugal - Submersible'
+          : l.contains('centrif')
+              ? 'Centrifugal'
+              : l.contains('gear')
+                  ? 'PD-Rotary (Gear)'
+                  : l.contains('progress') || l.contains('cavity')
+                      ? 'PD-Rotary (Progressing Cavity)'
+                      : l.contains('screw')
+                          ? 'PD-Rotary (Screw)'
+                          : l.contains('vane')
+                              ? 'PD-Rotary (Sliding Vane)'
+                              : l.contains('diaphragm') || l.contains('metering') || l.contains('dosing')
+                                  ? 'Metering (Diaphragm)'
+                                  : l.contains('plunger') || l.contains('reciproc')
+                                      ? 'PD-Reciprocating (Plunger)'
+                                      : null;
+      final t = RegExp(r'\b(OH|BB|VS)\s*-?\s*([1-7])\b', caseSensitive: false).firstMatch(v);
+      if (t != null) o['api610_type'] ??= '${t.group(1)!.toUpperCase()}${t.group(2)}';
+    } else if (RegExp(r'flow|capacity').hasMatch(k) && n.isNotEmpty) {
+      var q = n.first;
+      final unit = '$k $l';
+      if (unit.contains('l/h') || unit.contains('lph') || unit.contains('lit')) q = q / 1000;
+      if (unit.contains('gpm')) q = q * 0.2271;
+      o['capacity_m3h'] ??= q;
+    } else if (k.contains('head') && n.isNotEmpty) {
+      o['diff_head_m'] ??= n.first;
+    } else if (k.contains('discharge press') && n.isNotEmpty) {
+      o['discharge_pressure_barg'] ??= ('$k $l').contains('kpa') ? n.first / 100 : n.first;
+    } else if ((k.contains('power') || k.contains('motor')) && n.isNotEmpty) {
+      final hp = ('$k $l').contains('hp') && !('$k $l').contains('kw');
+      o['power_kw'] ??= hp ? n.first * 0.7457 : n.first;
+      o['power_basis'] ??= k.contains('motor') || l.contains('motor') ? 'Motor Rated' : 'Not stated';
+    } else if (k.contains('material')) {
+      final m = RegExp(r'\b([ISCAD])\s*-?\s*(\d)\b').firstMatch(v.toUpperCase());
+      if (m != null) {
+        final c = '${m.group(1)}-${m.group(2)}';
+        if (_pumpMat.contains(c)) o['material_class'] ??= c;
+      } else if (l.contains('316')) {
+        o['material_class'] ??= 'SS316L (non-API)';
+      }
+    } else if (k.contains('nace')) {
+      o['nace'] ??= l.startsWith('y') ? 'Y' : (l.startsWith('n') ? 'N' : null);
+    } else if (k.contains('design code') || k.contains('standard')) {
+      o['pump_standard'] ??= firstIn(_pumpStd, v);
+      o['ips_standard'] ??= firstIn(_pumpIps, v);
+      o['standards'] ??= v.replaceAll('\n', ' ');
+    } else if (k.contains('driver')) {
+      o['driver_type'] ??= l.contains('diesel')
+          ? 'Diesel Engine'
+          : l.contains('turbine')
+              ? 'Steam Turbine'
+              : l.contains('air') || l.contains('pneum')
+                  ? 'Air / Pneumatic'
+                  : l.contains('motor') || l.contains('electric')
+                      ? 'Electric Motor'
+                      : null;
+    }
+  }
+  // زیرگروه و سیال از نام سرویس
+  final s = name.toLowerCase();
+  o['sub_category'] ??= s.contains('fire')
+      ? 'ROT-FIR'
+      : RegExp(r'inject|chemical|dosing|demulsif|anti.?scale|corrosion').hasMatch(s)
+          ? 'ROT-INJ'
+          : RegExp(r'drain|sump|slop').hasMatch(s)
+              ? 'ROT-DRN'
+              : RegExp(r'crude|oil|off.?spec|booster|transfer|shipping').hasMatch(s)
+                  ? 'ROT-CRU'
+                  : RegExp(r'water|wash|dilution|deaerat|brine|effluent').hasMatch(s)
+                      ? 'ROT-WAT'
+                      : 'ROT-AUX';
+  o['service_fluid'] ??= s.contains('fire')
+      ? 'Fire Water'
+      : s.contains('deaerat')
+          ? 'Deaerated Water'
+          : RegExp(r'dilution|wash|process water').hasMatch(s)
+              ? 'Process / Dilution Water'
+              : RegExp(r'produced|disposal|effluent|brine').hasMatch(s)
+                  ? 'Produced / Disposal Water'
+                  : RegExp(r'drain|oily').hasMatch(s)
+                      ? 'Oily Water / Drain'
+                      : s.contains('slop')
+                          ? 'Slop / Dirty Oil'
+                          : RegExp(r'chemical|inject|dosing|demulsif').hasMatch(s)
+                              ? 'Chemical'
+                              : RegExp(r'diesel|fuel').hasMatch(s)
+                                  ? 'Diesel / Fuel Oil'
+                                  : RegExp(r'crude|oil|off.?spec').hasMatch(s)
+                                      ? 'Crude Oil'
+                                      : RegExp(r'potable|fresh|drinking').hasMatch(s)
+                                          ? 'Fresh / Potable Water'
+                                          : RegExp(r'cooling|seal water').hasMatch(s)
+                                              ? 'Cooling / Seal Water'
+                                              : null;
+  if (o['pump_family'] == 'Centrifugal' && o['api610_type'] == null && o['pump_standard'] != 'API 610') {
+    o['api610_type'] = 'N/A (non-API 610)';
+  }
+  o.removeWhere((k, v) => v == null);
+  return o;
+}
+
+// -----------------------------------------------------------------------------
+// تشخیص رده از متن (نام شیت، عنوان بخش یا نام قلم)
+
+const _categoryWords = <(String, String)>[
+  (r'desalt|dehydrat|electrostatic|نمک.?زدا|دیسالتر', 'DESALTER'),
+  (r'deaerat|دی.?اریتور|هوازدا', 'DEAERATOR'),
+  (r'\bigf\b|flotation|شناورساز', 'IGF'),
+  (r'injection|dosing|chemical|c\.i\.p|تزریق', 'CIP'),
+  (r'air\s*dryer|dryer|خشک.?کن', 'AIR_DRYER'),
+  (r'compressor|کمپرسور', 'COMPRESSOR'),
+  (r'pump|پمپ', 'PUMP'),
+  (r'exchang|cooler|condenser|reboiler|\bphe\b|مبدل|کولر', 'HEX'),
+  (r'heater|furnace|fired|گرم.?کن|کوره', 'HEATER'),
+  (r'tank|مخزن', 'TANK'),
+  (r'vessel|drum|separator|receiver|knock.?out|\bk\.?o\.?\b|scrubber|ظرف|درام|جداکننده', 'VESSEL'),
+  (r'filter|strainer|فیلتر|صافی', 'FILTER'),
+  (r'flare|burn\s*pit|stack|فلر|مشعل', 'FLARE'),
+  (r'crane|hoist|monorail|جرثقیل|بالابر', 'CRANE'),
+];
+
+/// پیشنهاد رده از روی متن آزاد (فارسی یا انگلیسی)؛ null = تشخیص داده نشد.
+/// اسم اصلی برنده است: در انگلیسی آخرین کلیدواژه (Drum در «Pump Suction Drum»)،
+/// در فارسی اولین کلیدواژه («پمپ» در «پمپ تزریق مواد»).
+String? suggestCategoryFromText(String text) {
+  final t = text.split('\n').first.toLowerCase().replaceAll('ي', 'ی').replaceAll('ك', 'ک');
+  final fa = RegExp(r'[\u0600-\u06FF]');
+  String? en, faBest;
+  var enPos = -1, faPos = 1 << 30;
+  for (final (p, code) in _categoryWords) {
+    for (final m in RegExp(p, caseSensitive: false).allMatches(t)) {
+      if (fa.hasMatch(m.group(0)!)) {
+        if (m.start < faPos) {
+          faPos = m.start;
+          faBest = code;
+        }
+      } else if (m.start > enPos) {
+        enPos = m.start;
+        en = code;
+      }
+    }
+  }
+  return faBest ?? en;
+}

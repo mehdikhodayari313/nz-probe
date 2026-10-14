@@ -213,7 +213,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
               Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 SizedBox(
                   width: 190,
-                  child: DropdownButtonFormField<String?>(
+                  child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
                     value: projects.contains(_project) ? _project : null,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'پروژه'),
@@ -413,22 +413,22 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     String show(String v) => (labels[v] == null || labels[v] == v) ? v : '${labels[v]}';
     return SizedBox(
       width: 178,
-      child: DropdownButtonFormField<String?>(
+      child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
         value: values.contains(cur) ? cur : null,
         isExpanded: true,
         decoration: InputDecoration(
           labelText: labelFa,
           fillColor: cur != null ? t.colorScheme.primaryContainer : null,
         ),
-        selectedItemBuilder: (_) => [const Text('همه'), for (final v in values) Text(show(v), overflow: TextOverflow.ellipsis)],
+        selectedItemBuilder: (_) => [const DdText('همه'), for (final v in values) DdText(show(v))],
         items: [
-          DropdownMenuItem<String?>(value: null, child: Text('همه (${fa(all.length)})')),
+          DropdownMenuItem<String?>(value: null, child: DdText('همه (${fa(all.length)})')),
           for (final v in values)
             DropdownMenuItem<String?>(
               value: v,
               child: Row(children: [
                 Expanded(
-                  child: Text(show(v),
+                  child: DdText(show(v),
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(color: (counts[v] ?? 0) == 0 ? t.colorScheme.outline : null)),
                 ),
@@ -603,13 +603,13 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
         child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           row(
             'روش تعدیل این رده',
-            DropdownButtonFormField<String?>(
+            DropdownButtonFormField<String?>(itemHeight: null, 
               value: _method,
               isExpanded: true,
               items: [
-                DropdownMenuItem<String?>(value: null, child: Text('پیش‌فرض برنامه (${s.escalationMethod})')),
+                DropdownMenuItem<String?>(value: null, child: DdText('پیش‌فرض برنامه (${s.escalationMethod})')),
                 for (final m in escalationMethods.where((m) => m.selectable))
-                  DropdownMenuItem<String?>(value: m.code, child: Text('${m.code} — ${m.nameFa}')),
+                  DropdownMenuItem<String?>(value: m.code, child: DdText('${m.code} — ${m.nameFa}')),
               ],
               onChanged: (v) => setState(() => _method = v),
             ),
@@ -617,13 +617,13 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
           ),
           row(
             'شاخص PPI (روش‌های M4/M6)',
-            DropdownButtonFormField<String?>(
+            DropdownButtonFormField<String?>(itemHeight: null, 
               value: ppiSeries.any((x) => x.code == _ppi) ? _ppi : null,
               isExpanded: true,
               items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('پیش‌فرض برنامه')),
+                const DropdownMenuItem<String?>(value: null, child: DdText('پیش‌فرض برنامه')),
                 for (final x in ppiSeries)
-                  DropdownMenuItem<String?>(value: x.code, child: Text(x.nameFa, overflow: TextOverflow.ellipsis)),
+                  DropdownMenuItem<String?>(value: x.code, child: DdText(x.nameFa, overflow: TextOverflow.ellipsis)),
               ],
               onChanged: (v) => setState(() => _ppi = v),
             ),
@@ -649,11 +649,11 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
             ),
           row(
             'روش تخمین پیش‌فرض',
-            DropdownButtonFormField<String?>(
+            DropdownButtonFormField<String?>(itemHeight: null, 
               value: _est,
               isExpanded: true,
               items: [
-                for (final m in GenEstMethod.values) DropdownMenuItem<String?>(value: m.name, child: Text(m.titleFa)),
+                for (final m in GenEstMethod.values) DropdownMenuItem<String?>(value: m.name, child: DdText(m.titleFa)),
               ],
               onChanged: (v) => setState(() => _est = v),
             ),
