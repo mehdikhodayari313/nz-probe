@@ -213,7 +213,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
               Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
                 SizedBox(
                   width: 190,
-                  child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
+                  child: DropdownButtonFormField<String?>(itemHeight: null, 
                     value: projects.contains(_project) ? _project : null,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'پروژه'),
@@ -413,7 +413,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     String show(String v) => (labels[v] == null || labels[v] == v) ? v : '${labels[v]}';
     return SizedBox(
       width: 178,
-      child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
+      child: DropdownButtonFormField<String?>(itemHeight: null, 
         value: values.contains(cur) ? cur : null,
         isExpanded: true,
         decoration: InputDecoration(

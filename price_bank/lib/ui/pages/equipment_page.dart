@@ -513,7 +513,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
 
     return SizedBox(
       width: 178,
-      child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
+      child: DropdownButtonFormField<String?>(itemHeight: null, 
         value: values.contains(current) ? current : null,
         isExpanded: true,
         menuMaxHeight: 420,

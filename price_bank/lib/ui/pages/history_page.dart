@@ -78,7 +78,7 @@ class _HistoryPageState extends State<HistoryPage> {
           const SizedBox(width: 10),
           SizedBox(
             width: 200,
-            child: DropdownButtonFormField<String?>(itemHeight: null, menuWidth: 340, 
+            child: DropdownButtonFormField<String?>(itemHeight: null, 
               value: _entity,
               isExpanded: true,
               decoration: const InputDecoration(labelText: 'نوع'),

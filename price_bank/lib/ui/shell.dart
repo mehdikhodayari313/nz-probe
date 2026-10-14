@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../app/app_state.dart';
 import '../core/calc/methods.dart';
 import 'format.dart';
+import 'widgets/common.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/documents_page.dart';
 import 'pages/equipment_page.dart';
