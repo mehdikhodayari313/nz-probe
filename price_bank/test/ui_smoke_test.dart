@@ -255,7 +255,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('پارامترهای تخمین این رده'), findsOneWidget);
     expect(find.textContaining('روغن‌کاری کمپرسور'), findsNothing);
+    await tester.scrollUntilVisible(find.textContaining('فشار طراحی (پایه'), 300,
+        scrollable: find.ancestor(of: find.text('پارامترهای تخمین این رده'), matching: find.byType(Scrollable)).first);
     expect(find.textContaining('فشار طراحی (پایه'), findsOneWidget);
+    expect(find.textContaining('روغن‌کاری کمپرسور'), findsNothing);
     await tester.tap(find.byKey(const Key('shell-back')));
     await tester.pumpAndSettle();
     expect(find.text('فقط برای پمپ'), findsOneWidget);
