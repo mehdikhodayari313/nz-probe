@@ -163,7 +163,7 @@ class MtoGeneric {
         .hasMatch(n)) {
       return MtoSheetKind.skip;
     }
-    if (RegExp(r'^(c\.|ins\b|ins-|install)|construction|نصب|اجرا|^cv\d').hasMatch(n)) return MtoSheetKind.install;
+    if (RegExp(r'^(c\.(?!i\.?p)|ins\b|ins-|install)|construction|نصب|اجرا|^cv\d').hasMatch(n)) return MtoSheetKind.install;
     for (var r = 1; r <= 15 && r <= sh.maxRow; r++) {
       for (var c = 1; c <= 4 && c <= sh.maxCol; c++) {
         final t = _norm(sh.text(r, c));
