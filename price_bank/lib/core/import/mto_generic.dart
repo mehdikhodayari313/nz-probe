@@ -317,6 +317,8 @@ class MtoGeneric {
         col.role = roleOwn;
       } else if (roleOwn == MtoColRole.desc) {
         col.role = MtoColRole.desc;
+      } else if (roleOwn == MtoColRole.spec && currencyOf(own) != null && own.length <= 12 && yearOfHeader(full).$1 != null) {
+        col.role = MtoColRole.going; // «1404» / «یورو»: ستون قیمت بدون واژه‌ی «قیمت»
       } else if (roleOwn == MtoColRole.spec && specific.contains(roleFull)) {
         col.role = roleFull; // مثل «QUANTITY / LENGTH(M)»
       } else if (roleFull == MtoColRole.desc && parts.length > 1) {
@@ -364,7 +366,9 @@ class MtoGeneric {
     if (inBlock && currencyOf(h) != null) return MtoColRole.quote; // «ریال»، «یورو» زیر بلوک استعلام
     if (_has(h, _pQuote) && currencyOf(h) != null) return MtoColRole.quote;
     if (_has(h, _pWeight)) return MtoColRole.weight;
-    if (_has(h, _pQty) && !_has(h, _pDesc)) return MtoColRole.qty;
+    if (_has(h, _pQty) && !_has(h, _pDesc) && !_has(h, r'افزایش|افزايش|کاهش|كاهش|تغییر|change|increase')) {
+      return MtoColRole.qty;
+    }
     if (_has(h, _pUnit)) return MtoColRole.unit;
     if (_has(h, _pCurrency)) return MtoColRole.currency;
     if (_has(h, _pRemarks)) return MtoColRole.remarks;
@@ -539,6 +543,7 @@ class MtoGeneric {
 
     MtoItem? cur;
     List<String>? curLines;
+    final usedTags = <String>{};
     var curEnd = 0;
     for (var r = l.dataStart; r <= sh.maxRow; r++) {
       final d = desc == null ? '' : textOf(sh, r, desc).replaceAll('\r', '');
@@ -589,11 +594,26 @@ class MtoGeneric {
         k++;
       }
       final nameLine = head.isNotEmpty ? head.join(' ') : (np.isNotEmpty ? np : (dLines.isNotEmpty ? dLines.first : t));
-      final lines = <String>[nameLine, ...dLines.skip(head.isEmpty && np.isEmpty && dLines.isNotEmpty ? 1 : k)];
+      // نام کوتاه برای شرح‌های بسیار بلند (متن کامل در شرح قلم می‌ماند)
+      var shortName = nameLine;
+      if (nameLine.length > 90) {
+        final cut = nameLine.indexOf(RegExp(r'[,،.;]\s'), 25);
+        shortName = (cut > 0 && cut <= 90) ? nameLine.substring(0, cut) : '${nameLine.substring(0, nameLine.lastIndexOf(' ', 88).clamp(30, 88))}…';
+      }
+      final lines = <String>[
+        shortName,
+        if (shortName != nameLine) nameLine,
+        ...dLines.skip(head.isEmpty && np.isEmpty && dLines.isNotEmpty ? 1 : k),
+      ];
       final tagText = t.isEmpty
           ? '${sh.name}#$r'
           : (l.tagIsSerial ? '${sh.name}#${t.replaceAll(RegExp(r'\.0$'), '')}' : t.replaceAll(RegExp(r'\s+'), ' '));
-      final it = MtoItem(r, tagText, '');
+      var uniqueTag = tagText;
+      for (var n = 2; usedTags.contains(uniqueTag); n++) {
+        uniqueTag = '$tagText ($n)';
+      }
+      usedTags.add(uniqueTag);
+      final it = MtoItem(r, uniqueTag, '');
       final unit = unitCol == null ? '' : textOf(sh, r, unitCol).trim().toLowerCase();
       final perKg = RegExp(r'^(kg|kgs|kilo|کیلو|کیلوگرم|كيلوگرم)').hasMatch(unit);
       final perTon = RegExp(r'^(ton|tons|tonne|t|تن)$').hasMatch(unit);
@@ -707,7 +727,8 @@ class MtoGeneric {
               priorityCategoryFromText(it.name) ??
               secCat ??
               suggestCategoryFromText(it.name) ??
-              suggestCategoryFromText(it.description));
+              suggestCategoryFromText(it.description) ??
+              (l.summary ? null : 'MISC_PKG')); // نامشخص ← «سایر پکیج‌ها و تجهیزات» (در پیش‌نمایش قابل تغییر)
       it.autoCategory = !overrides.containsKey(key0);
       final key = cat ?? '?';
       final g = groups[key] ??= (MtoSheet(sh.name, l.context.isEmpty ? sh.name : l.context.join(' · '))
@@ -730,6 +751,33 @@ class MtoGeneric {
       }
     }
     return list;
+  }
+
+  /// صفحه‌ی ادامه‌ی گزارش چاپی (بدون سطر عنوان): متن ستون شرح به شرح [last] اضافه می‌شود.
+  static bool appendContinuation(XlsxSheet sh, MtoItem last, MtoLayout prev) {
+    final desc = prev.first(MtoColRole.desc);
+    if (desc == null) return false;
+    var cont = false;
+    for (var r = 1; r <= 25 && r <= sh.maxRow; r++) {
+      for (var c = 1; c <= 6 && c <= sh.maxCol; c++) {
+        if (_has(sh.text(r, c), r"cont'?d|continued|ادامه")) cont = true;
+      }
+    }
+    if (!cont) return false;
+    final lines = <String>[];
+    for (var r = 1; r <= sh.maxRow; r++) {
+      final t = textOf(sh, r, desc).trim();
+      if (t.isEmpty) continue;
+      if (_has(t, r'^(total|جمع)')) break;
+      lines.add(t);
+    }
+    if (lines.isEmpty) return false;
+    last.description = '${last.description}\n${lines.join('\n')}';
+    final dd = parseMtoDescription(last.description);
+    last.specs
+      ..clear()
+      ..addAll(dd.specs);
+    return true;
   }
 
   // ---------------------------------------------------------------------------

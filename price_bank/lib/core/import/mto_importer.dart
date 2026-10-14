@@ -38,8 +38,8 @@ class MtoQuote {
 class MtoItem {
   MtoItem(this.row, this.tag, this.description);
   final int row;
-  final String tag;
-  final String description;
+  String tag;
+  String description;
   String get name => description.split('\n').first.trim();
   double? quantity;
   String? refCurrency;
@@ -209,6 +209,7 @@ class MtoImporter {
       final m = int.parse(fm.group(2)!);
       if (m >= 1 && m <= 12) a.issueMonth = m;
     }
+    (MtoItem, MtoLayout)? lastGeneric;
     for (final info in wb.sheets) {
       if (info.hidden) continue;
       final sh = wb.sheet(info.name);
@@ -232,6 +233,12 @@ class MtoImporter {
           continue;
         }
         final l = MtoGeneric.detect(sh);
+        // صفحه‌ی ادامه («… (Cont'd)»): سطرهای شرح به آخرین قلم صفحه‌ی قبل اضافه می‌شود
+        final lg = lastGeneric;
+        if (l == null && lg != null && MtoGeneric.appendContinuation(sh, lg.$1, lg.$2)) {
+          a.skippedSheets.add(info.name);
+          continue;
+        }
         final groups =
             l == null ? const <MtoSheet>[] : MtoGeneric.parse(sh, l, defaultYear: a.issueYear, overrides: a.itemCategory);
         if (l == null || groups.isEmpty || groups.every((g) => g.items.isEmpty)) {
@@ -241,6 +248,8 @@ class MtoImporter {
         _docInfo(a, sh, l.headerRow);
         a.layouts[info.name] = l;
         a.sheets.addAll(groups);
+        final lastIt = groups.expand((g) => g.items).fold<MtoItem?>(null, (m, i) => m == null || i.row > m.row ? i : m);
+        if (lastIt != null) lastGeneric = (lastIt, l);
         continue;
       }
       _docInfo(a, sh, hdr);
@@ -655,6 +664,7 @@ class MtoImporter {
             return id;
           }();
 
+      final seenTags = <String>{};
       for (final s in a.sheets.where((s) => s.selected && s.categoryCode != null)) {
         final cat = catalog.categoryByCode(s.categoryCode!);
         if (cat == null) {
@@ -663,14 +673,25 @@ class MtoImporter {
         }
         final isPump = cat.code == 'PUMP';
         for (final it in s.items) {
-          // تکراری: همان تگ در همان پروژه و رده
-          final dup = db.scalar(
-              "SELECT id FROM items WHERE category_id = ? AND project_id = ? AND tag = ? AND status = 'active'",
-              [cat.id, pid, it.tag]);
-          if (dup != null) {
-            rep.skippedDuplicates++;
-            continue;
+          // تگ تکراری در همین فایل (مثل شماره‌ردیف تکراری): با پسوند حفظ می‌شود، نه حذف
+          final key = '${cat.id}|${it.tag}';
+          if (seenTags.contains(key)) {
+            var n = 2;
+            while (seenTags.contains('${cat.id}|${it.tag} ($n)')) {
+              n++;
+            }
+            it.tag = '${it.tag} ($n)';
+          } else {
+            // تکراری: همان تگ در همان پروژه و رده از ورود قبلی (مثلاً پمپ‌های v8)
+            final dup = db.scalar(
+                "SELECT id FROM items WHERE category_id = ? AND project_id = ? AND tag = ? AND status = 'active'",
+                [cat.id, pid, it.tag]);
+            if (dup != null) {
+              rep.skippedDuplicates++;
+              continue;
+            }
           }
+          seenTags.add('${cat.id}|${it.tag}');
           final values = <String, Object?>{
             'tag': it.tag,
             'name': it.name,

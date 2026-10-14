@@ -41,6 +41,9 @@ void main() {
     report(pb, rep);
     expect(rep.items, greaterThan(100));
     expect(rep.weights, greaterThan(10));
+    expect(rep.skippedDuplicates, 0);
+    final igf = a.sheets.where((s) => s.categoryCode == 'IGF').expand((s) => s.items).first;
+    expect(igf.description, contains('Oily Sludge Pumps')); // صفحه‌ی ادامه
     pb.close();
   });
 
@@ -52,6 +55,8 @@ void main() {
     final rep = pb.mtoImporter().run(a, projectName: 'Sample 4', oldFx: null);
     report(pb, rep);
     expect(rep.items, greaterThan(600));
+    expect(rep.skippedDuplicates, 0);
+    expect(a.sheets.where((s) => s.categoryCode == null), isEmpty);
     pb.close();
   });
 
@@ -60,6 +65,9 @@ void main() {
     final lab = a.sheets.where((s) => s.categoryCode == 'LAB').toList();
     expect(lab, isNotEmpty);
     expect(lab.first.goingYear, 1392);
+    // جدول‌های جمع‌بندی (بدون تگ و تعداد) پیش‌فرض وارد نمی‌شوند
+    expect(a.sheets.where((s) => s.source == 'ME.p.1392' && s.selected), isEmpty);
+    expect(a.sheets.where((s) => s.source == 'EL.p.1392' && s.selected), isEmpty);
     final pb = PriceBank.memory(loadSeed());
     final rep = pb.mtoImporter().run(a, projectName: 'Sample M3', oldFx: null);
     report(pb, rep);

@@ -916,7 +916,7 @@ const _categoryWords = <(String, String)>[
   (r'exchang|cooler|condenser|reboiler|\bphe\b|مبدل|کولر', 'HEX'),
   (r'heater|furnace|fired|گرم.?کن|کوره', 'HEATER'),
   (r'tank|مخزن', 'TANK'),
-  (r'vessel|drum|separator|receiver|knock.?out|\bk\.?o\.?\b|scrubber|ظرف|درام|جداکننده', 'VESSEL'),
+  (r'vessel|drum|separator|receiver|reciever|knock.?out|\bk\.?o\.?\b|scrubber|ظرف|درام|جداکننده', 'VESSEL'),
   (r'filter|strainer|فیلتر|صافی', 'FILTER'),
   (r'flare|burn\s*pit|stack|فلر|مشعل', 'FLARE'),
   (r'crane|hoist|monorail|جرثقیل|بالابر', 'CRANE'),
