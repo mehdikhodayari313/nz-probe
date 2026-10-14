@@ -2,9 +2,12 @@
 // (test/fixtures/MTO_sample_14040105.xlsx — ساختار واقعی، اعداد و نام فروشندگان ساختگی).
 
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:math' as math;
+
+import 'package:price_bank/core/calc/generic_estimator.dart';
 import 'package:price_bank/core/import/mto_importer.dart';
+import 'package:price_bank/core/repo/generic_templates.dart';
 import 'package:price_bank/core/price_bank.dart';
-import 'package:price_bank/core/repo/catalog_repo.dart';
 import 'package:price_bank/core/xlsx/xlsx_reader.dart';
 
 import 'support.dart';
@@ -60,14 +63,13 @@ void main() {
     expect(rep.quotes, 33);
     expect(rep.perCategory['VESSEL'], 4);
     expect(rep.perCategory['PUMP'], 4);
-    expect(rep.specFields, greaterThan(10));
+    expect(rep.specFields, lessThan(5)); // تقریباً همه‌ی خط‌ها به فیلدهای قالب رده رفته‌اند
     expect(pb.mtoImporter().run(MtoImporter.analyze(wb, fileName: 'x.xlsx'), projectName: 'Sample').alreadyImported,
         isTrue);
 
     final vessel = pb.catalog.categoryByCode('VESSEL')!;
     expect(vessel.enabled, isTrue);
-    final f = pb.catalog.fields(vessel.id).firstWhere((f) => f.key == CatalogRepo.specKey('Design Pressure'));
-    expect(f.labelFa, 'فشار طراحی');
+    expect(pb.catalog.fields(vessel.id).any((f) => f.key == 'design_pressure_barg'), isTrue);
 
     final rows = pb.computeCategory(vessel.id);
     expect(rows.length, 4);
@@ -75,7 +77,15 @@ void main() {
     final p = r.item.primary!;
     expect(p.currency, 'IRR');
     expect(p.costYear, 1404);
-    expect(r.item.values[CatalogRepo.specKey('Design Pressure')], '13.5 Barg');
+    expect(r.item.values['design_pressure_barg'], 13.5);
+    expect(r.item.values['id_mm'], 2300);
+    expect(r.item.values['tl_mm'], 6900);
+    expect(r.item.values['orientation'], 'Vertical');
+    expect(r.item.values['material_class'], 'CS');
+    expect(r.item.values['design_temp_max_c'], 85);
+    expect(r.item.values['design_code'], 'ASME VIII, DIV.1 & IPS-G-ME-150');
+    expect(r.size, closeTo(math.pi / 4 * 2.3 * 2.3 * 6.9 + math.pi * 2.3 * 2.3 * 2.3 / 12, 1e-9));
+    expect(r.coef, isNotNull);
     // یورو(پایه) = ریال ÷ نرخ یوروی ۱۴۰۴ جدول پیش‌فرض
     final eur1404 = pb.seriesSnapshot.resolve('FX_EUR_V8', 1404, month: 2)!.value;
     expect(r.result.eurSource.number, closeTo(p.amount! / eur1404, 1e-6));
@@ -95,6 +105,69 @@ void main() {
     final q = r.item.observations.firstWhere((o) => o.kind == 'quote');
     pb.items.setPrimary(r.item.id, q.id);
     expect(pb.items.get(r.item.id)!.primary!.id, q.id);
+
+    // قالب سایر رده‌ها
+    final cip = pb.computeCategory(pb.catalog.categoryByCode('CIP')!.id).first;
+    expect(cip.item.values['chemical'], 'Anti Scale');
+    expect(cip.item.values['injection_rate_lph'], 3);
+    expect(cip.item.values['material_class'], 'SS316');
+    expect(cip.size, 3);
+    final hex = pb.computeCategory(pb.catalog.categoryByCode('HEX')!.id).single;
+    expect(hex.item.values['hex_type'], 'Plate & Frame');
+    expect(hex.item.values['duty_kw'], 3155);
+    expect(hex.item.values['material_class'], 'Titanium');
+    final crane = pb.computeCategory(pb.catalog.categoryByCode('CRANE')!.id).first;
+    expect(crane.item.values['capacity_kg'], 5000);
+    expect(crane.item.values['span_m'], 8.15);
+    expect(crane.item.values['crane_type'], 'Top Running');
+    final des = pb.computeCategory(pb.catalog.categoryByCode('DESALTER')!.id).single;
+    expect(des.item.values['vessel_id_mm'], 3658);
+    expect(des.item.values['pump_flow_m3h'], 20.2);
+    expect(des.size, isNotNull);
+
+    // تخمین: نزدیک‌ترین همتا با مشخصات خود V-141 = همان قیمت تعدیل‌شده‌ی V-141
+    final vrows = pb.computeCategory(vessel.id);
+    final v141 = vrows.firstWhere((x) => x.item.tag == 'V-141');
+    final est = pb.genericEstimator('VESSEL');
+    final peers = pb.genericPeers('VESSEL', vrows);
+    expect(peers.length, 4);
+    final near = est.estimate(values: v141.item.values, allPeers: peers, method: GenEstMethod.near);
+    expect(near.nearest!.itemId, v141.item.id);
+    expect(near.res.eurExpected, closeTo(v141.result.eurTarget.number!, 1e-6));
+    final cap = est.estimate(values: v141.item.values, allPeers: peers, method: GenEstMethod.cap, quantity: 2);
+    expect(cap.res.eurExpected, isNotNull);
+    expect(cap.res.irrTotal, closeTo(cap.res.irrExpected! * 2, 1e-3));
+    final man = est.estimate(values: v141.item.values, allPeers: peers, method: GenEstMethod.manual, manualCoef: 1000);
+    expect(man.res.eurExpected, closeTo(1000 * math.pow(v141.size!, 0.6) * v141.allF, 1e-6));
+
+    // تنظیمات رده: روش M0 فقط برای ظرف‌ها
+    pb.settingsRepo.set('cat_method_VESSEL', 'M0');
+    pb.invalidateCalc();
+    final v0 = pb.computeCategory(vessel.id).firstWhere((x) => x.item.tag == 'V-141');
+    expect(v0.result.methodCode, 'M0');
+    expect(v0.result.eurTarget.number, closeTo(v0.result.eurSource.number!, 1e-9));
+    expect(pb.computeCategory(pb.catalog.categoryByCode('TANK')!.id).every((x) => x.result.methodCode == 'M6'), isTrue);
+    pb.close();
+  });
+
+  test('اقلام قدیمی: استخراج قالب از شرح MTO در باز شدن برنامه', () {
+    final pb = PriceBank.memory(loadSeed());
+    final cat = pb.catalog.categoryByCode('TANK')!;
+    final (rawKey, _) = pb.catalog.ensureSpecField(cat.id, 'Roof Type');
+    final id = pb.items.create(categoryId: cat.id, values: {
+      'tag': 'TK-1',
+      'name': 'Test Tank',
+      'mto_description': 'Test Tank\nSize (D x H): 10000 x 8000 mm\nRoof Type: Cone\nMaterial (Shell/Bottom/Roof): A 283 Gr. C',
+      rawKey: 'Cone',
+    });
+    ensureGenericTemplates(pb.db);
+    pb.catalog.invalidate();
+    final it = pb.items.get(id)!;
+    expect(it.values['diameter_mm'], 10000);
+    expect(it.values['roof_type'], 'Cone');
+    expect(it.values['material_class'], 'CS');
+    expect(it.values.containsKey(rawKey), isFalse);
+    expect(pb.catalog.fields(cat.id).any((f) => f.key == rawKey), isFalse);
     pb.close();
   });
 

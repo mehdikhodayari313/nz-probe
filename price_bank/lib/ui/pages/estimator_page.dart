@@ -8,6 +8,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
+import 'generic_estimator_tab.dart';
 
 class EstimatorPage extends StatefulWidget {
   const EstimatorPage({super.key});
@@ -17,7 +18,7 @@ class EstimatorPage extends StatefulWidget {
 }
 
 class _EstimatorPageState extends State<EstimatorPage> with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 2, vsync: this);
+  late final _tabs = TabController(length: 3, vsync: this);
 
   @override
   void dispose() {
@@ -33,12 +34,13 @@ class _EstimatorPageState extends State<EstimatorPage> with SingleTickerProvider
         child: TabBar(
           controller: _tabs,
           tabs: const [
-            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'تخمین قیمت پمپ جدید (از روی همتاها)'),
+            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'تخمین پمپ جدید'),
+            Tab(icon: Icon(Icons.category_rounded), text: 'تخمین سایر تجهیزات'),
             Tab(icon: Icon(Icons.trending_up_rounded), text: 'انتقال قیمت قدیم به سال هدف'),
           ],
         ),
       ),
-      Expanded(child: TabBarView(controller: _tabs, children: const [_NewPumpEstimator(), _TransferCalculator()])),
+      Expanded(child: TabBarView(controller: _tabs, children: const [_NewPumpEstimator(), GenericEstimatorTab(), _TransferCalculator()])),
     ]);
   }
 }
@@ -251,7 +253,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
                     : 'توان یا دبی و هد را وارد کنید.',
                 style: TextStyle(color: Tones.warn(context), height: 1.8),
               )
-            : _EstimateResults(r: r, unit: unit, qty: qty),
+            : EstimateResultsView(r: r, unit: unit, qty: qty),
       ),
       const SizedBox(height: 14),
       SectionCard(
@@ -698,8 +700,8 @@ class _ResultTile extends StatelessWidget {
 }
 
 /// چیدمان نتیجه‌ی تخمین: یورو ← دلار ← بازه‌ی یورو ← ریال/تومان ← بازه‌ی ریالی ← جمع.
-class _EstimateResults extends StatelessWidget {
-  const _EstimateResults({required this.r, required this.unit, required this.qty});
+class EstimateResultsView extends StatelessWidget {
+  const EstimateResultsView({super.key, required this.r, required this.unit, required this.qty});
   final EstimatorResult r;
   final MoneyUnit unit;
   final double qty;

@@ -210,7 +210,27 @@ void main() {
       await go(tester, nEquipment);
       debugPrint('✓ ' 'رده‌ی $code');
     }
+    // فیلترهای پارامتریک و تنظیمات رده‌ی ظرف
+    EquipmentPage.selectedCategory = 'VESSEL';
+    await go(tester, 0);
+    await go(tester, nEquipment);
+    expect(find.text('جهت نصب'), findsWidgets);
+    expect(find.text('کلاس جنس'), findsWidgets);
+    await tester.tap(find.text('تنظیمات رده'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ذخیره'));
+    await tester.pumpAndSettle();
+    debugPrint('✓ ' 'فیلترهای پارامتریک و تنظیمات رده');
     EquipmentPage.selectedCategory = 'PUMP';
+
+    // تخمین سایر تجهیزات
+    await go(tester, nEstimator);
+    await tester.tap(find.text('تخمین سایر تجهیزات'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('نزدیک‌ترین همتا'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('حجم ظرف'), findsWidgets);
+    debugPrint('✓ ' 'تخمین سایر تجهیزات');
 
     // صفحه‌ی قلم
     final id = app.genericRows(vessel.id).firstWhere((r) => r.item.tag == 'V-141').item.id;

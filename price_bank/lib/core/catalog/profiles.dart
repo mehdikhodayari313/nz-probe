@@ -1,0 +1,736 @@
+// قالب تخصصی هر رده‌ی تجهیزات غیرپمپ: فیلدها، قواعد استخراج از شرح MTO، پارامتر اندازه برای تخمین،
+// ضرایب نرمال‌سازی (جنس، NACE، فشار) و فیلترها/ستون‌های جستجوی پارامتریک.
+//
+// ضرایب و توان‌های اندازه «اولیه (قضاوت مهندسی)» هستند و در صفحه‌ی «ضرایب» و تنظیمات هر رده
+// قابل کالیبره کردن‌اند.
+
+import 'dart:math' as math;
+
+/// شرح چندخطی MTO: خط اول نام؛ «کلید: مقدار» مشخصات؛ خط بدون «:» ادامه‌ی مقدار قبلی یا دامنه‌ی کار.
+({String name, Map<String, String> specs, List<String> scope}) parseMtoDescription(String description) {
+  final lines = description.replaceAll('\r', '').split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+  final specs = <String, String>{};
+  final scope = <String>[];
+  if (lines.isEmpty) return (name: '', specs: specs, scope: scope);
+  String? lastKey;
+  for (final line in lines.skip(1)) {
+    final i = line.indexOf(':');
+    if (i > 0 && i < 70 && !line.startsWith('&')) {
+      final k = line.substring(0, i).trim();
+      final v = line.substring(i + 1).trim();
+      if (specs.containsKey(k) && v.isNotEmpty && specs[k]!.isNotEmpty) {
+        specs[k] = '${specs[k]}; $v';
+      } else {
+        specs[k] = v;
+      }
+      lastKey = k;
+    } else if (lastKey != null) {
+      specs[lastKey] = '${specs[lastKey]} $line'.trim();
+    } else {
+      scope.add(line);
+    }
+  }
+  specs.removeWhere((k, v) => v.isEmpty);
+  return (name: lines.first, specs: specs, scope: scope);
+}
+
+/// یک فیلد قالب.
+class ProfileField {
+  const ProfileField(
+    this.key,
+    this.labelFa,
+    this.group, {
+    this.type = 'text',
+    this.unit,
+    this.list,
+    this.help,
+    this.labelEn,
+  });
+  final String key;
+  final String labelFa;
+  final String group; // key_specs, design, material, scope, package
+  final String type; // text, number, enum
+  final String? unit;
+  final String? list;
+  final String? help;
+  final String? labelEn;
+}
+
+const profileGroupFa = {
+  'key_specs': 'مشخصات کلیدی',
+  'design': 'شرایط طراحی',
+  'material': 'جنس، کد و استاندارد',
+  'package': 'اجزای پکیج',
+  'scope': 'دامنه‌ی تأمین',
+};
+
+const _groupSort = {'key_specs': 100, 'design': 200, 'material': 300, 'package': 400, 'scope': 500};
+int profileGroupSort(String g) => _groupSort[g] ?? 600;
+
+/// قاعده‌ی تبدیل یک خط شرح MTO به فیلد(های) قالب.
+class MtoRule {
+  const MtoRule(this.pattern, this.apply);
+  final String pattern; // RegExp (case-insensitive) روی برچسب خط
+  final void Function(String value, Map<String, Object?> out) apply;
+  bool matches(String label) => RegExp(pattern, caseSensitive: false).hasMatch(label);
+}
+
+/// پارامتر اندازه برای تخمین (قیمت ∝ اندازه^n).
+class SizeDriver {
+  const SizeDriver(this.labelFa, this.unit, this.n, this.compute);
+  final String labelFa;
+  final String unit;
+  final double n;
+  final double? Function(Map<String, Object?> v) compute;
+}
+
+class EquipmentProfile {
+  const EquipmentProfile({
+    required this.code,
+    required this.fields,
+    required this.rules,
+    required this.driver,
+    this.typeKey,
+    this.gridKeys = const [],
+    this.rangeKeys = const [],
+    this.factorGroups = const ['MAT', 'NACE'],
+    this.inferType,
+  });
+  final String code;
+  final List<ProfileField> fields;
+  final List<MtoRule> rules;
+  final SizeDriver driver;
+
+  /// فیلد «نوع» برای همتایابی هم‌نوع (مثلاً جهت نصب ظرف یا نوع مبدل)
+  final String? typeKey;
+  final List<String> gridKeys;
+  final List<String> rangeKeys;
+  final List<String> factorGroups;
+
+  /// استنباط فیلدها از نام/عنوان شیت (مثلاً «Burn Pit» ← نوع فلر)
+  final void Function(String nameAndTitle, Map<String, Object?> out)? inferType;
+
+  ProfileField? field(String key) => fields.where((f) => f.key == key).firstOrNull;
+
+  /// فیلدهای انتخابی (برای فیلتر)
+  List<ProfileField> get enumFields => fields.where((f) => f.type == 'enum').toList();
+
+  /// برچسب MTO به یکی از قواعد این قالب می‌خورد؟
+  bool maps(String label) => rules.any((r) => r.matches(label));
+
+  /// استخراج فیلدهای ساختاریافته از مشخصات «کلید: مقدار».
+  Map<String, Object?> extract(Map<String, String> specs, {String context = '', List<String> scope = const []}) {
+    final out = <String, Object?>{};
+    for (final e in specs.entries) {
+      for (final r in rules) {
+        if (r.matches(e.key)) {
+          r.apply(e.value, out);
+          break;
+        }
+      }
+    }
+    if (scope.isNotEmpty && field('scope') != null) out['scope'] = scope.join(' ');
+    inferType?.call(context, out);
+    out.removeWhere((k, v) => v == null || (v is String && v.trim().isEmpty));
+    return out;
+  }
+
+  double? sizeOf(Map<String, Object?> v) {
+    final s = driver.compute(v);
+    return (s == null || s.isNaN || s <= 0) ? null : s;
+  }
+}
+
+// -----------------------------------------------------------------------------
+// ابزار استخراج
+
+final _numRe = RegExp(r'-?\d+(?:\.\d+)?');
+List<double> _nums(String s) => [for (final m in _numRe.allMatches(s.replaceAll(',', ''))) double.parse(m.group(0)!)];
+
+double? _num(Object? v) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);
+
+MtoRule _text(String p, String key) => MtoRule(p, (v, o) => o[key] ??= v.trim());
+MtoRule _numAt(String p, String key, [int i = 0, double scale = 1]) => MtoRule(p, (v, o) {
+      final n = _nums(v);
+      if (n.length > i) o[key] ??= n[i] * scale;
+    });
+MtoRule _yn(String p, String key) => MtoRule(p, (v, o) {
+      final l = v.toLowerCase();
+      o[key] ??= l.startsWith('y') ? 'Y' : (l.startsWith('n') ? 'N' : null);
+    });
+
+/// «2300 x 6900 mm» ← دو بُعد بر حسب میلی‌متر (اگر واحد متر باشد ضربدر ۱۰۰۰)
+MtoRule _dims(String p, String k1, String k2) => MtoRule(p, (v, o) {
+      final n = _nums(v);
+      final l = v.toLowerCase();
+      final scale = (l.contains('mm') || !RegExp(r'\bm\b').hasMatch(l)) ? 1.0 : 1000.0;
+      if (n.isNotEmpty) o[k1] ??= n[0] * scale;
+      if (n.length > 1) o[k2] ??= n[1] * scale;
+    });
+
+/// فشار طراحی: بیشینه‌ی اعداد، kPa ← bar، «F.V.» ← خلأ کامل
+MtoRule _pressure(String p, {String key = 'design_pressure_barg', String? vacKey = 'full_vacuum'}) => MtoRule(p, (v, o) {
+      final l = v.toLowerCase();
+      var n = _nums(v);
+      if (n.isEmpty) return;
+      final kpa = l.contains('kpa');
+      n = [for (final x in n) kpa ? x / 100 : x];
+      o[key] ??= n.reduce(math.max);
+      if (vacKey != null && (l.contains('f.v') || l.contains('full vac') || n.any((x) => x < 0))) o[vacKey] ??= 'Y';
+      o['${key}_text'] ??= v.trim();
+    });
+
+/// «-2.8 / 85 oC» ← کمینه و بیشینه‌ی دمای طراحی
+MtoRule _temps(String p, {String minKey = 'design_temp_min_c', String maxKey = 'design_temp_max_c'}) => MtoRule(p, (v, o) {
+      final n = _nums(v);
+      if (n.isEmpty) return;
+      if (n.length == 1) {
+        o[maxKey] ??= n[0];
+      } else {
+        o[minKey] ??= n.reduce(math.min);
+        o[maxKey] ??= n.reduce(math.max);
+      }
+    });
+
+/// جنس (متن) + کلاس جنس (انتخابی)
+MtoRule _material(String p, String textKey, {String classKey = 'material_class'}) => MtoRule(p, (v, o) {
+      o[textKey] ??= v.trim();
+      o[classKey] ??= materialClassOf(v);
+    });
+
+/// کلاس جنس از متن جنس.
+String materialClassOf(String text) {
+  final l = text.toLowerCase();
+  if (l.contains('super duplex')) return 'Super Duplex';
+  if (l.contains('duplex')) return 'Duplex';
+  if (l.contains('titan')) return 'Titanium';
+  if (l.contains('316')) return 'SS316';
+  if (l.contains('304') || l.contains('s.s') || l.contains('stainless')) return 'SS304';
+  if (l.contains('333') || l.contains('lt') && l.contains('cs') || l.contains('low temp')) return 'LTCS';
+  if (l.contains('516') || l.contains('283') || l.contains('106') || l.contains('285') || l.contains('c.s') ||
+      l.contains('carbon') || RegExp(r'\bcs\b').hasMatch(l)) {
+    return 'CS';
+  }
+  return 'Other';
+}
+
+const _code = MtoRule(r'design codes?\s*(&|and)\s*standards?', _codeApply);
+void _codeApply(String v, Map<String, Object?> o) => o['design_code'] ??= v.trim();
+final _nace = _yn(r"nace", 'nace');
+
+double? _cyl(Map<String, Object?> v, String d, String l, {bool heads = true}) {
+  final dm = _num(v[d]), lm = _num(v[l]);
+  if (dm == null || lm == null) return null;
+  final dd = dm / 1000, ll = lm / 1000;
+  final shell = math.pi / 4 * dd * dd * ll;
+  return heads ? shell + math.pi * dd * dd * dd / 12 : shell; // دو عدسی بیضوی ۲:۱
+}
+
+// -----------------------------------------------------------------------------
+// فیلدهای مشترک
+
+const _fMat = ProfileField('material_class', 'کلاس جنس', 'material', type: 'enum', list: 'G_MAT',
+    help: 'برای ضریب نرمال‌سازی جنس؛ از متن جنس خودکار تشخیص داده می‌شود.');
+const _fNace = ProfileField('nace', 'الزام NACE MR-0175', 'material', type: 'enum', list: 'YNS');
+const _fCode = ProfileField('design_code', 'کد و استاندارد طراحی', 'material');
+const _fPress = ProfileField('design_pressure_barg', 'فشار طراحی', 'design', type: 'number', unit: 'barg',
+    help: 'بیشینه‌ی فشار طراحی؛ kPa به bar تبدیل شده است.');
+const _fPressText = ProfileField('design_pressure_barg_text', 'فشار طراحی (متن منبع)', 'design');
+const _fVac = ProfileField('full_vacuum', 'خلأ کامل (F.V.)', 'design', type: 'enum', list: 'YNS');
+const _fTmin = ProfileField('design_temp_min_c', 'دمای طراحی کمینه', 'design', type: 'number', unit: '°C');
+const _fTmax = ProfileField('design_temp_max_c', 'دمای طراحی بیشینه', 'design', type: 'number', unit: '°C');
+const _fScope = ProfileField('scope', 'دامنه‌ی تأمین (از شرح)', 'scope');
+
+final _common = <MtoRule>[_code, _nace];
+
+// -----------------------------------------------------------------------------
+// قالب‌ها
+
+final equipmentProfiles = <String, EquipmentProfile>{
+  'VESSEL': EquipmentProfile(
+    code: 'VESSEL',
+    fields: const [
+      ProfileField('orientation', 'جهت نصب', 'key_specs', type: 'enum', list: 'G_ORIENT'),
+      ProfileField('id_mm', 'قطر داخلی (ID)', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('tl_mm', 'طول TL-TL', 'key_specs', type: 'number', unit: 'mm'),
+      _fPress, _fPressText, _fVac, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      _dims(r'^size', 'id_mm', 'tl_mm'),
+      MtoRule(r'installation|position|orientation', (v, o) {
+        final l = v.toLowerCase();
+        o['orientation'] ??= l.startsWith('h') ? 'Horizontal' : (l.startsWith('v') ? 'Vertical' : null);
+      }),
+      _pressure(r'design press'),
+      _temps(r'design temp'),
+      _material(r'^mat', 'shell_material'),
+      ..._common,
+    ],
+    driver: SizeDriver('حجم ظرف', 'm³', 0.6, (v) => _cyl(v, 'id_mm', 'tl_mm')),
+    typeKey: 'orientation',
+    gridKeys: ['orientation', 'id_mm', 'tl_mm', 'design_pressure_barg', 'material_class'],
+    rangeKeys: ['design_pressure_barg'],
+    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+  ),
+  'TANK': EquipmentProfile(
+    code: 'TANK',
+    fields: const [
+      ProfileField('diameter_mm', 'قطر', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('height_mm', 'ارتفاع', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('roof_type', 'نوع سقف', 'key_specs', type: 'enum', list: 'G_ROOF'),
+      _fPress, _fPressText, _fVac, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس پوسته/کف/سقف', 'material'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      _dims(r'^size', 'diameter_mm', 'height_mm'),
+      MtoRule(r'roof', (v, o) {
+        final l = v.toLowerCase();
+        o['roof_type'] ??= l.contains('dome')
+            ? 'Dome'
+            : (l.contains('cone') ? 'Cone' : (l.contains('float') ? 'Floating' : 'Other'));
+      }),
+      _pressure(r'design press'),
+      _temps(r'design temp'),
+      _material(r'^mat', 'shell_material'),
+      ..._common,
+    ],
+    driver: SizeDriver('حجم مخزن', 'm³', 0.6, (v) => _cyl(v, 'diameter_mm', 'height_mm', heads: false)),
+    typeKey: 'roof_type',
+    gridKeys: ['diameter_mm', 'height_mm', 'roof_type', 'material_class'],
+    rangeKeys: [],
+  ),
+  'HEX': EquipmentProfile(
+    code: 'HEX',
+    fields: const [
+      ProfileField('hex_type', 'نوع مبدل', 'key_specs', type: 'enum', list: 'G_HEX'),
+      ProfileField('duty_kw', 'حرارت مبادله‌شده', 'key_specs', type: 'number', unit: 'kW'),
+      ProfileField('duty_case', 'حالت طراحی حرارت', 'key_specs'),
+      _fPress, _fPressText, _fTmin, _fTmax,
+      ProfileField('plate_material', 'جنس صفحه/لوله', 'material'),
+      ProfileField('gasket_material', 'جنس گسکت', 'material'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      MtoRule(r'heat exchanged|duty', (v, o) {
+        final n = _nums(v);
+        if (n.isNotEmpty) o['duty_kw'] ??= n.first * (v.toLowerCase().contains('mw') ? 1000 : 1);
+        final c = RegExp(r'\(([^)]*)\)').firstMatch(v);
+        if (c != null) o['duty_case'] ??= c.group(1);
+      }),
+      _pressure(r'design press', vacKey: null),
+      _temps(r'design temp'),
+      MtoRule(r'^mat', (v, o) {
+        final parts = v.split('/').map((e) => e.trim()).toList();
+        o['plate_material'] ??= parts.first;
+        if (parts.length > 1) o['gasket_material'] ??= parts[1];
+        o['material_class'] ??= materialClassOf(parts.first);
+      }),
+      ..._common,
+    ],
+    driver: SizeDriver('حرارت مبادله‌شده', 'kW', 0.6, (v) => _num(v['duty_kw'])),
+    typeKey: 'hex_type',
+    gridKeys: ['hex_type', 'duty_kw', 'material_class'],
+    rangeKeys: ['design_pressure_barg'],
+    inferType: (ctx, o) {
+      final l = ctx.toLowerCase();
+      o['hex_type'] ??= l.contains('plate')
+          ? 'Plate & Frame'
+          : (l.contains('air cool') ? 'Air Cooler' : (l.contains('shell') ? 'Shell & Tube' : null));
+    },
+  ),
+  'HEATER': EquipmentProfile(
+    code: 'HEATER',
+    fields: const [
+      ProfileField('duty_kw', 'حرارت نامی', 'key_specs', type: 'number', unit: 'kW'),
+      ProfileField('shell_id_mm', 'قطر پوسته', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('shell_tl_mm', 'طول پوسته TL-TL', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('design_pressure_shell_barg', 'فشار طراحی پوسته', 'design', type: 'number', unit: 'barg'),
+      ProfileField('design_pressure_coil_barg', 'فشار طراحی کویل', 'design', type: 'number', unit: 'barg'),
+      _fPress, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
+      ProfileField('coil_material', 'جنس کویل', 'material'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      MtoRule(r'heat exchanged|duty', (v, o) {
+        final n = _nums(v);
+        if (n.isNotEmpty) o['duty_kw'] ??= n.first * (v.toLowerCase().contains('mw') ? 1000 : 1);
+      }),
+      _dims(r'shell dim|^size', 'shell_id_mm', 'shell_tl_mm'),
+      MtoRule(r'design press', (v, o) {
+        final n = _nums(v);
+        if (n.isEmpty) return;
+        if (n.length >= 2) {
+          o['design_pressure_shell_barg'] ??= n[0];
+          o['design_pressure_coil_barg'] ??= n[1];
+        }
+        o['design_pressure_barg'] ??= n.reduce(math.max);
+      }),
+      _temps(r'design temp'),
+      _material(r'mat.*coil', 'coil_material', classKey: '_coil_class'),
+      _material(r'^mat', 'shell_material'),
+      ..._common,
+    ],
+    driver: SizeDriver('حرارت نامی', 'kW', 0.8, (v) => _num(v['duty_kw'])),
+    gridKeys: ['duty_kw', 'shell_id_mm', 'design_pressure_coil_barg', 'material_class'],
+    rangeKeys: ['design_pressure_barg'],
+    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+  ),
+  'DESALTER': EquipmentProfile(
+    code: 'DESALTER',
+    fields: const [
+      ProfileField('desalter_type', 'نوع', 'key_specs'),
+      ProfileField('vessel_tag', 'تگ ظرف دیسالتر', 'key_specs'),
+      ProfileField('vessel_id_mm', 'قطر داخلی ظرف', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('vessel_tl_mm', 'طول TL-TL ظرف', 'key_specs', type: 'number', unit: 'mm'),
+      _fPress, _fPressText, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس ظرف', 'material'),
+      _fMat, _fNace, _fCode,
+      ProfileField('pumps_tag', 'تگ پمپ‌های گردشی', 'package'),
+      ProfileField('pump_type', 'نوع پمپ‌ها', 'package'),
+      ProfileField('pump_flow_m3h', 'دبی نامی پمپ', 'package', type: 'number', unit: 'm³/h'),
+      ProfileField('pump_dp_bar', 'اختلاف فشار پمپ', 'package', type: 'number', unit: 'bar'),
+      ProfileField('pump_material_class', 'کلاس متریال پمپ (API 610)', 'package'),
+      ProfileField('pump_code', 'کد پمپ‌ها', 'package'),
+      _fScope,
+    ],
+    rules: [
+      _text(r'^type', 'desalter_type'),
+      _text(r'vessel tag', 'vessel_tag'),
+      _dims(r'dim|size', 'vessel_id_mm', 'vessel_tl_mm'),
+      _pressure(r'design press', vacKey: null),
+      _temps(r'design temp'),
+      _text(r'pumps? tag', 'pumps_tag'),
+      _text(r'pumps? type', 'pump_type'),
+      _numAt(r'pumps? rated flow', 'pump_flow_m3h'),
+      _numAt(r'pumps? diff', 'pump_dp_bar'),
+      _text(r'pumps? mat', 'pump_material_class'),
+      _text(r'pumps? design code', 'pump_code'),
+      _material(r'^vessels? mat|^mat', 'shell_material'),
+      ..._common,
+    ],
+    driver: SizeDriver('حجم ظرف دیسالتر', 'm³', 0.6, (v) => _cyl(v, 'vessel_id_mm', 'vessel_tl_mm')),
+    gridKeys: ['vessel_id_mm', 'vessel_tl_mm', 'desalter_type', 'material_class'],
+    rangeKeys: ['design_pressure_barg'],
+    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+  ),
+  'CIP': EquipmentProfile(
+    code: 'CIP',
+    fields: const [
+      ProfileField('chemical', 'ماده‌ی شیمیایی', 'key_specs'),
+      ProfileField('injection_rate_lph', 'حداکثر نرخ تزریق', 'key_specs', type: 'number', unit: 'L/h'),
+      ProfileField('discharge_pressure_barg', 'حداکثر فشار رانش', 'key_specs', type: 'number', unit: 'barg'),
+      ProfileField('pumps_qty', 'تعداد پمپ', 'package', type: 'number'),
+      ProfileField('pump_material', 'جنس پمپ', 'package'),
+      ProfileField('pump_standard', 'استاندارد پمپ', 'package'),
+      ProfileField('tank_capacity_m3', 'حجم مخزن', 'package', type: 'number', unit: 'm³'),
+      ProfileField('tank_design_pressure_barg', 'فشار طراحی مخزن', 'package', type: 'number', unit: 'barg'),
+      _fTmin, _fTmax,
+      ProfileField('tank_material', 'جنس مخزن', 'package'),
+      ProfileField('agitator', 'همزن', 'package', type: 'enum', list: 'YNS'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      _numAt(r'injection rate', 'injection_rate_lph'),
+      _numAt(r'discharge press', 'discharge_pressure_barg'),
+      _numAt(r'pumps? qty', 'pumps_qty'),
+      _material(r'pumps? mat', 'pump_material'),
+      _text(r'pumps? design code', 'pump_standard'),
+      _numAt(r'tank capacity', 'tank_capacity_m3'),
+      _numAt(r'tank design press', 'tank_design_pressure_barg'),
+      _temps(r'tank design temp|design temp'),
+      _text(r'tank mat', 'tank_material'),
+      _yn(r'agitator', 'agitator'),
+      ..._common,
+    ],
+    driver: SizeDriver('نرخ تزریق', 'L/h', 0.3, (v) => _num(v['injection_rate_lph'])),
+    typeKey: 'chemical',
+    gridKeys: ['chemical', 'injection_rate_lph', 'pumps_qty', 'tank_capacity_m3', 'material_class'],
+    rangeKeys: ['tank_capacity_m3'],
+    inferType: (ctx, o) {
+      final n = ctx.split('\n').first;
+      final m = RegExp(r'^(.*?)\s+Injection', caseSensitive: false).firstMatch(n);
+      if (m != null) o['chemical'] ??= m.group(1)!.trim();
+    },
+  ),
+  'DEAERATOR': EquipmentProfile(
+    code: 'DEAERATOR',
+    fields: const [
+      ProfileField('flow_m3h', 'حداکثر دبی', 'key_specs', type: 'number', unit: 'm³/h'),
+      ProfileField('tower_tag', 'تگ برج', 'key_specs'),
+      ProfileField('internals', 'نوع داخلی‌ها', 'key_specs'),
+      _fPress, _fPressText, _fVac, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
+      ProfileField('internals_material', 'جنس داخلی‌های جداشدنی', 'material'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      _numAt(r'flow', 'flow_m3h'),
+      _text(r'tower tag', 'tower_tag'),
+      _text(r'^internals$', 'internals'),
+      _pressure(r'design press'),
+      _temps(r'design temp'),
+      _text(r'remov', 'internals_material'),
+      _material(r'^mat', 'shell_material'),
+      ..._common,
+    ],
+    driver: SizeDriver('دبی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
+    gridKeys: ['flow_m3h', 'internals', 'material_class'],
+    rangeKeys: [],
+    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+  ),
+  'IGF': EquipmentProfile(
+    code: 'IGF',
+    fields: const [
+      ProfileField('flow_m3h', 'دبی طراحی', 'key_specs', type: 'number', unit: 'm³/h'),
+      _fPress, _fPressText, _fVac, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس ظرف', 'material'),
+      ProfileField('internals_material', 'جنس داخلی‌های جداشدنی', 'material'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      _numAt(r'design flow|flow rate', 'flow_m3h'),
+      _pressure(r'design press'),
+      _temps(r'design temp'),
+      _text(r'remov', 'internals_material'),
+      _material(r'^vessel mat|^mat', 'shell_material'),
+      MtoRule(r'vessel design codes?', _codeApply),
+      ..._common,
+    ],
+    driver: SizeDriver('دبی طراحی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
+    gridKeys: ['flow_m3h', 'internals_material', 'material_class'],
+    rangeKeys: [],
+    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+  ),
+  'FILTER': EquipmentProfile(
+    code: 'FILTER',
+    fields: const [
+      ProfileField('filter_type', 'نوع فیلتر', 'key_specs'),
+      ProfileField('vessels_config', 'تعداد/آرایش ظروف', 'key_specs'),
+      ProfileField('flow_m3h', 'دبی (معادل آب)', 'key_specs', type: 'number', unit: 'm³/h',
+          help: 'دبی جرمی kg/h با چگالی آب به m³/h تبدیل شده است.'),
+      ProfileField('flow_kgh', 'دبی جرمی', 'key_specs', type: 'number', unit: 'kg/h'),
+      ProfileField('outlet_oil_ppm', 'روغن آزاد خروجی', 'key_specs', type: 'number', unit: 'ppmw'),
+      _fPress, _fPressText, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
+      ProfileField('internals_material', 'جنس اجزای داخلی', 'material'),
+      ProfileField('agitator', 'همزن', 'package', type: 'enum', list: 'YNS'),
+      _fMat, _fNace, _fCode, _fScope,
+    ],
+    rules: [
+      _text(r'^type', 'filter_type'),
+      _text(r'^including', 'vessels_config'),
+      MtoRule(r'flow', (v, o) {
+        final n = _nums(v);
+        if (n.isEmpty) return;
+        if (v.toLowerCase().contains('kg') || RegExp('kg', caseSensitive: false).hasMatch(v)) {
+          o['flow_kgh'] ??= n.first;
+          o['flow_m3h'] ??= n.first / 1000;
+        } else {
+          o['flow_m3h'] ??= n.first;
+        }
+      }),
+      _numAt(r'oil content', 'outlet_oil_ppm'),
+      _pressure(r'design press', vacKey: null),
+      _temps(r'design temp'),
+      _text(r'internal', 'internals_material'),
+      _yn(r'agitator', 'agitator'),
+      _material(r'^mat', 'shell_material'),
+      ..._common,
+    ],
+    driver: SizeDriver('دبی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
+    typeKey: 'filter_type',
+    gridKeys: ['filter_type', 'flow_m3h', 'material_class'],
+    rangeKeys: [],
+    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+  ),
+  'FLARE': EquipmentProfile(
+    code: 'FLARE',
+    fields: const [
+      ProfileField('flare_type', 'نوع', 'key_specs', type: 'enum', list: 'G_FLARE'),
+      ProfileField('capacity_kgh', 'ظرفیت کل', 'key_specs', type: 'number', unit: 'kg/h'),
+      ProfileField('ignition_type', 'سیستم جرقه‌زنی', 'key_specs'),
+      ProfileField('stack_diameter_in', 'قطر استک', 'key_specs', type: 'number', unit: 'in'),
+      ProfileField('stack_height_m', 'ارتفاع استک', 'key_specs', type: 'number', unit: 'm'),
+      ProfileField('stack_support', 'نوع نگهداری استک', 'key_specs'),
+      ProfileField('burn_pit_diameter_m', 'قطر Burn Pit', 'key_specs', type: 'number', unit: 'm'),
+      ProfileField('electrical_kw', 'توان برق', 'design', type: 'number', unit: 'kW'),
+      ProfileField('elect_protection', 'حداقل حفاظت تجهیزات برقی', 'design'),
+      _fCode, _fScope,
+    ],
+    rules: [
+      _numAt(r'capacity', 'capacity_kgh'),
+      _text(r'ignition', 'ignition_type'),
+      MtoRule(r'stack size', (v, o) {
+        final n = _nums(v);
+        if (n.isNotEmpty) o['stack_diameter_in'] ??= n[0];
+        if (n.length > 1) o['stack_height_m'] ??= n[1];
+      }),
+      _text(r'support', 'stack_support'),
+      _numAt(r'burn pit diam', 'burn_pit_diameter_m'),
+      _numAt(r'electrical duty', 'electrical_kw'),
+      _text(r'protection', 'elect_protection'),
+      _code,
+    ],
+    driver: SizeDriver('ظرفیت', 'kg/h', 0.5, (v) => _num(v['capacity_kgh'])),
+    typeKey: 'flare_type',
+    gridKeys: ['flare_type', 'capacity_kgh', 'stack_height_m'],
+    rangeKeys: [],
+    factorGroups: const ['NACE'],
+    inferType: (ctx, o) => o['flare_type'] ??= ctx.toLowerCase().contains('burn pit') ? 'Burn Pit' : 'Flare',
+  ),
+  'COMPRESSOR': EquipmentProfile(
+    code: 'COMPRESSOR',
+    fields: const [
+      ProfileField('comp_type', 'نوع کمپرسور', 'key_specs', type: 'enum', list: 'G_COMP'),
+      ProfileField('lubrication', 'روغن‌کاری', 'key_specs', type: 'enum', list: 'G_LUBE'),
+      ProfileField('flow_m3h', 'دبی نرمال', 'key_specs', type: 'number', unit: 'm³/h'),
+      ProfileField('discharge_pressure_barg', 'فشار رانش', 'key_specs', type: 'number', unit: 'barg'),
+      _fCode, _fScope,
+    ],
+    rules: [
+      MtoRule(r'^type', (v, o) {
+        final l = v.toLowerCase();
+        o['comp_type'] ??= l.contains('recip')
+            ? 'Reciprocating'
+            : (l.contains('screw') ? 'Screw' : (l.contains('centrif') ? 'Centrifugal' : 'Other'));
+        o['lubrication'] ??= (l.contains('non-lub') || l.contains('oil-free') || l.contains('oil free'))
+            ? 'Oil-free'
+            : (l.contains('lub') ? 'Lubricated' : null);
+      }),
+      _numAt(r'flow', 'flow_m3h'),
+      _numAt(r'discharge press', 'discharge_pressure_barg'),
+      _code,
+    ],
+    driver: SizeDriver('دبی نرمال', 'm³/h', 0.7, (v) => _num(v['flow_m3h'])),
+    typeKey: 'comp_type',
+    gridKeys: ['comp_type', 'lubrication', 'flow_m3h', 'discharge_pressure_barg'],
+    rangeKeys: ['discharge_pressure_barg'],
+    factorGroups: const ['LUBE'],
+  ),
+  'AIR_DRYER': EquipmentProfile(
+    code: 'AIR_DRYER',
+    fields: const [
+      ProfileField('dryer_type', 'نوع خشک‌کن', 'key_specs'),
+      ProfileField('drying_medium', 'ماده‌ی جاذب', 'key_specs'),
+      ProfileField('flow_m3h', 'دبی ورودی', 'key_specs', type: 'number', unit: 'm³/h'),
+      ProfileField('towers_qty', 'تعداد برج', 'package', type: 'number'),
+      ProfileField('prefilters_qty', 'تعداد پیش‌فیلتر', 'package', type: 'number'),
+      ProfileField('afterfilters_qty', 'تعداد پس‌فیلتر', 'package', type: 'number'),
+      _fPress, _fPressText, _fTmin, _fTmax,
+      ProfileField('shell_material', 'جنس', 'material'),
+      _fMat, _fCode, _fScope,
+    ],
+    rules: [
+      _text(r'^type', 'dryer_type'),
+      _text(r'medium', 'drying_medium'),
+      _numAt(r'flow', 'flow_m3h'),
+      _numAt(r'tower', 'towers_qty'),
+      _numAt(r'pre-?filter', 'prefilters_qty'),
+      _numAt(r'after-?filter', 'afterfilters_qty'),
+      _pressure(r'design press', vacKey: null),
+      _temps(r'design temp'),
+      _material(r'^mat', 'shell_material'),
+      _code,
+    ],
+    driver: SizeDriver('دبی ورودی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
+    gridKeys: ['dryer_type', 'flow_m3h', 'towers_qty'],
+    rangeKeys: [],
+    factorGroups: const ['MAT', 'PRESS'],
+  ),
+  'CRANE': EquipmentProfile(
+    code: 'CRANE',
+    fields: const [
+      ProfileField('crane_type', 'نوع جرثقیل', 'key_specs', type: 'enum', list: 'G_CRANE'),
+      ProfileField('drive', 'محرک', 'key_specs'),
+      ProfileField('capacity_kg', 'ظرفیت', 'key_specs', type: 'number', unit: 'kg'),
+      ProfileField('lift_m', 'ارتفاع بالابری', 'key_specs', type: 'number', unit: 'm'),
+      ProfileField('span_m', 'دهانه', 'key_specs', type: 'number', unit: 'm'),
+      ProfileField('travel_m', 'طول حرکت', 'key_specs', type: 'number', unit: 'm'),
+      ProfileField('motor', 'مشخصات موتور', 'design'),
+      _fCode, _fScope,
+    ],
+    rules: [
+      MtoRule(r'^type', (v, o) {
+        final l = v.toLowerCase();
+        o['crane_type'] ??= l.contains('top run')
+            ? 'Top Running'
+            : (l.contains('under') ? 'Under Hung' : (l.contains('gantry') ? 'Gantry' : (l.contains('mono') ? 'Monorail' : 'Other')));
+        final parts = v.split(',');
+        if (parts.length > 1) o['drive'] ??= parts.sublist(1).join(',').trim();
+      }),
+      _numAt(r'capacity', 'capacity_kg'),
+      MtoRule(r'lift.*span', (v, o) {
+        final n = _nums(v);
+        if (n.isNotEmpty) o['lift_m'] ??= n[0];
+        if (n.length > 1) o['span_m'] ??= n[1];
+        if (n.length > 2) o['travel_m'] ??= n[2];
+      }),
+      _text(r'motor', 'motor'),
+      _code,
+    ],
+    driver: SizeDriver('ظرفیت', 'kg', 0.6, (v) => _num(v['capacity_kg'])),
+    typeKey: 'crane_type',
+    gridKeys: ['crane_type', 'capacity_kg', 'span_m'],
+    rangeKeys: ['span_m'],
+    factorGroups: const [],
+  ),
+};
+
+/// فهرست‌های انتخابی قالب‌ها: کلید ← گزینه‌ها (مقدار، برچسب فارسی)
+const profileLists = <String, List<(String, String)>>{
+  'G_MAT': [
+    ('CS', 'فولاد کربنی'), ('LTCS', 'فولاد کربنی دمای پایین'), ('SS304', 'فولاد زنگ‌نزن ۳۰۴'),
+    ('SS316', 'فولاد زنگ‌نزن ۳۱۶'), ('Duplex', 'داپلکس'), ('Super Duplex', 'سوپر داپلکس'), ('Titanium', 'تیتانیوم'),
+    ('Other', 'سایر'),
+  ],
+  'G_ORIENT': [('Vertical', 'عمودی'), ('Horizontal', 'افقی')],
+  'G_ROOF': [('Dome', 'گنبدی'), ('Cone', 'مخروطی'), ('Floating', 'شناور'), ('Other', 'سایر')],
+  'G_HEX': [('Plate & Frame', 'صفحه‌ای'), ('Shell & Tube', 'پوسته و لوله'), ('Air Cooler', 'هوایی'), ('Other', 'سایر')],
+  'G_FLARE': [('Flare', 'فلر'), ('Burn Pit', 'Burn Pit')],
+  'G_COMP': [('Reciprocating', 'رفت‌وبرگشتی'), ('Screw', 'اسکرو'), ('Centrifugal', 'گریز از مرکز'), ('Other', 'سایر')],
+  'G_LUBE': [('Oil-free', 'بدون روغن'), ('Lubricated', 'روغن‌کاری‌شده')],
+  'G_CRANE': [('Top Running', 'روی ریل (Top Running)'), ('Under Hung', 'آویز (Under Hung)'), ('Gantry', 'دروازه‌ای'), ('Monorail', 'مونوریل'), ('Other', 'سایر')],
+};
+
+/// ضرایب نرمال‌سازی اولیه (قضاوت مهندسی، نسبت به پایه = ۱): (گروه، گزینه، ضریب، شرح)
+const profileFactorSeeds = <(String, String, double, String)>[
+  ('MAT', 'CS', 1.0, 'پایه: فولاد کربنی'),
+  ('MAT', 'LTCS', 1.15, 'فولاد کربنی دمای پایین'),
+  ('MAT', 'SS304', 1.8, 'فولاد زنگ‌نزن ۳۰۴'),
+  ('MAT', 'SS316', 2.1, 'فولاد زنگ‌نزن ۳۱۶'),
+  ('MAT', 'Duplex', 2.6, 'داپلکس'),
+  ('MAT', 'Super Duplex', 3.0, 'سوپر داپلکس'),
+  ('MAT', 'Titanium', 3.5, 'تیتانیوم'),
+  ('MAT', 'Other', 1.0, 'نامشخص/سایر'),
+  ('NACE', 'Y', 1.05, 'الزام NACE MR0175'),
+  ('NACE', 'N', 1.0, 'پایه'),
+  ('PRESS', '≤10', 1.0, 'فشار طراحی تا ۱۰ barg (پایه)'),
+  ('PRESS', '10–20', 1.1, 'فشار طراحی ۱۰ تا ۲۰ barg'),
+  ('PRESS', '20–40', 1.25, 'فشار طراحی ۲۰ تا ۴۰ barg'),
+  ('PRESS', '>40', 1.45, 'فشار طراحی بیش از ۴۰ barg'),
+  ('LUBE', 'Lubricated', 1.0, 'پایه: روغن‌کاری‌شده'),
+  ('LUBE', 'Oil-free', 1.3, 'بدون روغن'),
+];
+
+String factorSetOf(String categoryCode) => 'GEN_$categoryCode';
+
+/// گزینه‌ی گروه ضریب برای مقادیر یک قلم.
+String? factorOption(String group, Map<String, Object?> v) {
+  switch (group) {
+    case 'MAT':
+      return v['material_class']?.toString();
+    case 'NACE':
+      return v['nace']?.toString();
+    case 'LUBE':
+      return v['lubrication']?.toString();
+    case 'PRESS':
+      final p = _num(v['design_pressure_barg']);
+      if (p == null) return null;
+      return p <= 10 ? '≤10' : (p <= 20 ? '10–20' : (p <= 40 ? '20–40' : '>40'));
+  }
+  return null;
+}

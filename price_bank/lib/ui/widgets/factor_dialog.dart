@@ -22,15 +22,19 @@ Future<FactorEditResult?> showFactorDialog(
   required String option,
   required String label,
   double? localOverride,
+  String setCode = PriceBank.pumpFactorSet,
 }) {
   return showDialog<FactorEditResult>(
     context: context,
-    builder: (ctx) => _FactorDialog(group: group, option: option, label: label, localOverride: localOverride),
+    builder: (ctx) =>
+        _FactorDialog(group: group, option: option, label: label, localOverride: localOverride, setCode: setCode),
   );
 }
 
 class _FactorDialog extends StatefulWidget {
-  const _FactorDialog({required this.group, required this.option, required this.label, this.localOverride});
+  const _FactorDialog(
+      {required this.group, required this.option, required this.label, this.localOverride, required this.setCode});
+  final String setCode;
   final String group;
   final String option;
   final String label;
@@ -50,10 +54,10 @@ class _FactorDialogState extends State<_FactorDialog> {
   void initState() {
     super.initState();
     final app = AppScope.read(context);
-    for (final r in app.pb.indices.factors(PriceBank.pumpFactorSet)) {
+    for (final r in app.pb.indices.factors(widget.setCode)) {
       if (r['grp'] == widget.group && r['option'] == widget.option) _row = r;
     }
-    final eff = widget.localOverride ?? app.pb.factorTable.get(widget.group, widget.option);
+    final eff = widget.localOverride ?? app.pb.indices.factorTable(widget.setCode).get(widget.group, widget.option);
     _c = TextEditingController(text: _plain(eff));
   }
 
@@ -78,7 +82,7 @@ class _FactorDialogState extends State<_FactorDialog> {
     }
     if (_persist) {
       final app = AppScope.read(context);
-      app.pb.indices.setCalibrated(PriceBank.pumpFactorSet, widget.group, widget.option, v,
+      app.pb.indices.setCalibrated(widget.setCode, widget.group, widget.option, v,
           reason: _reason.text.trim().isEmpty ? 'ثبت از صفحه‌ی تخمین' : _reason.text.trim());
       app.dataChanged(calcInputs: true);
       Navigator.pop(context, const FactorEditResult(saved: true, clearLocal: true));

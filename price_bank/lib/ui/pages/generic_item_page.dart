@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_state.dart';
 import '../../core/calc/generic_engine.dart';
 import '../../core/calc/pump_engine.dart' show CalcStep;
+import '../../core/catalog/profiles.dart';
 import '../../core/price_bank.dart';
 import '../../core/repo/audit.dart';
 import '../../core/repo/catalog_repo.dart';
@@ -44,7 +45,8 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
     }
     final cat = pb.catalog.categories().firstWhere((c) => c.id == item.categoryId);
     final fields = pb.catalog.fields(cat.id);
-    final engine = pb.genericEngine();
+    final engine = pb.genericEngine(categoryCode: cat.code);
+    final profile = equipmentProfiles[cat.code];
     final result = engine.calculate(PriceBank.genericInputFor(item.primary));
     final canEdit = app.canEdit(cat.disciplineCode);
     final t = Theme.of(context);
@@ -108,7 +110,7 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
         ),
       ),
       body: Column(children: [
-        _Strip(item: item, result: result, engine: engine),
+        _Strip(item: item, result: result, engine: engine, profile: profile),
         Expanded(
           child: TabBarView(controller: _tabs, children: [
             _specTab(context, fields, item),
@@ -197,10 +199,11 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
 }
 
 class _Strip extends StatelessWidget {
-  const _Strip({required this.item, required this.result, required this.engine});
+  const _Strip({required this.item, required this.result, required this.engine, this.profile});
   final ItemRecord item;
   final GenericCalcResult result;
   final GenericEngine engine;
+  final EquipmentProfile? profile;
 
   @override
   Widget build(BuildContext context) {
@@ -240,6 +243,15 @@ class _Strip extends StatelessWidget {
           icon: Icons.functions_rounded,
           width: 220,
         ),
+        if (profile != null)
+          KpiTile(
+            label: profile!.driver.labelFa,
+            value: profile!.sizeOf(item.values) == null ? '—' : faSmart(profile!.sizeOf(item.values)),
+            sub: profile!.sizeOf(item.values) == null ? 'ابعاد/ظرفیت ثبت نشده' : '${profile!.driver.unit} · پارامتر اندازه برای تخمین',
+            icon: Icons.straighten_rounded,
+            color: AppColors.petrol,
+            width: 210,
+          ),
         KpiTile(
           label: 'بازه‌ی استعلام‌ها (یورو، سال هدف)',
           value: quotes.isEmpty ? '—' : '${compactNum(quotes.first)} تا ${compactNum(quotes.last)}',

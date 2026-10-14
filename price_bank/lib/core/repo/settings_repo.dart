@@ -17,6 +17,12 @@ class AppSettings {
   String get fxRateType => str('fx_rate_type', 'V8');
   String get ppiSeries => str('ppi_series', 'PPI_EU_C2813');
   String get escalationMethod => str('escalation_method', 'M6');
+
+  // تنظیمات اختصاصی هر رده (خالی = پیش‌فرض برنامه یا قالب رده)
+  String? catMethod(String code) => _m['cat_method_$code']?.isEmpty ?? true ? null : _m['cat_method_$code'];
+  String? catPpi(String code) => _m['cat_ppi_$code']?.isEmpty ?? true ? null : _m['cat_ppi_$code'];
+  double? catExponent(String code) => numOrNull('cat_n_$code');
+  String? catEstimation(String code) => _m['cat_est_$code'];
   double get floorEur => numv('floor_eur', 25000);
   int get floorBaseYear => intv('floor_base_year', 1404);
   double get costExponent => numv('cost_exponent_n', 0.6);
@@ -28,13 +34,14 @@ class AppSettings {
   /// واحد نمایش پول: IRR (ریال) یا IRT (تومان). داده همیشه به ریال ذخیره می‌شود.
   String get displayUnit => str('display_unit', 'IRR');
 
-  PumpCalcSettings toPumpSettings({String? fxTypeOverride, int? targetYearOverride, String? methodOverride}) =>
+  PumpCalcSettings toPumpSettings(
+          {String? fxTypeOverride, int? targetYearOverride, String? methodOverride, String? ppiOverride}) =>
       PumpCalcSettings(
         method: methodOverride ?? escalationMethod,
         targetYear: targetYearOverride ?? targetYear,
         targetMonth: targetYearOverride == null ? targetMonth : null,
         fxType: fxTypeOverride ?? fxRateType,
-        ppiSeries: ppiSeries,
+        ppiSeries: ppiOverride ?? ppiSeries,
         floorEur: floorEur,
         floorBaseYear: floorBaseYear,
         costExponent: costExponent,

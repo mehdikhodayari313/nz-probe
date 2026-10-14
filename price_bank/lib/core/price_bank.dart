@@ -1,7 +1,11 @@
 // نقطه‌ی ورود هسته: همه‌ی مخزن‌های داده و موتور محاسبات در یک جا.
 // این فایل به Flutter وابسته نیست؛ هم در برنامه و هم در آزمون‌ها استفاده می‌شود.
 
+import 'dart:math' as math;
+
 import 'calc/estimator.dart';
+import 'calc/generic_estimator.dart';
+import 'catalog/profiles.dart';
 import 'calc/generic_engine.dart';
 import 'calc/pump_engine.dart';
 import 'calc/series.dart';
@@ -26,9 +30,18 @@ class PumpRow {
 
 /// یک قلم غیرپمپ با نتیجه‌ی محاسبه‌ی قیمت اصلی و آمار استعلام‌ها (همه به یوروی سال هدف).
 class GenericRow {
-  GenericRow(this.item, this.result, this.quoteEurTargets);
+  GenericRow(this.item, this.result, this.quoteEurTargets, {this.size, this.allF = 1, this.coef});
   final ItemRecord item;
   final GenericCalcResult result;
+
+  /// پارامتر اندازه‌ی قالب رده (حجم، توان حرارتی، دبی، …)
+  final double? size;
+
+  /// ضریب کل پیکربندی (جنس، NACE، فشار، …)
+  final double allF;
+
+  /// ضریب هزینه = یورو نرمال‌شده‌ی تعدیل‌شده ÷ اندازه^n
+  final double? coef;
 
   /// قیمت هر استعلام فروشنده، تعدیل‌شده به یوروی سال هدف
   final List<double> quoteEurTargets;
@@ -103,12 +116,53 @@ class PriceBank {
         factorTable,
       );
 
-  GenericEngine genericEngine({String? fxType, int? targetYear, String? method}) => GenericEngine(
-        seriesSnapshot,
-        settingsRepo
-            .load()
-            .toPumpSettings(fxTypeOverride: fxType, targetYearOverride: targetYear, methodOverride: method),
-      );
+  /// موتور تعدیل غیرپمپ؛ با [categoryCode] روش و شاخص اختصاصی همان رده اعمال می‌شود.
+  GenericEngine genericEngine({String? fxType, int? targetYear, String? method, String? categoryCode}) {
+    final st = settingsRepo.load();
+    return GenericEngine(
+      seriesSnapshot,
+      st.toPumpSettings(
+        fxTypeOverride: fxType,
+        targetYearOverride: targetYear,
+        methodOverride: method ?? (categoryCode == null ? null : st.catMethod(categoryCode)),
+        ppiOverride: categoryCode == null ? null : st.catPpi(categoryCode),
+      ),
+    );
+  }
+
+  /// توان اندازه‌ی رده (تنظیمات رده، وگرنه پیش‌فرض قالب).
+  double exponentOf(String categoryCode) =>
+      settingsRepo.load().catExponent(categoryCode) ?? equipmentProfiles[categoryCode]?.driver.n ?? 0.6;
+
+  GenericEstimator genericEstimator(String categoryCode, {Map<String, double> overrides = const {}}) {
+    final e = genericEngine(categoryCode: categoryCode);
+    return GenericEstimator(
+      profile: equipmentProfiles[categoryCode]!,
+      factors: indices.factorTable(factorSetOf(categoryCode)).withOverrides(overrides),
+      n: exponentOf(categoryCode),
+      eurRate: e.eurRateTarget,
+      usdRate: e.usdRateTarget,
+    );
+  }
+
+  /// همتاهای تخمین از اقلام محاسبه‌شده‌ی یک رده.
+  List<GenericPeer> genericPeers(String categoryCode, List<GenericRow> rows) {
+    final est = genericEstimator(categoryCode);
+    return [
+      for (final r in rows)
+        if (r.item.include)
+          if (est.peerOf(
+            itemId: r.item.id,
+            tag: r.item.tag ?? '',
+            name: r.item.name,
+            project: r.item.projectName ?? '',
+            values: r.item.values,
+            eurTarget: r.result.eurTarget.number,
+          )
+              case final p?)
+            p,
+    ];
+  }
 
   static GenericInput genericInputFor(PriceObs? o) => GenericInput(
         unitPrice: o?.amountValue,
@@ -120,18 +174,34 @@ class PriceBank {
 
   /// همه‌ی اقلام یک رده‌ی غیرپمپ با محاسبه.
   List<GenericRow> computeCategory(int categoryId, {GenericEngine? engine}) {
-    final e = engine ?? genericEngine();
-    return [
-      for (final it in items.loadCategory(categoryId))
-        GenericRow(
-          it,
-          e.calculate(genericInputFor(it.primary)),
-          [
-            for (final o in it.observations.where((o) => o.kind == 'quote'))
-              if (e.calculate(genericInputFor(o)).eurTarget.number case final v?) v,
-          ],
-        ),
-    ];
+    final cat = catalog.categories().firstWhere((c) => c.id == categoryId);
+    final e = engine ?? genericEngine(categoryCode: cat.code);
+    final profile = equipmentProfiles[cat.code];
+    final est = profile == null ? null : genericEstimator(cat.code);
+    final rows = <GenericRow>[];
+    for (final it in items.loadCategory(categoryId)) {
+      final res = e.calculate(genericInputFor(it.primary));
+      double? size, coef;
+      var allF = 1.0;
+      if (profile != null && est != null) {
+        size = profile.sizeOf(it.values);
+        allF = est.configFactor(it.values).$1;
+        final eur = res.eurTarget.number;
+        if (size != null && eur != null) coef = eur / allF / math.pow(size, est.n);
+      }
+      rows.add(GenericRow(
+        it,
+        res,
+        [
+          for (final o in it.observations.where((o) => o.kind == 'quote'))
+            if (e.calculate(genericInputFor(o)).eurTarget.number case final v?) v,
+        ],
+        size: size,
+        allF: allF,
+        coef: coef,
+      ));
+    }
+    return rows;
   }
 
   static PumpInput inputFor(ItemRecord item) {

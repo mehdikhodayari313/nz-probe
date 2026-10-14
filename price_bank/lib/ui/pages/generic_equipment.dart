@@ -7,6 +7,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
+import '../../core/calc/generic_estimator.dart';
+import '../../core/calc/methods.dart';
+import '../../core/catalog/profiles.dart';
 import '../../core/price_bank.dart';
 import '../../core/repo/catalog_repo.dart';
 import '../format.dart';
@@ -30,12 +33,38 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
   String? _project;
   bool _onlyPriced = false;
   bool _onlyQuoted = false;
+  bool _showFilters = true;
+  final Map<String, String?> _enumF = {};
+  final Map<String, (TextEditingController, TextEditingController)> _rangeF = {};
+
+  EquipmentProfile? get _profile => equipmentProfiles[widget.code];
+
+  (TextEditingController, TextEditingController) _range(String key) =>
+      _rangeF[key] ??= (TextEditingController(), TextEditingController());
 
   @override
   void dispose() {
     _search.dispose();
+    for (final r in _rangeF.values) {
+      r.$1.dispose();
+      r.$2.dispose();
+    }
     super.dispose();
   }
+
+  static double? _numOf(Object? v) => v is num ? v.toDouble() : (v is String ? double.tryParse(v) : null);
+
+  void _clear() => setState(() {
+        _search.clear();
+        _project = null;
+        _onlyPriced = false;
+        _onlyQuoted = false;
+        _enumF.clear();
+        for (final r in _rangeF.values) {
+          r.$1.clear();
+          r.$2.clear();
+        }
+      });
 
   bool _match(GenericRow r) {
     final q = _search.text.trim().toLowerCase();
@@ -49,6 +78,18 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     if (_project != null && r.item.projectName != _project) return false;
     if (_onlyPriced && !r.result.eurTarget.isNumber) return false;
     if (_onlyQuoted && r.quoteCount == 0) return false;
+    for (final e in _enumF.entries) {
+      if (e.value == null) continue;
+      if (r.item.values[e.key]?.toString() != e.value) return false;
+    }
+    for (final e in _rangeF.entries) {
+      final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
+      if (lo == null && hi == null) continue;
+      final v = e.key == '_size' ? r.size : _numOf(r.item.values[e.key]);
+      if (v == null) return false;
+      if (lo != null && v < lo) return false;
+      if (hi != null && v > hi) return false;
+    }
     return true;
   }
 
@@ -65,7 +106,10 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         .fields(cat.id)
         .where((f) => f.groupKey == 'mto_specs')
         .toList(); // به ترتیب پیدایش در MTO
-    final keySpecs = specFields.take(2).toList();
+    final fieldsByKey = {for (final f in app.pb.catalog.fields(cat.id)) f.key: f};
+    final keySpecs = _profile != null
+        ? [for (final k in _profile!.gridKeys) if (fieldsByKey[k] != null) fieldsByKey[k]!]
+        : specFields.take(2).toList();
     final projects = {for (final r in all) r.item.projectName ?? ''}..remove('');
     final totalIrr = rows
         .where((r) => r.item.include && r.result.irrTarget.isNumber)
@@ -77,13 +121,20 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         PageHeader(
           icon: _iconOf(cat.code),
           title: cat.nameFa,
-          subtitle: '${cat.nameEn ?? ''} · ${fa(all.length)} قلم · قیمت‌ها تعدیل‌شده به سال ${fa(s.targetYear)} با روش ${s.escalationMethod}',
+          subtitle: '${cat.nameEn ?? ''} · ${fa(all.length)} قلم · قیمت‌ها تعدیل‌شده به سال ${fa(s.targetYear)} با روش ${s.catMethod(cat.code) ?? s.escalationMethod}'
+              '${s.catMethod(cat.code) == null ? '' : ' (اختصاصی این رده)'}',
           actions: [
             if (widget.onShowCategories != null)
               OutlinedButton.icon(
                 onPressed: widget.onShowCategories,
                 icon: const Icon(Icons.account_tree_outlined),
                 label: const Text('رده‌ها'),
+              ),
+            if (_profile != null)
+              OutlinedButton.icon(
+                onPressed: () => showDialog<void>(context: context, builder: (_) => CategorySettingsDialog(code: cat.code)),
+                icon: const Icon(Icons.settings_suggest_outlined),
+                label: const Text('تنظیمات رده'),
               ),
             OutlinedButton.icon(
               onPressed: rows.isEmpty ? null : () => _exportCsv(context, cat, rows, keySpecs, unit),
@@ -111,56 +162,89 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         ),
         SectionCard(
           padding: const EdgeInsets.all(12),
-          child: Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            SizedBox(
-              width: 360,
-              child: TextField(
-                controller: _search,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search_rounded),
-                  hintText: 'جستجو در تگ، نام، مشخصات، پروژه…',
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _search,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.search_rounded),
+                    hintText: 'جستجو در تگ، نام، مشخصات، پروژه…',
+                  ),
+                  onChanged: (_) => setState(() {}),
                 ),
-                onChanged: (_) => setState(() {}),
               ),
-            ),
-            SizedBox(
-              width: 220,
-              child: DropdownButtonFormField<String?>(
-                value: projects.contains(_project) ? _project : null,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'پروژه'),
-                items: [
-                  const DropdownMenuItem<String?>(value: null, child: Text('همه')),
-                  for (final p in projects.toList()..sort()) DropdownMenuItem<String?>(value: p, child: Text(p)),
-                ],
-                onChanged: (v) => setState(() => _project = v),
+              const SizedBox(width: 10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(color: AppColors.petrol.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(10)),
+                child: Text.rich(
+                  TextSpan(children: [
+                    TextSpan(text: fa(rows.length), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.strong)),
+                    TextSpan(text: ' از ${fa(all.length)} قلم · جمع (× تعداد): '),
+                    TextSpan(
+                        text: money(totalIrr, unit, compact: true),
+                        style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.strong)),
+                  ]),
+                  style: t.textTheme.bodySmall,
+                ),
               ),
-            ),
-            ToggleChip(
-              label: 'فقط دارای قیمت تعدیل‌شده',
-              selected: _onlyPriced,
-              color: Tones.good(context),
-              onChanged: (v) => setState(() => _onlyPriced = v),
-            ),
-            ToggleChip(
-              label: 'فقط دارای استعلام',
-              selected: _onlyQuoted,
-              onChanged: (v) => setState(() => _onlyQuoted = v),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-              decoration: BoxDecoration(color: AppColors.petrol.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(10)),
-              child: Text.rich(
-                TextSpan(children: [
-                  TextSpan(text: fa(rows.length), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.strong)),
-                  TextSpan(text: ' از ${fa(all.length)} قلم · جمع تعدیل‌شده (× تعداد): '),
-                  TextSpan(
-                      text: money(totalIrr, unit, compact: true),
-                      style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.strong)),
-                ]),
-                style: t.textTheme.bodySmall,
+              const SizedBox(width: 10),
+              ToggleChip(
+                label: _showFilters ? 'بستن فیلترها' : 'فیلترها',
+                icon: Icons.tune_rounded,
+                selected: _showFilters,
+                onChanged: (v) => setState(() => _showFilters = v),
               ),
-            ),
+              const SizedBox(width: 6),
+              OutlinedButton.icon(
+                onPressed: _clear,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Tones.bad(context),
+                  side: BorderSide(color: Tones.bad(context).withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                ),
+                icon: const Icon(Icons.filter_alt_off_rounded, size: 19),
+                label: const Text('پاک کردن فیلترها'),
+              ),
+            ]),
+            if (_showFilters) ...[
+              const SizedBox(height: 10),
+              Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+                SizedBox(
+                  width: 190,
+                  child: DropdownButtonFormField<String?>(
+                    value: projects.contains(_project) ? _project : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'پروژه'),
+                    items: [
+                      const DropdownMenuItem<String?>(value: null, child: Text('همه')),
+                      for (final p in projects.toList()..sort()) DropdownMenuItem<String?>(value: p, child: Text(p)),
+                    ],
+                    onChanged: (v) => setState(() => _project = v),
+                  ),
+                ),
+                if (_profile != null)
+                  for (final f in _profile!.enumFields) _enumFilter(context, all, f),
+                if (_profile != null)
+                  _rangeFilter(context, '_size', '${_profile!.driver.labelFa} (${_profile!.driver.unit})'),
+                if (_profile != null)
+                  for (final k in _profile!.rangeKeys)
+                    if (_profile!.field(k) case final f?)
+                      _rangeFilter(context, k, '${f.labelFa}${f.unit == null ? '' : ' (${f.unit})'}'),
+                ToggleChip(
+                  label: 'فقط دارای قیمت تعدیل‌شده',
+                  selected: _onlyPriced,
+                  color: Tones.good(context),
+                  onChanged: (v) => setState(() => _onlyPriced = v),
+                ),
+                ToggleChip(
+                  label: 'فقط دارای استعلام',
+                  selected: _onlyQuoted,
+                  onChanged: (v) => setState(() => _onlyQuoted = v),
+                ),
+              ]),
+            ],
           ]),
         ),
         const SizedBox(height: 12),
@@ -219,12 +303,29 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         GridColumn(label: 'پروژه', width: 110, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
         for (final f in keySpecs)
           GridColumn(
-            label: f.labelFa,
-            width: 140,
-            ltr: true,
+            label: '${f.labelFa}${f.unit == null ? '' : '\n${f.unit}'}',
+            width: f.type == 'number' ? 92 : 120,
+            ltr: f.type != 'number',
+            numeric: f.type == 'number',
             tooltip: f.labelEn,
-            text: (r) => r.item.values[f.key]?.toString() ?? '',
-            sortKey: (r) => r.item.values[f.key]?.toString(),
+            text: (r) {
+              final v = r.item.values[f.key];
+              if (v is num) return faSmart(v);
+              return v?.toString() ?? '';
+            },
+            sortKey: (r) {
+              final v = r.item.values[f.key];
+              return v is num ? v.toDouble() : v?.toString();
+            },
+          ),
+        if (_profile != null)
+          GridColumn(
+            label: '${_profile!.driver.labelFa}\n${_profile!.driver.unit}',
+            width: 96,
+            numeric: true,
+            tooltip: 'پارامتر اندازه برای تخمین',
+            text: (r) => r.size == null ? '' : faSmart(r.size),
+            sortKey: (r) => r.size,
           ),
         GridColumn(label: 'تعداد', width: 54, numeric: true, text: (r) => r.item.quantity == null ? '' : faSmart(r.item.quantity), sortKey: (r) => r.item.quantity),
         GridColumn(
@@ -294,6 +395,64 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         ),
       ];
 
+  Widget _enumFilter(BuildContext context, List<GenericRow> all, FieldDef f) {
+    final t = Theme.of(context);
+    final counts = <String, int>{};
+    for (final r in all) {
+      final v = r.item.values[f.key]?.toString();
+      if (v == null || v.isEmpty) continue;
+      counts[v] = (counts[v] ?? 0) + 1;
+    }
+    final opts = f.listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(f.listKey!);
+    final labels = {for (final o in opts) o.value: o.labelFa};
+    final values = [for (final o in opts) o.value, for (final v in counts.keys) if (!labels.containsKey(v)) v];
+    final cur = _enumF[f.key];
+    String show(String v) => (labels[v] == null || labels[v] == v) ? v : '${labels[v]}';
+    return SizedBox(
+      width: 178,
+      child: DropdownButtonFormField<String?>(
+        value: values.contains(cur) ? cur : null,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: f.labelFa,
+          fillColor: cur != null ? t.colorScheme.primaryContainer : null,
+        ),
+        selectedItemBuilder: (_) => [const Text('همه'), for (final v in values) Text(show(v), overflow: TextOverflow.ellipsis)],
+        items: [
+          DropdownMenuItem<String?>(value: null, child: Text('همه (${fa(all.length)})')),
+          for (final v in values)
+            DropdownMenuItem<String?>(
+              value: v,
+              child: Row(children: [
+                Expanded(
+                  child: Text(show(v),
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: (counts[v] ?? 0) == 0 ? t.colorScheme.outline : null)),
+                ),
+                Text(fa(counts[v] ?? 0),
+                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: (counts[v] ?? 0) == 0 ? t.colorScheme.outline : AppColors.strong)),
+              ]),
+            ),
+        ],
+        onChanged: (v) => setState(() => _enumF[f.key] = v),
+      ),
+    );
+  }
+
+  Widget _rangeFilter(BuildContext context, String key, String label) {
+    final c = _range(key);
+    InputDecoration dec(String h) => InputDecoration(hintText: h, isDense: true);
+    return SizedBox(
+      width: 300,
+      child: Row(children: [
+        SizedBox(width: 120, child: Text(label, style: Theme.of(context).textTheme.labelMedium)),
+        Expanded(child: TextField(controller: c.$1, textDirection: TextDirection.ltr, decoration: dec('از'), onChanged: (_) => setState(() {}))),
+        const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('تا')),
+        Expanded(child: TextField(controller: c.$2, textDirection: TextDirection.ltr, decoration: dec('تا'), onChanged: (_) => setState(() {}))),
+      ]),
+    );
+  }
+
   Future<void> _exportCsv(
       BuildContext context, Category cat, List<GenericRow> rows, List<FieldDef> keySpecs, MoneyUnit unit) async {
     String esc(String s) => '"${s.replaceAll('"', '""')}"';
@@ -341,3 +500,149 @@ IconData _iconOf(String code) => switch (code) {
       'FILTER' => Icons.filter_alt_outlined,
       _ => Icons.precision_manufacturing_outlined,
     };
+
+
+/// تنظیمات اختصاصی رده: روش تعدیل، شاخص PPI، توان اندازه و روش تخمین پیش‌فرض.
+class CategorySettingsDialog extends StatefulWidget {
+  const CategorySettingsDialog({super.key, required this.code});
+  final String code;
+
+  @override
+  State<CategorySettingsDialog> createState() => _CategorySettingsDialogState();
+}
+
+class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
+  String? _method;
+  String? _ppi;
+  String? _est;
+  late final TextEditingController _n;
+
+  @override
+  void initState() {
+    super.initState();
+    final s = AppScope.read(context).settings;
+    _method = s.catMethod(widget.code);
+    _ppi = s.catPpi(widget.code);
+    _est = s.catEstimation(widget.code);
+    final n = s.catExponent(widget.code);
+    _n = TextEditingController(text: n == null ? '' : '$n');
+  }
+
+  @override
+  void dispose() {
+    _n.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final app = AppScope.read(context);
+    final n = parseUserNumber(_n.text);
+    if (_n.text.trim().isNotEmpty && (n == null || n <= 0 || n > 1.5)) {
+      showSnack(context, 'توان اندازه باید عددی بین ۰ و ۱٫۵ باشد.', error: true);
+      return;
+    }
+    const reason = 'تنظیمات رده';
+    app.pb.settingsRepo.set('cat_method_${widget.code}', _method, reason: reason);
+    app.pb.settingsRepo.set('cat_ppi_${widget.code}', _ppi, reason: reason);
+    app.pb.settingsRepo.set('cat_est_${widget.code}', _est, reason: reason);
+    app.pb.settingsRepo.set('cat_n_${widget.code}', n == null ? null : '$n', reason: reason);
+    app.dataChanged(calcInputs: true);
+    Navigator.pop(context);
+    showSnack(context, 'تنظیمات رده ذخیره شد؛ قیمت‌ها دوباره محاسبه شدند.');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = Theme.of(context);
+    final cat = app.pb.catalog.categoryByCode(widget.code)!;
+    final p = equipmentProfiles[widget.code]!;
+    final s = app.settings;
+    final ppiSeries = app.pb.indices.series().where((x) => x.group.startsWith('ppi') && x.calendar == 'jalali').toList();
+    Widget row(String label, Widget w, {String? help}) => Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(children: [
+            SizedBox(
+              width: 170,
+              child: Row(children: [
+                Flexible(child: Text(label, style: t.textTheme.bodySmall)),
+                if (help != null)
+                  Tooltip(
+                    message: help,
+                    child: Padding(
+                      padding: const EdgeInsetsDirectional.only(start: 4),
+                      child: Icon(Icons.info_outline_rounded, size: 14, color: t.colorScheme.outline),
+                    ),
+                  ),
+              ]),
+            ),
+            Expanded(child: w),
+          ]),
+        );
+    return AlertDialog(
+      title: Row(children: [
+        const Icon(Icons.settings_suggest_outlined),
+        const SizedBox(width: 8),
+        Expanded(child: Text('تنظیمات رده: ${cat.nameFa}')),
+      ]),
+      content: SizedBox(
+        width: 560,
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          row(
+            'روش تعدیل این رده',
+            DropdownButtonFormField<String?>(
+              value: _method,
+              isExpanded: true,
+              items: [
+                DropdownMenuItem<String?>(value: null, child: Text('پیش‌فرض برنامه (${s.escalationMethod})')),
+                for (final m in escalationMethods.where((m) => m.selectable))
+                  DropdownMenuItem<String?>(value: m.code, child: Text('${m.code} — ${m.nameFa}')),
+              ],
+              onChanged: (v) => setState(() => _method = v),
+            ),
+            help: 'کف قیمت M6 فقط برای پمپ‌هاست؛ در این رده M6 همان M4 است.',
+          ),
+          row(
+            'شاخص PPI (روش‌های M4/M6)',
+            DropdownButtonFormField<String?>(
+              value: ppiSeries.any((x) => x.code == _ppi) ? _ppi : null,
+              isExpanded: true,
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('پیش‌فرض برنامه')),
+                for (final x in ppiSeries)
+                  DropdownMenuItem<String?>(value: x.code, child: Text(x.nameFa, overflow: TextOverflow.ellipsis)),
+              ],
+              onChanged: (v) => setState(() => _ppi = v),
+            ),
+            help: 'برای تجهیزات ساخت داخل (ظرف، مخزن، سازه) می‌توانید PPI بخشی ایران (مثلاً ISIC 25 محصولات فلزی) را انتخاب کنید؛ ابتدا مقادیر آن را در «شاخص‌ها و ارز» کامل کنید.',
+          ),
+          row(
+            'توان اندازه n',
+            TextField(
+              controller: _n,
+              textDirection: TextDirection.ltr,
+              decoration: InputDecoration(hintText: 'پیش‌فرض ${p.driver.n} (قیمت ∝ ${p.driver.labelFa}^n)'),
+            ),
+          ),
+          row(
+            'روش تخمین پیش‌فرض',
+            DropdownButtonFormField<String?>(
+              value: _est,
+              isExpanded: true,
+              items: [
+                for (final m in GenEstMethod.values) DropdownMenuItem<String?>(value: m.name, child: Text(m.titleFa)),
+              ],
+              onChanged: (v) => setState(() => _est = v),
+            ),
+          ),
+          Text('پارامتر اندازه‌ی این رده: ${p.driver.labelFa} (${p.driver.unit}). ضرایب نرمال‌سازی: ${p.factorGroups.isEmpty ? 'ندارد' : p.factorGroups.join('، ')} — در صفحه‌ی «ضرایب».',
+              style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8)),
+        ]),
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),
+        FilledButton(onPressed: _save, child: const Text('ذخیره')),
+      ],
+    );
+  }
+}

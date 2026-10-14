@@ -12,6 +12,7 @@
 
 import 'package:shamsi_date/shamsi_date.dart';
 
+import '../catalog/profiles.dart';
 import '../db/db.dart';
 import '../repo/audit.dart';
 import '../repo/catalog_repo.dart';
@@ -344,32 +345,10 @@ class MtoImporter {
     return null;
   }
 
-  /// شرح چندخطی: خط اول نام؛ «کلید: مقدار» مشخصات؛ خط بدون «:» ادامه‌ی مقدار قبلی یا دامنه‌ی کار.
   static void _parseDescription(MtoItem it) {
-    final lines = it.description.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
-    String? lastKey;
-    for (final line in lines.skip(1)) {
-      final i = line.indexOf(':');
-      if (i > 0 && i < 70 && !line.startsWith('&')) {
-        final k = line.substring(0, i).trim();
-        final v = line.substring(i + 1).trim();
-        if (v.isEmpty) {
-          lastKey = k;
-          it.specs[k] = '';
-        } else if (it.specs.containsKey(k)) {
-          it.specs[k] = '${it.specs[k]}; $v';
-          lastKey = k;
-        } else {
-          it.specs[k] = v;
-          lastKey = k;
-        }
-      } else if (lastKey != null) {
-        it.specs[lastKey] = '${it.specs[lastKey]} $line'.trim();
-      } else {
-        it.scopeLines.add(line);
-      }
-    }
-    it.specs.removeWhere((k, v) => v.isEmpty);
+    final d = parseMtoDescription(it.description);
+    it.specs.addAll(d.specs);
+    it.scopeLines.addAll(d.scope);
   }
 
   static void _applyDate(MtoQuote q, XlsxCell? c, MtoItem it, String sheet) {
@@ -487,7 +466,13 @@ class MtoImporter {
             values['remarks'] = '${it.description}${values['remarks'] == '' ? '' : '\n${values['remarks']}'}';
           } else {
             values['mto_description'] = it.description;
+            final profile = equipmentProfiles[cat.code];
+            if (profile != null) {
+              // فیلدهای ساختاریافته‌ی قالب رده (ابعاد، فشار، جنس، …)
+              values.addAll(profile.extract(it.specs, context: '${it.name}\n${s.title}', scope: it.scopeLines));
+            }
             for (final e in it.specs.entries) {
+              if (profile != null && profile.maps(e.key)) continue;
               final key = catalog.ensureSpecField(cat.id, e.key);
               if (key.$2) rep.specFields++;
               values[key.$1] = e.value;
