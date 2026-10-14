@@ -87,10 +87,10 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ),
           const SizedBox(width: 10),
-          FilterChip(
-            label: const Text('پنهان کردن ثبت‌های انتقال اولیه'),
+          ToggleChip(
+            label: 'پنهان کردن ثبت‌های انتقال اولیه',
             selected: _hideImport,
-            onSelected: (v) => setState(() => _hideImport = v),
+            onChanged: (v) => setState(() => _hideImport = v),
           ),
         ]),
         const SizedBox(height: 12),

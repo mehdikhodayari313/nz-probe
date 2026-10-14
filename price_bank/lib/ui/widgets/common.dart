@@ -404,6 +404,54 @@ class _RangePainter extends CustomPainter {
   bool shouldRepaint(_RangePainter old) => old.pos != pos || old.color != color || old.rtl != rtl;
 }
 
+/// دکمه‌ی روشن/خاموش خوانا (جایگزین FilterChip که روی بعضی سیستم‌ها متنش کم‌رنگ دیده می‌شد).
+class ToggleChip extends StatelessWidget {
+  const ToggleChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onChanged,
+    this.icon,
+    this.color,
+  });
+  final String label;
+  final bool selected;
+  final ValueChanged<bool> onChanged;
+  final IconData? icon;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final c = color ?? AppColors.petrol;
+    final fg = selected ? Colors.white : t.colorScheme.onSurface;
+    return Material(
+      color: selected ? c : t.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: BorderSide(color: selected ? c : t.colorScheme.outline.withValues(alpha: 0.6), width: 1.2),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () => onChanged(!selected),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Icon(
+              icon ?? (selected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded),
+              size: 19,
+              color: selected ? Colors.white : c,
+            ),
+            const SizedBox(width: 8),
+            Text(label, style: TextStyle(color: fg, fontSize: 13, fontWeight: FontWeight.w700)),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
 /// برچسب کوچک رنگی.
 class Pill extends StatelessWidget {
   const Pill(this.text, {super.key, this.color, this.icon, this.tooltip});

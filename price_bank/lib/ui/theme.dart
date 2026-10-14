@@ -169,7 +169,7 @@ ThemeData buildTheme(Brightness b) {
     chipTheme: base.chipTheme.copyWith(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       side: BorderSide(color: scheme.outlineVariant),
-      labelStyle: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 12.5),
+      labelStyle: TextStyle(fontFamily: 'Vazirmatn', fontSize: 12.5, color: scheme.onSurface),
     ),
     tabBarTheme: TabBarThemeData(
       labelColor: scheme.primary,

@@ -422,30 +422,40 @@ class _EquipmentPageState extends State<EquipmentPage> {
             ),
           ),
           const SizedBox(width: 10),
-          FilterChip(
-            label: Text('فیلترها${active > 0 ? ' (${fa(active)})' : ''}'),
+          ToggleChip(
+            label: _showFilters ? 'بستن فیلترها${active > 0 ? ' (${fa(active)} فعال)' : ''}' : 'فیلترها${active > 0 ? ' (${fa(active)} فعال)' : ''}',
+            icon: Icons.tune_rounded,
             selected: _showFilters,
-            onSelected: (v) => setState(() => _showFilters = v),
-            avatar: const Icon(Icons.tune_rounded, size: 18),
+            onChanged: (v) => setState(() => _showFilters = v),
           ),
           const SizedBox(width: 6),
-          TextButton.icon(onPressed: _clear, icon: const Icon(Icons.clear_all_rounded), label: const Text('پاک کردن')),
+          OutlinedButton.icon(
+            onPressed: _clear,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Tones.bad(context),
+              side: BorderSide(color: Tones.bad(context).withValues(alpha: 0.5)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            ),
+            icon: const Icon(Icons.filter_alt_off_rounded, size: 19),
+            label: const Text('پاک کردن فیلترها'),
+          ),
         ]),
         if (_showFilters) ...[
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
             for (final e in _enumFilters.entries) _enumFilter(context, all, e.key, e.value, fields[e.key]?.listKey),
             for (final e in _ranges.entries) _rangeFilter(context, e.key, e.value),
-            FilterChip(
-              label: const Text('فقط دارای قیمت تعدیل‌شده'),
+            ToggleChip(
+              label: 'فقط دارای قیمت تعدیل‌شده',
               selected: _onlyPriced,
-              onSelected: (v) => setState(() => _onlyPriced = v),
+              color: Tones.good(context),
+              onChanged: (v) => setState(() => _onlyPriced = v),
             ),
-            FilterChip(
-              label: const Text('فقط دارای هشدار داده'),
+            ToggleChip(
+              label: 'فقط دارای هشدار داده',
               selected: _onlyIssues,
-              onSelected: (v) => setState(() => _onlyIssues = v),
-              selectedColor: Tones.warn(context).withValues(alpha: 0.2),
+              color: Tones.warn(context),
+              onChanged: (v) => setState(() => _onlyIssues = v),
             ),
           ]),
         ],
