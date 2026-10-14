@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart' show kBackMouseButton;
 import 'package:flutter/material.dart';
 
 import '../app/app_state.dart';
@@ -57,44 +58,87 @@ class AppShell extends StatefulWidget {
       history = 7, users = 8, settings = 9;
 
   static const sidebarKey = Key('sidebar');
+  static const backKey = Key('shell-back');
 
   @override
   State<AppShell> createState() => _AppShellState();
 }
 
-class _AppShellState extends State<AppShell> {
-  int _index = 0;
+/// یک صفحه در تاریخچه‌ی پیمایش؛ [gen] نمونه‌ی صفحه را از نمونه‌ی تازه‌ی همان صفحه جدا می‌کند.
+class _Visit {
+  const _Visit(this.index, this.gen);
+  final int index;
+  final int gen;
+}
 
-  void _go(int i) => setState(() => _index = i);
+class _AppShellState extends State<AppShell> {
+  static const _maxHistory = 12;
+  var _cur = const _Visit(0, 0);
+  final List<_Visit> _history = [];
+  int _gen = 0;
+
+  /// رفتن به صفحه‌ی دیگر: صفحه‌ی فعلی (با همان حالت و جای اسکرول) در تاریخچه زنده می‌ماند.
+  void _go(int i) {
+    if (i == _cur.index) return;
+    setState(() {
+      _history.add(_cur);
+      if (_history.length > _maxHistory) _history.removeAt(0);
+      _cur = _Visit(i, ++_gen);
+    });
+  }
+
+  /// بازگشت به صفحه‌ی قبل، دقیقاً با همان حالت (فیلترها، زبانه، جای اسکرول).
+  void _back() {
+    if (_history.isEmpty) return;
+    setState(() => _cur = _history.removeLast());
+  }
 
   @override
   Widget build(BuildContext context) {
+    final alive = [..._history, _cur]..sort((a, b) => a.gen.compareTo(b.gen));
+    final prev = _history.isEmpty ? null : _destinations[_history.last.index].label;
     return Scaffold(
-      body: LayoutBuilder(builder: (context, c) {
-        final compact = c.maxWidth < 1000;
-        return Row(children: [
-          _Sidebar(index: _index, onSelect: _go, compact: compact),
-          Expanded(
-            child: Column(children: [
-              _TopBar(title: _destinations[_index].label, icon: _destinations[_index].selectedIcon),
-              Expanded(
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 260),
-                  switchInCurve: Curves.easeOutCubic,
-                  transitionBuilder: (child, anim) => FadeTransition(
-                    opacity: anim,
-                    child: SlideTransition(
-                      position: Tween(begin: const Offset(0, 0.015), end: Offset.zero).animate(anim),
-                      child: child,
-                    ),
-                  ),
-                  child: KeyedSubtree(key: ValueKey(_index), child: _destinations[_index].builder()),
+      body: Listener(
+        // دکمه‌ی «بازگشت» ماوس هم کار می‌کند
+        onPointerDown: (e) {
+          if (e.buttons & kBackMouseButton != 0) _back();
+        },
+        child: LayoutBuilder(builder: (context, c) {
+          final compact = c.maxWidth < 1000;
+          return Row(children: [
+            _Sidebar(index: _cur.index, onSelect: _go, compact: compact),
+            Expanded(
+              child: Column(children: [
+                _TopBar(
+                  title: _destinations[_cur.index].label,
+                  icon: _destinations[_cur.index].selectedIcon,
+                  backTo: prev,
+                  onBack: _back,
                 ),
-              ),
-            ]),
-          ),
-        ]);
-      }),
+                Expanded(
+                  child: Stack(fit: StackFit.expand, children: [
+                    for (final v in alive)
+                      KeyedSubtree(
+                        key: ValueKey('page-${v.gen}'),
+                        child: Offstage(
+                          offstage: !identical(v, _cur),
+                          child: TickerMode(
+                            enabled: identical(v, _cur),
+                            child: FocusScope(
+                              canRequestFocus: identical(v, _cur),
+                              // هر صفحه کنترل‌گر اسکرول خودش را دارد (صفحه‌های زنده‌ی پشت صحنه با هم تداخل ندارند)
+                              child: PrimaryScrollController.none(child: _destinations[v.index].builder()),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ]),
+                ),
+              ]),
+            ),
+          ]);
+        }),
+      ),
     );
   }
 }
@@ -188,7 +232,7 @@ class _Sidebar extends StatelessWidget {
                   Text(app.user.displayName,
                       overflow: TextOverflow.ellipsis,
                       style: t.textTheme.labelLarge?.copyWith(color: Colors.white)),
-                  Text('نسخه‌ی ۰٫۵ · آفلاین',
+                  Text('نسخه‌ی ۰٫۶ · آفلاین',
                       style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.55))),
                 ]),
               ),
@@ -301,9 +345,13 @@ class _NavItemState extends State<_NavItem> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.title, required this.icon});
+  const _TopBar({required this.title, required this.icon, required this.backTo, required this.onBack});
   final String title;
   final IconData icon;
+
+  /// نام صفحه‌ی قبل (null = تاریخچه خالی است)
+  final String? backTo;
+  final VoidCallback onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -322,6 +370,22 @@ class _TopBar extends StatelessWidget {
         boxShadow: softShadow(context),
       ),
       child: Row(children: [
+        // دکمه‌ی بازگشت: همیشه در همین جای ثابت (هم‌جای دکمه‌ی بازگشت صفحه‌های جزئیات)
+        Tooltip(
+          message: backTo == null ? 'صفحه‌ی قبلی وجود ندارد' : 'بازگشت به «$backTo» (همان جای قبلی)',
+          child: IconButton.filledTonal(
+            key: AppShell.backKey,
+            onPressed: backTo == null ? null : onBack,
+            icon: const BackButtonIcon(),
+          ),
+        ),
+        if (backTo != null)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(start: 2, end: 6),
+            child: Text(backTo!,
+                style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+          ),
+        Container(width: 1, height: 26, margin: const EdgeInsets.symmetric(horizontal: 8), color: t.colorScheme.outlineVariant),
         Icon(icon, size: 20, color: t.colorScheme.primary),
         const SizedBox(width: 8),
         Expanded(

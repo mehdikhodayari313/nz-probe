@@ -95,6 +95,7 @@ class EquipmentProfile {
     this.rangeKeys = const [],
     this.factorGroups = const ['MAT', 'NACE'],
     this.inferType,
+    this.weightKey,
   });
   final String code;
   final List<ProfileField> fields;
@@ -106,6 +107,9 @@ class EquipmentProfile {
   final List<String> gridKeys;
   final List<String> rangeKeys;
   final List<String> factorGroups;
+
+  /// فیلد وزن خالی (ظرف‌ها و مخازن): اگر پر باشد، «ضریب وزن» در تخمین اعمال می‌شود؛ خالی = بی‌اثر.
+  final String? weightKey;
 
   /// استنباط فیلدها از نام/عنوان شیت (مثلاً «Burn Pit» ← نوع فلر)
   final void Function(String nameAndTitle, Map<String, Object?> out)? inferType;
@@ -240,6 +244,20 @@ const _fVac = ProfileField('full_vacuum', 'خلأ کامل (F.V.)', 'design', ty
 const _fTmin = ProfileField('design_temp_min_c', 'دمای طراحی کمینه', 'design', type: 'number', unit: '°C');
 const _fTmax = ProfileField('design_temp_max_c', 'دمای طراحی بیشینه', 'design', type: 'number', unit: '°C');
 const _fScope = ProfileField('scope', 'دامنه‌ی تأمین (از شرح)', 'scope');
+const weightFieldKey = 'empty_weight_kg';
+const _fWeight = ProfileField(weightFieldKey, 'وزن خالی (ساخت)', 'key_specs', type: 'number', unit: 'kg',
+    help: 'وزن خالی/ساخت از دیتاشیت سازنده (Empty / Fabricated weight). اختیاری: تا خالی است در محاسبات بی‌اثر است؛ '
+        'وقتی برای این قلم و دست‌کم یک قلم دیگر همین رده وارد شود، «ضریب وزن» در تخمین و نرمال‌سازی اعمال می‌شود '
+        'و جای ضریب فشار را می‌گیرد.');
+
+/// «Empty Weight: 12.5 ton» ← کیلوگرم (وزن عملیاتی/آزمون آبی نادیده گرفته می‌شود)
+final _weight = MtoRule(r'^(empty|fabricat\w*|erection|shipping|dry)?\s*weight', (v, o) {
+  final n = _nums(v);
+  if (n.isEmpty) return;
+  final l = v.toLowerCase();
+  final ton = RegExp(r'\bt\b|ton').hasMatch(l) && !l.contains('kg');
+  o[weightFieldKey] ??= n.first * (ton ? 1000 : 1);
+});
 
 final _common = <MtoRule>[_code, _nace];
 
@@ -253,6 +271,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
       ProfileField('orientation', 'جهت نصب', 'key_specs', type: 'enum', list: 'G_ORIENT'),
       ProfileField('id_mm', 'قطر داخلی (ID)', 'key_specs', type: 'number', unit: 'mm'),
       ProfileField('tl_mm', 'طول TL-TL', 'key_specs', type: 'number', unit: 'mm'),
+      _fWeight,
       _fPress, _fPressText, _fVac, _fTmin, _fTmax,
       ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
       _fMat, _fNace, _fCode, _fScope,
@@ -266,12 +285,14 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _pressure(r'design press'),
       _temps(r'design temp'),
       _material(r'^mat', 'shell_material'),
+      _weight,
       ..._common,
     ],
+    weightKey: weightFieldKey,
     driver: SizeDriver('حجم ظرف', 'm³', 0.6, (v) => _cyl(v, 'id_mm', 'tl_mm')),
     typeKey: 'orientation',
-    gridKeys: ['orientation', 'id_mm', 'tl_mm', 'design_pressure_barg', 'material_class'],
-    rangeKeys: ['design_pressure_barg'],
+    gridKeys: ['orientation', 'id_mm', 'tl_mm', 'design_pressure_barg', 'material_class', weightFieldKey],
+    rangeKeys: ['design_pressure_barg', weightFieldKey],
     factorGroups: const ['MAT', 'NACE', 'PRESS'],
   ),
   'TANK': EquipmentProfile(
@@ -279,6 +300,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
     fields: const [
       ProfileField('diameter_mm', 'قطر', 'key_specs', type: 'number', unit: 'mm'),
       ProfileField('height_mm', 'ارتفاع', 'key_specs', type: 'number', unit: 'mm'),
+      _fWeight,
       ProfileField('roof_type', 'نوع سقف', 'key_specs', type: 'enum', list: 'G_ROOF'),
       _fPress, _fPressText, _fVac, _fTmin, _fTmax,
       ProfileField('shell_material', 'جنس پوسته/کف/سقف', 'material'),
@@ -295,12 +317,14 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _pressure(r'design press'),
       _temps(r'design temp'),
       _material(r'^mat', 'shell_material'),
+      _weight,
       ..._common,
     ],
+    weightKey: weightFieldKey,
     driver: SizeDriver('حجم مخزن', 'm³', 0.6, (v) => _cyl(v, 'diameter_mm', 'height_mm', heads: false)),
     typeKey: 'roof_type',
-    gridKeys: ['diameter_mm', 'height_mm', 'roof_type', 'material_class'],
-    rangeKeys: [],
+    gridKeys: ['diameter_mm', 'height_mm', 'roof_type', 'material_class', weightFieldKey],
+    rangeKeys: [weightFieldKey],
   ),
   'HEX': EquipmentProfile(
     code: 'HEX',
@@ -386,6 +410,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
       ProfileField('vessel_tag', 'تگ ظرف دیسالتر', 'key_specs'),
       ProfileField('vessel_id_mm', 'قطر داخلی ظرف', 'key_specs', type: 'number', unit: 'mm'),
       ProfileField('vessel_tl_mm', 'طول TL-TL ظرف', 'key_specs', type: 'number', unit: 'mm'),
+      _fWeight,
       _fPress, _fPressText, _fTmin, _fTmax,
       ProfileField('shell_material', 'جنس ظرف', 'material'),
       _fMat, _fNace, _fCode,
@@ -410,8 +435,10 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _text(r'pumps? mat', 'pump_material_class'),
       _text(r'pumps? design code', 'pump_code'),
       _material(r'^vessels? mat|^mat', 'shell_material'),
+      _weight,
       ..._common,
     ],
+    weightKey: weightFieldKey,
     driver: SizeDriver('حجم ظرف دیسالتر', 'm³', 0.6, (v) => _cyl(v, 'vessel_id_mm', 'vessel_tl_mm')),
     gridKeys: ['vessel_id_mm', 'vessel_tl_mm', 'desalter_type', 'material_class'],
     rangeKeys: ['design_pressure_barg'],
@@ -462,6 +489,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
       ProfileField('flow_m3h', 'حداکثر دبی', 'key_specs', type: 'number', unit: 'm³/h'),
       ProfileField('tower_tag', 'تگ برج', 'key_specs'),
       ProfileField('internals', 'نوع داخلی‌ها', 'key_specs'),
+      _fWeight,
       _fPress, _fPressText, _fVac, _fTmin, _fTmax,
       ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
       ProfileField('internals_material', 'جنس داخلی‌های جداشدنی', 'material'),
@@ -475,8 +503,10 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _temps(r'design temp'),
       _text(r'remov', 'internals_material'),
       _material(r'^mat', 'shell_material'),
+      _weight,
       ..._common,
     ],
+    weightKey: weightFieldKey,
     driver: SizeDriver('دبی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
     gridKeys: ['flow_m3h', 'internals', 'material_class'],
     rangeKeys: [],
@@ -486,6 +516,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
     code: 'IGF',
     fields: const [
       ProfileField('flow_m3h', 'دبی طراحی', 'key_specs', type: 'number', unit: 'm³/h'),
+      _fWeight,
       _fPress, _fPressText, _fVac, _fTmin, _fTmax,
       ProfileField('shell_material', 'جنس ظرف', 'material'),
       ProfileField('internals_material', 'جنس داخلی‌های جداشدنی', 'material'),
@@ -498,8 +529,10 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _text(r'remov', 'internals_material'),
       _material(r'^vessel mat|^mat', 'shell_material'),
       MtoRule(r'vessel design codes?', _codeApply),
+      _weight,
       ..._common,
     ],
+    weightKey: weightFieldKey,
     driver: SizeDriver('دبی طراحی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
     gridKeys: ['flow_m3h', 'internals_material', 'material_class'],
     rangeKeys: [],
@@ -514,6 +547,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
           help: 'دبی جرمی kg/h با چگالی آب به m³/h تبدیل شده است.'),
       ProfileField('flow_kgh', 'دبی جرمی', 'key_specs', type: 'number', unit: 'kg/h'),
       ProfileField('outlet_oil_ppm', 'روغن آزاد خروجی', 'key_specs', type: 'number', unit: 'ppmw'),
+      _fWeight,
       _fPress, _fPressText, _fTmin, _fTmax,
       ProfileField('shell_material', 'جنس پوسته/عدسی', 'material'),
       ProfileField('internals_material', 'جنس اجزای داخلی', 'material'),
@@ -539,8 +573,10 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _text(r'internal', 'internals_material'),
       _yn(r'agitator', 'agitator'),
       _material(r'^mat', 'shell_material'),
+      _weight,
       ..._common,
     ],
+    weightKey: weightFieldKey,
     driver: SizeDriver('دبی', 'm³/h', 0.6, (v) => _num(v['flow_m3h'])),
     typeKey: 'filter_type',
     gridKeys: ['filter_type', 'flow_m3h', 'material_class'],

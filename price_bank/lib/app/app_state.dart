@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../core/price_bank.dart';
+import '../core/repo/items_repo.dart';
 import '../core/repo/seed.dart';
 import '../core/repo/settings_repo.dart';
 import '../core/repo/users_repo.dart';
@@ -28,6 +29,16 @@ Future<SeedData> loadSeedAssets() async {
 Future<String> defaultDbPath() async {
   final dir = await getApplicationSupportDirectory();
   return '${dir.path}${Platform.pathSeparator}price_bank.db';
+}
+
+/// یک قلم از هر رده (پمپ یا غیرپمپ) با قیمت منبع و تعدیل‌شده — برای داشبورد و جمع‌ها.
+class EquipRow {
+  const EquipRow(this.categoryId, this.item, this.eurSource, this.irrSource, this.eurTarget, this.irrTarget);
+  final int categoryId;
+  final ItemRecord item;
+  final double? eurSource, irrSource, eurTarget, irrTarget;
+  bool get priced => eurSource != null && irrSource != null && eurTarget != null && irrTarget != null;
+  double get qty => item.quantity ?? 1;
 }
 
 /// وضعیت سراسری برنامه. هر تغییری در داده، [revision] را بالا می‌برد تا صفحه‌ها دوباره بخوانند.
@@ -72,6 +83,26 @@ class AppState extends ChangeNotifier {
       _genRev = revision;
     }
     return _gen[categoryId] ??= pb.computeCategory(categoryId);
+  }
+
+  // همه‌ی اقلام همه‌ی رده‌ها (پمپ + رده‌های دارای قالب)
+  int _allRev = -1;
+  List<EquipRow> _all = const [];
+  List<EquipRow> get allRows {
+    if (_allRev != revision) {
+      _all = [
+        for (final r in pumps)
+          EquipRow(r.item.categoryId, r.item, r.result.eurSource.number, r.result.irrSource.number,
+              r.result.eurTarget.number, r.result.irrTarget.number),
+        for (final c in pb.estimableCategories())
+          if (c.code != 'PUMP')
+            for (final r in genericRows(c.id))
+              EquipRow(c.id, r.item, r.result.eurSource.number, r.result.irrSource.number, r.result.eurTarget.number,
+                  r.result.irrTarget.number),
+      ];
+      _allRev = revision;
+    }
+    return _all;
   }
 
   // کش محاسبه‌ی پمپ‌ها برای همان revision

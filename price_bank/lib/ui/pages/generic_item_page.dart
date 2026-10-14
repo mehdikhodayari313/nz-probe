@@ -152,6 +152,7 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
                   width: w,
                   child: FieldTile(
                     field: f,
+                    categoryId: item.categoryId,
                     value: _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
                     meta: item.meta[f.key],
                     editing: _editing && f.editable,
@@ -252,6 +253,7 @@ class _Strip extends StatelessWidget {
             color: AppColors.petrol,
             width: 210,
           ),
+        if (profile?.weightKey != null) _weightTile(context, app),
         KpiTile(
           label: 'بازه‌ی استعلام‌ها (یورو، سال هدف)',
           value: quotes.isEmpty ? '—' : '${compactNum(quotes.first)} تا ${compactNum(quotes.last)}',
@@ -261,6 +263,32 @@ class _Strip extends StatelessWidget {
           width: 260,
         ),
       ]),
+    );
+  }
+}
+
+extension on _Strip {
+  /// وزن خالی و ضریب وزن (بی‌اثر تا وقتی وزن ثبت نشده)
+  Widget _weightTile(BuildContext context, AppState app) {
+    final p = profile!;
+    final w = item.values[p.weightKey];
+    final cat = app.pb.catalog.categories().firstWhere((c) => c.id == item.categoryId);
+    final est = app.pb.genericEstimator(cat.code);
+    final wf = est.weightFactor(item.values);
+    return Tooltip(
+      message: 'وزن خالی/ساخت از دیتاشیت سازنده. برای ثبت، «ویرایش» را بزنید (گروه مشخصات کلیدی).\n'
+          'ضریب وزن = (وزن ÷ ${p.driver.labelFa} ÷ میانه‌ی همین نسبت در رده)^${faSmart(est.weightExp)}؛ '
+          'تا وزن این قلم و دست‌کم دو قلم رده ثبت نشده، بی‌اثر (۱) است.',
+      child: KpiTile(
+        label: 'وزن خالی',
+        value: w is num ? '${faSmart(w)} kg' : 'ثبت نشده',
+        sub: w is! num
+            ? 'اختیاری · فعلاً بی‌اثر در محاسبه'
+            : (wf == null ? 'ضریب وزن هنوز فعال نیست (مرجع رده کافی نیست)' : 'ضریب وزن × ${faSmart(wf)}'),
+        icon: Icons.scale_rounded,
+        color: w is num ? AppColors.teal : Theme.of(context).colorScheme.outline,
+        width: 230,
+      ),
     );
   }
 }

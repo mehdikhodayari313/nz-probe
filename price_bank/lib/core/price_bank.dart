@@ -134,7 +134,25 @@ class PriceBank {
   double exponentOf(String categoryCode) =>
       settingsRepo.load().catExponent(categoryCode) ?? equipmentProfiles[categoryCode]?.driver.n ?? 0.6;
 
-  GenericEstimator genericEstimator(String categoryCode, {Map<String, double> overrides = const {}}) {
+  /// توان ضریب وزن رده (تنظیمات رده، وگرنه ۰٫۸).
+  double weightExponentOf(String categoryCode) =>
+      settingsRepo.load().catWeightExp(categoryCode) ?? defaultWeightExponent;
+
+  /// میانه‌ی «وزن ÷ اندازه» اقلام فعال رده که وزن دارند (مرجع ضریب وزن)؛ کمتر از دو قلم = null.
+  double? weightRefOf(String categoryCode) {
+    final p = equipmentProfiles[categoryCode];
+    final cat = catalog.categoryByCode(categoryCode);
+    if (p?.weightKey == null || cat == null) return null;
+    final n = db.scalar(
+      "SELECT COUNT(*) FROM item_values v JOIN items i ON i.id = v.item_id "
+      "WHERE i.category_id = ? AND i.status = 'active' AND v.field_key = ? AND v.value_num > 0",
+      [cat.id, p!.weightKey],
+    ) as int;
+    if (n < 2) return null;
+    return medianWeightDensity(p, items.loadCategory(cat.id).map((it) => it.values));
+  }
+
+  GenericEstimator genericEstimator(String categoryCode, {Map<String, double> overrides = const {}, double? weightRef}) {
     final e = genericEngine(categoryCode: categoryCode);
     return GenericEstimator(
       profile: equipmentProfiles[categoryCode]!,
@@ -142,6 +160,8 @@ class PriceBank {
       n: exponentOf(categoryCode),
       eurRate: e.eurRateTarget,
       usdRate: e.usdRateTarget,
+      weightRef: weightRef ?? weightRefOf(categoryCode),
+      weightExp: weightExponentOf(categoryCode),
     );
   }
 
@@ -177,9 +197,12 @@ class PriceBank {
     final cat = catalog.categories().firstWhere((c) => c.id == categoryId);
     final e = engine ?? genericEngine(categoryCode: cat.code);
     final profile = equipmentProfiles[cat.code];
-    final est = profile == null ? null : genericEstimator(cat.code);
+    final all = items.loadCategory(categoryId);
+    final est = profile == null
+        ? null
+        : genericEstimator(cat.code, weightRef: medianWeightDensity(profile, all.map((it) => it.values)));
     final rows = <GenericRow>[];
-    for (final it in items.loadCategory(categoryId)) {
+    for (final it in all) {
       final res = e.calculate(genericInputFor(it.primary));
       double? size, coef;
       var allF = 1.0;
@@ -218,6 +241,19 @@ class PriceBank {
   }
 
   Category get pumpCategory => catalog.categoryByCode('PUMP')!;
+
+  /// تعداد اقلام فعال هر رده (شناسه‌ی رده ← تعداد)
+  Map<int, int> categoryCounts() => {
+        for (final r in db.query("SELECT category_id, COUNT(*) AS n FROM items WHERE status = 'active' GROUP BY category_id"))
+          r['category_id'] as int: r['n'] as int,
+      };
+
+  /// رده‌های قابل تخمین/تعدیل: پمپ + رده‌های دارای قالب تخصصی
+  List<Category> estimableCategories() => [
+        pumpCategory,
+        for (final c in catalog.categories())
+          if (c.enabled && equipmentProfiles.containsKey(c.code)) c,
+      ];
 
   List<PumpRow> computePumps({PumpEngine? engine}) {
     final e = engine ?? pumpEngine();

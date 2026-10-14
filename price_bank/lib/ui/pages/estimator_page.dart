@@ -8,6 +8,8 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
+import '../widgets/category_picker.dart';
+import 'equipment_page.dart';
 import 'generic_estimator_tab.dart';
 
 class EstimatorPage extends StatefulWidget {
@@ -18,7 +20,7 @@ class EstimatorPage extends StatefulWidget {
 }
 
 class _EstimatorPageState extends State<EstimatorPage> with SingleTickerProviderStateMixin {
-  late final _tabs = TabController(length: 3, vsync: this);
+  late final _tabs = TabController(length: 2, vsync: this);
 
   @override
   void dispose() {
@@ -34,14 +36,34 @@ class _EstimatorPageState extends State<EstimatorPage> with SingleTickerProvider
         child: TabBar(
           controller: _tabs,
           tabs: const [
-            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'تخمین پمپ جدید'),
-            Tab(icon: Icon(Icons.category_rounded), text: 'تخمین سایر تجهیزات'),
+            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'تخمین تجهیزات'),
             Tab(icon: Icon(Icons.trending_up_rounded), text: 'انتقال قیمت قدیم به سال هدف'),
           ],
         ),
       ),
-      Expanded(child: TabBarView(controller: _tabs, children: const [_NewPumpEstimator(), GenericEstimatorTab(), _TransferCalculator()])),
+      Expanded(child: TabBarView(controller: _tabs, children: const [_EquipmentEstimator(), _TransferCalculator()])),
     ]);
+  }
+}
+
+/// تخمین تجهیز جدید: انتخاب رده (پمپ یا سایر تجهیزات) و فرم تخصصی همان رده.
+class _EquipmentEstimator extends StatefulWidget {
+  const _EquipmentEstimator();
+
+  @override
+  State<_EquipmentEstimator> createState() => _EquipmentEstimatorState();
+}
+
+class _EquipmentEstimatorState extends State<_EquipmentEstimator> {
+  late String _code = EquipmentPage.selectedCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    if (!app.pb.estimableCategories().any((c) => c.code == _code)) _code = 'PUMP';
+    final picker = EquipmentCategoryPicker(value: _code, onChanged: (v) => setState(() => _code = v));
+    if (_code == 'PUMP') return _NewPumpEstimator(key: const ValueKey('PUMP'), picker: picker);
+    return GenericEstimatorTab(key: ValueKey(_code), code: _code, picker: picker);
   }
 }
 
@@ -49,7 +71,8 @@ class _EstimatorPageState extends State<EstimatorPage> with SingleTickerProvider
 // تخمین پمپ جدید
 
 class _NewPumpEstimator extends StatefulWidget {
-  const _NewPumpEstimator();
+  const _NewPumpEstimator({super.key, required this.picker});
+  final Widget picker;
 
   @override
   State<_NewPumpEstimator> createState() => _NewPumpEstimatorState();
@@ -175,6 +198,16 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
     );
     final unit = app.unit;
     final canEditFactors = app.user.isAdmin || app.user.role == 'reviewer';
+    // تعداد پمپ‌های بانک با هر گزینه (مثل فیلترهای صفحه‌ی تجهیزات)
+    final pumpCounts = <String, Map<String, int>>{};
+    for (final r in app.pumps) {
+      for (final (key, _, _) in _params) {
+        final v = asText(r.item.values[key]);
+        if (v.isEmpty) continue;
+        final m = pumpCounts[key] ??= {};
+        m[v] = (m[v] ?? 0) + 1;
+      }
+    }
 
     final inputs = SectionCard(
       title: 'مشخصات پمپ مورد نظر',
@@ -188,6 +221,15 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
               label: Text('حذف ${fa(_overrides.length)} ضریب موردی'),
             ),
       child: Column(children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            SizedBox(width: 170, child: Text('رده‌ی تجهیز', style: t.textTheme.bodySmall)),
+            Expanded(child: widget.picker),
+            const SizedBox(width: 104),
+          ]),
+        ),
+        const Divider(height: 16),
         for (final (key, label, list) in _params)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
@@ -201,9 +243,10 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
                     for (final o in app.pb.catalog.options(list))
                       DropdownMenuItem(
                         value: o.value,
-                        child: Text(
+                        child: CountedLabel(
                           (list == 'YN' || list == 'YNS') && o.labelFa != null ? o.labelFa! : o.value,
-                          overflow: TextOverflow.ellipsis,
+                          key == 'match' ? null : (pumpCounts[key]?[o.value] ?? 0),
+                          dimZero: false,
                         ),
                       ),
                   ],
@@ -383,7 +426,8 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
   String _cls = 'D-2';
   String _cur = 'EUR';
   FloorMode _floor = FloorMode.auto;
-  String? _method; // null = روش فعال برنامه
+  String? _method; // null = روش رده (تنظیمات رده) یا روش فعال برنامه
+  late String _cat = EquipmentPage.selectedCategory;
   final _price = TextEditingController(text: '260000');
   final _year = TextEditingController(text: '1393');
   final _month = TextEditingController();
@@ -404,7 +448,14 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final unit = app.unit;
+    if (!app.pb.estimableCategories().any((c) => c.code == _cat)) _cat = 'PUMP';
+    final isPump = _cat == 'PUMP';
+    final st = app.settings;
     final s = app.settings.toPumpSettings();
+    final catMethod = isPump ? null : st.catMethod(_cat);
+    final ppiCode = isPump ? s.ppiSeries : (st.catPpi(_cat) ?? s.ppiSeries);
+    final ppiName = app.pb.indices.series().where((x) => x.code == ppiCode).map((x) => x.nameFa).firstOrNull ?? ppiCode;
+    final catName = app.pb.catalog.categoryByCode(_cat)?.nameFa ?? _cat;
     final override = parseUserNumber(_eurOverride.text);
     final engine = PumpEngine(
       app.pb.seriesSnapshot,
@@ -412,16 +463,16 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         targetYear: s.targetYear,
         targetMonth: s.targetMonth,
         fxType: s.fxType,
-        ppiSeries: s.ppiSeries,
+        ppiSeries: ppiCode,
         floorEur: s.floorEur,
         floorBaseYear: s.floorBaseYear,
         eurTargetOverride: override ?? s.eurTargetOverride,
         usdTargetOverride: s.usdTargetOverride,
-        method: _method ?? s.method,
+        method: _method ?? catMethod ?? s.method,
       ),
       app.pb.factorTable,
     );
-    final method = methodByCode(_method ?? s.method);
+    final method = methodByCode(_method ?? catMethod ?? s.method);
     final price = parseUserNumber(_price.text);
     final year = parseUserNumber(_year.text)?.toInt();
     final month = parseUserNumber(_month.text)?.toInt();
@@ -433,14 +484,21 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         baseYear: year,
         baseMonth: (month != null && month >= 1 && month <= 12) ? month : null,
         sourceFxRate: _cur == 'IRR' ? parseUserNumber(_srcFx.text) : null,
-        isApiCentrifugal: _type == _types.first,
-        materialClass: _cls,
+        isApiCentrifugal: isPump && _type == _types.first,
+        materialClass: isPump ? _cls : '',
         quantity: parseUserNumber(_qty.text) ?? 1,
         customsPercent: (parseUserNumber(_customs.text) ?? 0) / 100,
-        floorMode: _floor,
+        floorMode: isPump ? _floor : FloorMode.no,
       ));
     }
 
+    final clsCounts = <String, int>{};
+    if (isPump) {
+      for (final r in app.pumps) {
+        final v = asText(r.item.values['material_class']);
+        if (v.isNotEmpty) clsCounts[v] = (clsCounts[v] ?? 0) + 1;
+      }
+    }
     final inputs = SectionCard(
       title: 'ورودی‌ها',
       icon: Icons.edit_note_rounded,
@@ -448,23 +506,59 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(children: [
-            SizedBox(width: 210, child: _label(context, 'روش تعدیل', 'پیش‌فرض = روش فعال برنامه (نوار بالا). تغییر در اینجا فقط روی همین محاسبه اثر دارد.')),
+            SizedBox(
+                width: 210,
+                child: _label(context, 'رده‌ی تجهیز',
+                    'روش تعدیل پیش‌فرض و شاخص PPI از «تنظیمات رده» همین تجهیز خوانده می‌شود؛ کف قیمت فقط برای پمپ است.')),
+            Expanded(
+              child: EquipmentCategoryPicker(
+                value: _cat,
+                onChanged: (v) => setState(() {
+                  _cat = v;
+                  _method = null;
+                }),
+              ),
+            ),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            SizedBox(
+                width: 210,
+                child: _label(
+                    context,
+                    'روش تعدیل',
+                    'پیش‌فرض = روش این رده در «تنظیمات رده» و اگر تعیین نشده، روش فعال برنامه (نوار بالا). '
+                        'تغییر در اینجا فقط روی همین محاسبه اثر دارد.')),
             Expanded(
               child: DropdownButtonFormField<String>(
+                key: ValueKey('transfer-method-$_cat'),
                 value: method.code,
                 isExpanded: true,
                 items: [
                   for (final m in escalationMethods.where((m) => m.selectable))
-                    DropdownMenuItem(value: m.code, child: Text('${m.code} — ${m.nameFa}', overflow: TextOverflow.ellipsis)),
+                    DropdownMenuItem(
+                      value: m.code,
+                      child: Row(children: [
+                        Expanded(
+                          child: Text(methodLabelFor(m, pump: isPump, ppiName: ppiName), overflow: TextOverflow.ellipsis),
+                        ),
+                        if (m.code == (catMethod ?? s.method)) const Pill('پیش‌فرض رده'),
+                      ]),
+                    ),
                 ],
                 onChanged: (v) => setState(() => _method = v),
               ),
             ),
           ]),
         ),
-        _dd(context, 'نوع پمپ', _type, _types, (v) => _type = v,
-            help: 'کف قیمت فقط به «گریز از مرکز API 610» با کلاس S یا D اعمال می‌شود.'),
-        _dd(context, 'کلاس متریال API 610', _cls, [for (final o in app.pb.catalog.options('MAT')) o.value], (v) => _cls = v),
+        if (isPump) ...[
+          _dd(context, 'نوع پمپ', _type, _types, (v) => _type = v,
+              help: 'کف قیمت فقط به «گریز از مرکز API 610» با کلاس S یا D اعمال می‌شود.'),
+          _dd(context, 'کلاس متریال API 610', _cls, [for (final o in app.pb.catalog.options('MAT')) o.value], (v) => _cls = v,
+              counts: clsCounts),
+        ],
         _tf(context, 'قیمت واحد پایه', _price, help: 'قیمت یک دستگاه در منبع قدیمی، به همان ارز منبع.'),
         _dd(context, 'ارز قیمت پایه', _cur, const ['EUR', 'USD', 'IRR'], (v) => _cur = v),
         _tf(context, 'سال پایه (شمسی)', _year, help: 'سال تاریخ قیمت/استعلام منبع، نه سال انتشار گزارش.'),
@@ -476,6 +570,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         _tf(context, 'گمرک/حمل/ترخیص (٪ از قیمت)', _customs, help: 'برای کالای وارداتی؛ ساخت داخل صفر.'),
         _tf(context, 'نرخ یوروی هدف (ریال) — اختیاری', _eurOverride,
             help: 'خالی = نرخ سال هدف از جدول نوع نرخ انتخاب‌شده در نوار بالا.'),
+        if (isPump)
         Padding(
           padding: const EdgeInsets.only(bottom: 8),
           child: Row(children: [
@@ -514,11 +609,14 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
               ),
             _step(context, '۱', 'نرخ تبدیل ارز پایه به یورو', '${n(r.toEurRate)}  (${r.toEurSource})'),
             _step(context, '۲', 'قیمت پایه به یورو', eur(r.baseEur)),
-            if (ppiMethod) _step(context, '۳', 'شاخص قیمت پمپ در سال پایه / هدف', '${n(r.ppiBase)} / ${n(r.ppiTarget)}'),
+            if (ppiMethod)
+              _step(context, '۳', isPump ? 'شاخص قیمت پمپ در سال پایه / هدف' : 'شاخص PPI رده ($ppiName) در سال پایه / هدف',
+                  '${n(r.ppiBase)} / ${n(r.ppiTarget)}'),
             _step(context, ppiMethod ? '۴' : '۳', 'ضریب تعدیل یورویی (${method.code})',
                 r.ppiFactor == null ? '—' : '${n(r.ppiFactor)}${ppiMethod ? '' : '  (${r.factorDetail})'}'),
             _step(context, '۵', 'قیمت یورویی تعدیل‌شده', eur(r.escalatedEur)),
-            _step(context, '۶', 'کف قیمت در سال هدف', r.floorApplies ? eur(r.floorEur) : (method.usesFloor ? 'مشمول نیست' : 'در این روش اعمال نمی‌شود')),
+            _step(context, '۶', 'کف قیمت در سال هدف',
+                !isPump ? 'فقط برای پمپ' : (r.floorApplies ? eur(r.floorEur) : (method.usesFloor ? 'مشمول نیست' : 'در این روش اعمال نمی‌شود'))),
             _step(context, '۷', 'قیمت یورویی نهایی (واحد)', eur(r.finalEurUnit), strong: true),
             _step(context, '۸', 'نرخ یوروی سال هدف', r.eurRate == null ? 'وارد نشده' : '${faNum(r.eurRate)} ریال'),
             _step(context, '۹', 'قیمت واحد بدون گمرک', money(r.irrUnitNoCustoms, unit)),
@@ -536,14 +634,19 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         initiallyOpen: false,
         lines: [
           'روش M6: ریال(هدف) = MAX[ قیمت پایه ÷ نرخ تسعیر منبع × PPI(هدف)/PPI(پایه) ، کف × PPI(هدف)/PPI(${fa(s.floorBaseYear)}) ] × نرخ یورو(هدف)',
-          'روش تعدیل به طور پیش‌فرض همان روش فعال برنامه است؛ برای مقایسه می‌توانید در همین صفحه روش دیگری انتخاب کنید.',
+          'ابتدا رده‌ی تجهیز را انتخاب کنید (پمپ، ظرف، مخزن، مبدل، …). روش تعدیل پیش‌فرض و شاخص PPI همان رده از «تنظیمات رده» در صفحه‌ی تجهیزات خوانده می‌شود؛ برای مقایسه می‌توانید در همین صفحه روش دیگری انتخاب کنید.',
+          'در رده‌های غیرپمپ، M4 و M6 با شاخص PPI همان رده محاسبه می‌شوند و کف قیمت (ویژه‌ی پمپ API 610) اعمال نمی‌شود.',
           'سال هدف و جدول نرخ ارز از نوار بالای برنامه خوانده می‌شود (الان: ${fa(s.targetYear)}).',
           'مقادیر پیش‌فرض همان مثال شیت «ماشین_حساب» فایل صحت‌سنجی است؛ با سال هدف ۱۴۰۵، نرخ «بازار آزاد» و روش M6 نتیجه برابر اکسل است.',
           'تورم ریالی (CPI) برای پمپ استفاده نمی‌شود؛ فایل صحت‌سنجی نشان داد آن روش حدود ۵۰٪ کم‌برآورد می‌کند.',
         ],
       ),
       LayoutBuilder(builder: (context, c) {
-        final res = SectionCard(title: 'محاسبه‌ی گام‌به‌گام', subtitle: 'روش ${method.code} — ${method.nameFa}', icon: Icons.stairs_outlined, child: steps);
+        final res = SectionCard(
+            title: 'محاسبه‌ی گام‌به‌گام',
+            subtitle: '$catName · ${methodLabelFor(method, pump: isPump, ppiName: ppiName)}',
+            icon: Icons.stairs_outlined,
+            child: steps);
         if (c.maxWidth < 1000) return Column(children: [inputs, const SizedBox(height: 14), res]);
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(width: 500, child: inputs),
@@ -554,7 +657,8 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
     ]);
   }
 
-  Widget _dd(BuildContext context, String label, String value, List<String> items, void Function(String) set, {String? help}) =>
+  Widget _dd(BuildContext context, String label, String value, List<String> items, void Function(String) set,
+          {String? help, Map<String, int>? counts}) =>
       Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: [
@@ -563,7 +667,11 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
             child: DropdownButtonFormField<String>(
               value: items.contains(value) ? value : null,
               isExpanded: true,
-              items: [for (final i in items) DropdownMenuItem(value: i, child: Text(i))],
+              items: [
+                for (final i in items)
+                  DropdownMenuItem(
+                      value: i, child: counts == null ? Text(i) : CountedLabel(i, counts[i] ?? 0, dimZero: false)),
+              ],
               onChanged: (v) => setState(() => set(v ?? value)),
             ),
           ),

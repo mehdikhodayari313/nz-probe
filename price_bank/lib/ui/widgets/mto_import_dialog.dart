@@ -147,6 +147,11 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
     final all = app.pb.catalog.categories();
     final parents = {for (final c in all) c.parentId};
     final leafs = all.where((c) => c.enabled && !parents.contains(c.id)).toList();
+    // تعداد اقلام موجود هر رده در بانک
+    final counts = {
+      for (final r in app.pb.db.query("SELECT category_id, COUNT(*) AS n FROM items WHERE status = 'active' GROUP BY category_id"))
+        r['category_id'] as int: r['n'] as int,
+    };
     final existing = app.pb.docs.projects().map((p) => p.name).toList();
     final exists = existing.contains(_project.text.trim());
     final selected = a.sheets.where((s) => s.selected && s.categoryCode != null).toList();
@@ -242,7 +247,8 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                         decoration: const InputDecoration(labelText: 'رده'),
                         items: [
                           const DropdownMenuItem<String?>(value: null, child: Text('— انتخاب کنید —')),
-                          for (final Category c in leafs) DropdownMenuItem<String?>(value: c.code, child: Text(c.nameFa)),
+                          for (final Category c in leafs)
+                            DropdownMenuItem<String?>(value: c.code, child: CountedLabel(c.nameFa, counts[c.id] ?? 0)),
                         ],
                         onChanged: (v) => setState(() => s.categoryCode = v),
                       ),

@@ -42,6 +42,8 @@ class _HistoryPageState extends State<HistoryPage> {
     final app = AppScope.of(context);
     final all = app.pb.audit.recent(limit: 5000);
     final q = _q.text.trim().toLowerCase();
+    // تعداد هر نوع با همان شرط «پنهان کردن ثبت‌های انتقال اولیه»
+    final visible = [for (final e in all) if (!_hideImport || !(e.reason ?? '').startsWith('انتقال از')) e];
     final rows = [
       for (final e in all)
         if ((_entity == null || e.entity == _entity) &&
@@ -78,10 +80,13 @@ class _HistoryPageState extends State<HistoryPage> {
             width: 200,
             child: DropdownButtonFormField<String?>(
               value: _entity,
+              isExpanded: true,
               decoration: const InputDecoration(labelText: 'نوع'),
               items: [
-                const DropdownMenuItem<String?>(value: null, child: Text('همه')),
-                for (final e in _entityFa.entries) DropdownMenuItem<String?>(value: e.key, child: Text(e.value)),
+                DropdownMenuItem<String?>(value: null, child: CountedLabel('همه', visible.length)),
+                for (final e in _entityFa.entries)
+                  DropdownMenuItem<String?>(
+                      value: e.key, child: CountedLabel(e.value, visible.where((x) => x.entity == e.key).length)),
               ],
               onChanged: (v) => setState(() => _entity = v),
             ),

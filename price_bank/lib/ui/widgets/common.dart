@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../format.dart';
 import '../theme.dart';
 
 /// سرصفحه‌ی هر صفحه: نشان رنگی، عنوان، زیرعنوان و دکمه‌ها.
@@ -575,4 +576,46 @@ TextDirection dirOf(String s) {
     if ((ch >= 0x41 && ch <= 0x5A) || (ch >= 0x61 && ch <= 0x7A)) return TextDirection.ltr;
   }
   return TextDirection.rtl;
+}
+
+/// تعداد اقلام کنار گزینه‌ی دراپ‌داون (همان شکل فیلترهای پمپ).
+class CountBadge extends StatelessWidget {
+  const CountBadge(this.count, {super.key});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6),
+      decoration: BoxDecoration(
+        color: count == 0 ? null : AppColors.petrol.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(fa(count),
+          style: TextStyle(
+              fontSize: 11.5, fontWeight: FontWeight.w700, color: count == 0 ? t.colorScheme.outline : AppColors.petrolDark)),
+    );
+  }
+}
+
+/// متن گزینه‌ی دراپ‌داون + تعداد اقلام آن (دراپ‌داون باید isExpanded باشد).
+class CountedLabel extends StatelessWidget {
+  const CountedLabel(this.text, this.count, {super.key, this.dimZero = true});
+  final String text;
+  final int? count;
+  final bool dimZero;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Row(children: [
+      Expanded(
+        child: Text(text,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: dimZero && count == 0 ? t.colorScheme.outline : null)),
+      ),
+      if (count != null) CountBadge(count!),
+    ]);
+  }
 }

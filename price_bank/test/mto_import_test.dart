@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'dart:math' as math;
 
 import 'package:price_bank/core/calc/generic_estimator.dart';
+import 'package:price_bank/core/catalog/profiles.dart';
 import 'package:price_bank/core/import/mto_importer.dart';
 import 'package:price_bank/core/repo/generic_templates.dart';
 import 'package:price_bank/core/price_bank.dart';
@@ -168,6 +169,45 @@ void main() {
     expect(it.values['material_class'], 'CS');
     expect(it.values.containsKey(rawKey), isFalse);
     expect(pb.catalog.fields(cat.id).any((f) => f.key == rawKey), isFalse);
+    pb.close();
+  });
+
+  test('وزن ظرف: خالی = بی‌اثر؛ با وزن دو قلم، ضریب وزن جای ضریب فشار را می‌گیرد', () {
+    final pb = PriceBank.memory(loadSeed());
+    pb.mtoImporter().run(MtoImporter.analyze(wb, fileName: 'x.xlsx'), projectName: 'Sample');
+    final vessel = pb.catalog.categoryByCode('VESSEL')!;
+    expect(pb.catalog.fields(vessel.id).any((f) => f.key == 'empty_weight_kg'), isTrue);
+    final rows = pb.computeCategory(vessel.id);
+    final before = {for (final r in rows) r.item.tag: r.allF};
+    final a = rows.firstWhere((r) => r.item.tag == 'V-141');
+    final b = rows.firstWhere((r) => r.item.tag != 'V-141' && r.size != null);
+
+    // فقط یک قلم وزن دارد ← مرجع نیست ← بی‌اثر
+    pb.items.update(a.item.id, {'empty_weight_kg': 5000});
+    expect(pb.weightRefOf('VESSEL'), isNull);
+    expect({for (final r in pb.computeCategory(vessel.id)) r.item.tag: r.allF}, before);
+
+    // دو قلم وزن دارند ← ضریب وزن فعال
+    pb.items.update(b.item.id, {'empty_weight_kg': 9000});
+    final ref = pb.weightRefOf('VESSEL')!;
+    final a2 = pb.computeCategory(vessel.id).firstWhere((r) => r.item.tag == 'V-141');
+    final est = pb.genericEstimator('VESSEL');
+    final (all, m) = est.configFactor(a2.item.values);
+    expect(m['WEIGHT']!.$2, closeTo(math.pow(5000 / a2.size! / ref, 0.8), 1e-9));
+    expect(m['PRESS']!.$2, 1.0);
+    expect(a2.allF, closeTo(all, 1e-12));
+    // تخمین بدون وزن ← بی‌اثر و ضریب فشار برمی‌گردد
+    final noW = Map<String, Object?>.of(a2.item.values)..remove('empty_weight_kg');
+    expect(est.configFactor(noW).$2['WEIGHT']!.$2, 1.0);
+    expect(est.configFactor(noW).$2['PRESS']!.$1, isNot('با وزن جایگزین شد'));
+    // توان وزن صفر ← وزن نادیده
+    pb.settingsRepo.set('cat_wexp_VESSEL', '0');
+    expect(pb.genericEstimator('VESSEL').weightFactor(a2.item.values), isNull);
+    // خواندن وزن از شرح MTO
+    final p = equipmentProfiles['VESSEL']!;
+    expect(p.extract({'Empty Weight': '12.5 ton'})['empty_weight_kg'], 12500);
+    expect(p.extract({'Weight (Empty / Operating)': '5200 / 9100 kg'})['empty_weight_kg'], 5200);
+    expect(p.extract({'Operating Weight': '20000 kg'}).containsKey('empty_weight_kg'), isFalse);
     pb.close();
   });
 

@@ -22,6 +22,7 @@ class AppSettings {
   String? catMethod(String code) => _m['cat_method_$code']?.isEmpty ?? true ? null : _m['cat_method_$code'];
   String? catPpi(String code) => _m['cat_ppi_$code']?.isEmpty ?? true ? null : _m['cat_ppi_$code'];
   double? catExponent(String code) => numOrNull('cat_n_$code');
+  double? catWeightExp(String code) => numOrNull('cat_wexp_$code');
   String? catEstimation(String code) => _m['cat_est_$code'];
   double get floorEur => numv('floor_eur', 25000);
   int get floorBaseYear => intv('floor_base_year', 1404);

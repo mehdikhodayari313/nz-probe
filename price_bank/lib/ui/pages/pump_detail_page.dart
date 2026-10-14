@@ -320,6 +320,7 @@ class _SpecTab extends StatelessWidget {
                   width: w,
                   child: FieldTile(
                     field: f,
+                    categoryId: AppScope.of(context).pb.pumpCategory.id,
                     value: draft.containsKey(f.key) ? draft[f.key] : _value(f),
                     meta: item?.meta[f.key],
                     editing: editing && f.editable,

@@ -18,8 +18,11 @@ class FieldTile extends StatelessWidget {
     required this.editing,
     required this.changed,
     required this.onChanged,
+    this.categoryId,
   });
 
+  /// برای نمایش تعداد اقلام هر گزینه در دراپ‌داون
+  final int? categoryId;
   final FieldDef field;
   final Object? value;
   final FieldMeta? meta;
@@ -125,7 +128,8 @@ class FieldTile extends StatelessWidget {
   Widget _editor(BuildContext context) {
     switch (field.type) {
       case FieldType.enumeration:
-        return _EnumEditor(field: field, value: value == null ? null : asText(value), onChanged: onChanged);
+        return _EnumEditor(
+            field: field, value: value == null ? null : asText(value), onChanged: onChanged, categoryId: categoryId);
       case FieldType.number:
         return _TextEditor(
           initial: value == null ? '' : (value is num ? asText(value) : value.toString()),
@@ -184,15 +188,27 @@ class _TextEditorState extends State<_TextEditor> {
 }
 
 class _EnumEditor extends StatelessWidget {
-  const _EnumEditor({required this.field, required this.value, required this.onChanged});
+  const _EnumEditor({required this.field, required this.value, required this.onChanged, this.categoryId});
+  final int? categoryId;
   final FieldDef field;
   final String? value;
   final ValueChanged<Object?> onChanged;
 
   @override
   Widget build(BuildContext context) {
-    final opts = AppScope.of(context).pb.catalog.options(field.listKey ?? '');
+    final app = AppScope.of(context);
+    final opts = app.pb.catalog.options(field.listKey ?? '');
     final values = [for (final o in opts) o.value];
+    // تعداد اقلام همین رده با هر گزینه (فقط فیلدهای مشخصات که در item_values ذخیره می‌شوند)
+    final counts = categoryId == null || field.storage != FieldStorage.spec
+        ? null
+        : {
+            for (final r in app.pb.db.query(
+                "SELECT v.value_text AS v, COUNT(*) AS n FROM item_values v JOIN items i ON i.id = v.item_id "
+                "WHERE i.category_id = ? AND i.status = 'active' AND v.field_key = ? GROUP BY v.value_text",
+                [categoryId, field.key]))
+              '${r['v']}': r['n'] as int,
+          };
     final hasValue = value != null && values.contains(value);
     return DropdownButtonFormField<String?>(
       value: hasValue ? value : null,
@@ -205,11 +221,12 @@ class _EnumEditor extends StatelessWidget {
             value: o.value,
             child: Tooltip(
               message: o.description ?? o.labelFa ?? o.value,
-              child: Text(
+              child: CountedLabel(
                 (field.listKey == 'YN' || field.listKey == 'YNS') && o.labelFa != null
                     ? '${o.labelFa} (${o.value})'
                     : (o.labelFa != null && o.labelFa != o.value ? '${o.value} — ${o.labelFa}' : o.value),
-                overflow: TextOverflow.ellipsis,
+                counts == null ? null : (counts[o.value] ?? 0),
+                dimZero: false,
               ),
             ),
           ),

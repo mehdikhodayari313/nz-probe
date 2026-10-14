@@ -12,18 +12,27 @@ import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
 import 'estimator_page.dart';
 
+/// تخمین یک رده‌ی غیرپمپ؛ [picker] انتخاب رده است (پمپ هم در آن هست) و بالای ورودی‌ها نمایش داده می‌شود.
 class GenericEstimatorTab extends StatefulWidget {
-  const GenericEstimatorTab({super.key});
+  const GenericEstimatorTab({super.key, required this.code, required this.picker});
+  final String code;
+  final Widget picker;
 
   @override
   State<GenericEstimatorTab> createState() => _GenericEstimatorTabState();
 }
 
-const _factorField = {'MAT': 'material_class', 'NACE': 'nace', 'PRESS': 'design_pressure_barg', 'LUBE': 'lubrication'};
-const _factorLabel = {'MAT': 'کلاس جنس', 'NACE': 'NACE', 'PRESS': 'فشار طراحی', 'LUBE': 'روغن‌کاری'};
+const _factorField = {
+  'MAT': 'material_class',
+  'NACE': 'nace',
+  'PRESS': 'design_pressure_barg',
+  'LUBE': 'lubrication',
+  'WEIGHT': weightFieldKey,
+};
+const _factorLabel = {'MAT': 'کلاس جنس', 'NACE': 'NACE', 'PRESS': 'فشار طراحی', 'LUBE': 'روغن‌کاری', 'WEIGHT': 'وزن'};
 
 class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
-  String _code = 'VESSEL';
+  String get _code => widget.code;
   final Map<String, TextEditingController> _num = {};
   final Map<String, String?> _enum = {};
   final Map<String, double> _overrides = {};
@@ -66,18 +75,6 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
           f.key: f.type == 'number' ? parseUserNumber(_c(f.key).text) : _enum[f.key],
       };
 
-  void _reset(String code) {
-    for (final c in _num.values) {
-      c.dispose();
-    }
-    _num.clear();
-    _enum.clear();
-    _overrides.clear();
-    _fromItem = null;
-    _code = code;
-    _method = null;
-  }
-
   void _fill(GenericRow r) {
     _fromItem = r.item.id;
     for (final f in _inputs) {
@@ -100,9 +97,9 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final t = Theme.of(context);
-    final cats = app.pb.catalog.categories().where((c) => equipmentProfiles.containsKey(c.code)).toList();
-    final cat = cats.firstWhere((c) => c.code == _code, orElse: () => cats.first);
+    final cat = app.pb.catalog.categoryByCode(_code)!;
     final rows = app.genericRows(cat.id);
+    int countOf(String key, String v) => rows.where((r) => r.item.values[key]?.toString() == v).length;
     final method = _method ?? GenEstMethod.byName(app.settings.catEstimation(_code));
     final est = app.pb.genericEstimator(_code, overrides: _overrides);
     final peers = app.pb.genericPeers(_code, rows);
@@ -130,13 +127,7 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
               label: Text('حذف ${fa(_overrides.length)} ضریب موردی'),
             ),
       child: Column(children: [
-        _row(context, 'رده‌ی تجهیز',
-            DropdownButtonFormField<String>(
-              value: cat.code,
-              isExpanded: true,
-              items: [for (final c in cats) DropdownMenuItem(value: c.code, child: Text(c.nameFa))],
-              onChanged: (v) => setState(() => _reset(v ?? _code)),
-            )),
+        _row(context, 'رده‌ی تجهیز', widget.picker),
         _row(
           context,
           'پر کردن از یک قلم بانک (اختیاری)',
@@ -171,8 +162,10 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
                       for (final o in app.pb.catalog.options(f.list!))
                         DropdownMenuItem<String?>(
                             value: o.value,
-                            child: Text(o.labelFa == null || o.labelFa == o.value ? o.value : '${o.labelFa} (${o.value})',
-                                overflow: TextOverflow.ellipsis)),
+                            child: CountedLabel(
+                                o.labelFa == null || o.labelFa == o.value ? o.value : '${o.labelFa} (${o.value})',
+                                countOf(f.key, o.value),
+                                dimZero: false)),
                     ],
                     onChanged: (v) => setState(() => _enum[f.key] = v),
                   ),
@@ -280,12 +273,13 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
     return ListView(padding: const EdgeInsets.all(20), children: [
       HelpPanel(
         id: 'generic_estimator',
-        title: 'تخمین قیمت سایر تجهیزات چگونه کار می‌کند؟',
+        title: 'تخمین قیمت تجهیزات (غیرپمپ) چگونه کار می‌کند؟',
         initiallyOpen: false,
         lines: [
           'هر رده یک «پارامتر اندازه» دارد: ظرف و دیسالتر حجم (از قطر و طول TL-TL با دو عدسی ۲:۱)، مخزن حجم، مبدل و گرم‌کن توان حرارتی، دی‌اریتور/IGF/فیلتر/کمپرسور/خشک‌کن دبی، تزریق مواد نرخ تزریق، فلر ظرفیت، جرثقیل ظرفیت.',
           'قیمت ∝ اندازه^n (قانون توانی؛ n پیش‌فرض هر رده در «تنظیمات رده» صفحه‌ی تجهیزات قابل تغییر است).',
           'ضرایب جنس، NACE، فشار و روغن‌کاری قیمت همتاها را به پیکربندی پایه برمی‌گردانند و برای تجهیز جدید اعمال می‌شوند. روی «× ضریب» هر ردیف بزنید تا ویرایش شود.',
+          'ظرف‌ها و مخازن (و دیسالتر، دی‌اریتور، IGF، فیلتر) فیلد اختیاری «وزن خالی» دارند. تا خالی است اثری ندارد؛ وقتی وزن این تجهیز و دست‌کم دو قلم بانک ثبت شود، «ضریب وزن» = (وزن ÷ اندازه ÷ میانه‌ی رده)^۰٫۸ اعمال می‌شود و جای ضریب فشار را می‌گیرد.',
           'سه روش: ضریب هزینه‌ی همتاها (میانگین همه)، نزدیک‌ترین همتا (شبیه‌ترین اندازه، بازه از سه همتای نزدیک)، ضریب دستی (وقتی همتا ندارید).',
           'ضرایب و توان‌ها فعلاً «اولیه (قضاوت مهندسی)» هستند؛ با ورود MTOهای بیشتر، در صفحه‌ی «ضرایب» کالیبره کنید.',
         ],
@@ -304,8 +298,46 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
 
   Widget? _factorChip(BuildContext context, String key, String setCode, GenericEstimate e) {
     final g = _factorField.entries.where((x) => x.value == key).map((x) => x.key).firstOrNull;
-    if (g == null || !_p.factorGroups.contains(g)) return null;
+    if (g == null) return null;
+    if (g == 'WEIGHT' ? _p.weightKey == null : !_p.factorGroups.contains(g)) return null;
     final (opt, val) = e.factors[g] ?? (null, 1.0);
+    if (g == 'WEIGHT') {
+      return Tooltip(
+        message: opt == null
+            ? 'وزن اختیاری است؛ تا خالی است ضریب وزن ۱ (بی‌اثر) است.\n'
+                'وقتی وزن وارد شود و دست‌کم دو قلم این رده در بانک وزن داشته باشند:\n'
+                'ضریب وزن = (وزن ÷ ${_p.driver.labelFa} ÷ میانه‌ی همین نسبت در رده)^m و جای ضریب فشار را می‌گیرد.'
+            : 'ضریب وزن = (وزن ویژه ÷ میانه‌ی رده)^m — توان m در «تنظیمات رده» یا صفحه‌ی «ضرایب»',
+        child: Container(
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: opt == null ? null : AppColors.teal.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+          child: Text(opt == null ? 'بی‌اثر' : '× ${faSmart(val)}',
+              style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12.5,
+                  color: opt == null ? Theme.of(context).colorScheme.outline : AppColors.teal)),
+        ),
+      );
+    }
+    if (g == 'PRESS' && e.factors['WEIGHT']?.$1 != null) {
+      return Tooltip(
+        message: 'وزن ثبت شده است؛ اثر فشار طراحی در ضخامت و وزن دیده شده و ضریب فشار اعمال نمی‌شود.',
+        child: Container(
+          height: 34,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+          ),
+          child: Text('در وزن', style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.outline)),
+        ),
+      );
+    }
     final local = opt != null && _overrides.containsKey('$g|$opt');
     return Tooltip(
       message: opt == null ? 'ابتدا مقدار را انتخاب/وارد کنید' : 'ضریب ${_factorLabel[g]} «$opt» — برای تغییر بزنید',

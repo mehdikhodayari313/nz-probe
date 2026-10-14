@@ -258,3 +258,16 @@ const rialPackageResults = <RialPackageResult>[
   RialPackageResult('R3', 'مدل فلزی', 0.828995459246681, 0.855445874619527),
   RialPackageResult('R4', 'یورو × PPI × نرخ ارز (پیشنهادی)', 0.906222967965403, 0.935616992752061),
 ];
+
+
+/// برچسب روش برای یک رده‌ی تجهیز: در رده‌های غیرپمپ، M4/M6 با شاخص PPI همان رده و بدون کف قیمت است.
+String methodLabelFor(EscalationMethod m, {required bool pump, String? ppiName}) {
+  if (pump) return '${m.code} — ${m.nameFa}';
+  final ppi = ppiName == null ? 'PPI منتخب رده' : 'PPI: $ppiName';
+  return switch (m.code) {
+    'M4' => 'M4 — $ppi',
+    'M6' => 'M6 — همان M4 ($ppi)؛ کف قیمت فقط برای پمپ',
+    'M5' => 'M5 — PPI پمپ آمریکا به یورو (شاخص پمپ)',
+    _ => '${m.code} — ${m.nameFa}',
+  };
+}

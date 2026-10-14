@@ -218,8 +218,10 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'پروژه'),
                     items: [
-                      const DropdownMenuItem<String?>(value: null, child: Text('همه')),
-                      for (final p in projects.toList()..sort()) DropdownMenuItem<String?>(value: p, child: Text(p)),
+                      DropdownMenuItem<String?>(value: null, child: CountedLabel('همه', all.length)),
+                      for (final p in projects.toList()..sort())
+                        DropdownMenuItem<String?>(
+                            value: p, child: CountedLabel(p, all.where((r) => r.item.projectName == p).length)),
                     ],
                     onChanged: (v) => setState(() => _project = v),
                   ),
@@ -517,11 +519,14 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
   String? _ppi;
   String? _est;
   late final TextEditingController _n;
+  late final TextEditingController _w;
 
   @override
   void initState() {
     super.initState();
     final s = AppScope.read(context).settings;
+    final w = s.catWeightExp(widget.code);
+    _w = TextEditingController(text: w == null ? '' : '$w');
     _method = s.catMethod(widget.code);
     _ppi = s.catPpi(widget.code);
     _est = s.catEstimation(widget.code);
@@ -532,6 +537,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
   @override
   void dispose() {
     _n.dispose();
+    _w.dispose();
     super.dispose();
   }
 
@@ -542,6 +548,12 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
       showSnack(context, 'توان اندازه باید عددی بین ۰ و ۱٫۵ باشد.', error: true);
       return;
     }
+    final w = parseUserNumber(_w.text);
+    if (_w.text.trim().isNotEmpty && (w == null || w < 0 || w > 1.5)) {
+      showSnack(context, 'توان وزن باید عددی بین ۰ و ۱٫۵ باشد.', error: true);
+      return;
+    }
+    app.pb.settingsRepo.set('cat_wexp_${widget.code}', w == null ? null : '$w', reason: 'تنظیمات رده');
     const reason = 'تنظیمات رده';
     app.pb.settingsRepo.set('cat_method_${widget.code}', _method, reason: reason);
     app.pb.settingsRepo.set('cat_ppi_${widget.code}', _ppi, reason: reason);
@@ -588,7 +600,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
       ]),
       content: SizedBox(
         width: 560,
-        child: Column(mainAxisSize: MainAxisSize.min, children: [
+        child: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
           row(
             'روش تعدیل این رده',
             DropdownButtonFormField<String?>(
@@ -625,6 +637,16 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               decoration: InputDecoration(hintText: 'پیش‌فرض ${p.driver.n} (قیمت ∝ ${p.driver.labelFa}^n)'),
             ),
           ),
+          if (p.weightKey != null)
+            row(
+              'توان وزن m',
+              TextField(
+                controller: _w,
+                textDirection: TextDirection.ltr,
+                decoration: const InputDecoration(hintText: 'پیش‌فرض 0.8 — ضریب وزن = (وزن ویژه ÷ میانه‌ی رده)^m'),
+              ),
+              help: 'فقط وقتی وزن خالی برای قلم و دست‌کم دو قلم این رده ثبت شده باشد اثر دارد. صفر = وزن نادیده گرفته شود.',
+            ),
           row(
             'روش تخمین پیش‌فرض',
             DropdownButtonFormField<String?>(
@@ -638,7 +660,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
           ),
           Text('پارامتر اندازه‌ی این رده: ${p.driver.labelFa} (${p.driver.unit}). ضرایب نرمال‌سازی: ${p.factorGroups.isEmpty ? 'ندارد' : p.factorGroups.join('، ')} — در صفحه‌ی «ضرایب».',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8)),
-        ]),
+        ])),
       ),
       actions: [
         TextButton(onPressed: () => Navigator.pop(context), child: const Text('انصراف')),

@@ -223,14 +223,43 @@ void main() {
     debugPrint('✓ ' 'فیلترهای پارامتریک و تنظیمات رده');
     EquipmentPage.selectedCategory = 'PUMP';
 
-    // تخمین سایر تجهیزات
+    // تخمین تجهیزات: انتخاب رده‌ی ظرف از همان فهرست (پمپ هم در آن است)
     await go(tester, nEstimator);
-    await tester.tap(find.text('تخمین سایر تجهیزات'));
+    expect(find.text('تخمین تجهیزات'), findsOneWidget);
+    expect(find.text('مشخصات پمپ مورد نظر'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('category-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ظرف تحت فشار').last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('نزدیک‌ترین همتا'));
     await tester.pumpAndSettle();
     expect(find.textContaining('حجم ظرف'), findsWidgets);
-    debugPrint('✓ ' 'تخمین سایر تجهیزات');
+    expect(find.text('وزن خالی (ساخت) (kg)'), findsOneWidget);
+    expect(find.text('بی‌اثر'), findsOneWidget);
+    debugPrint('✓ ' 'تخمین تجهیزات (ظرف) با فیلد وزن');
+
+    // انتقال قیمت قدیم: رده‌ی ظرف، بدون کف قیمت
+    await tester.tap(find.text('انتقال قیمت قدیم به سال هدف'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('category-picker')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ظرف تحت فشار').last);
+    await tester.pumpAndSettle();
+    expect(find.text('فقط برای پمپ'), findsOneWidget);
+    expect(find.text('نوع پمپ'), findsNothing);
+    debugPrint('✓ ' 'انتقال قیمت برای ظرف');
+
+    // ضرایب: فقط ضرایب همین رده، سپس «بازگشت» به همان زبانه و همان رده
+    await go(tester, 5);
+    await tester.tap(find.byKey(const ValueKey('factor-cat-VESSEL')));
+    await tester.pumpAndSettle();
+    expect(find.text('پارامترهای تخمین این رده'), findsOneWidget);
+    expect(find.textContaining('روغن‌کاری کمپرسور'), findsNothing);
+    expect(find.textContaining('فشار طراحی (پایه'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('shell-back')));
+    await tester.pumpAndSettle();
+    expect(find.text('فقط برای پمپ'), findsOneWidget);
+    debugPrint('✓ ' 'ضرایب رده و بازگشت به همان جا');
 
     // صفحه‌ی قلم
     final id = app.genericRows(vessel.id).firstWhere((r) => r.item.tag == 'V-141').item.id;

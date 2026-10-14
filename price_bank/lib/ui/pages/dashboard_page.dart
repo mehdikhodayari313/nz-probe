@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/methods.dart';
-import '../../core/calc/pump_engine.dart';
 import '../../core/import/v8_importer.dart';
-import '../../core/price_bank.dart';
 import '../../core/xlsx/xlsx_reader.dart';
 import '../format.dart';
 import '../shell.dart';
@@ -20,27 +18,23 @@ class DashboardPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
-    final rows = app.pumps;
+    final rows = app.allRows;
     final unit = app.unit;
     final s = app.settings;
     final t = Theme.of(context);
 
     final included = rows.where((r) => r.item.include).toList();
-    final priced = included.where((r) => r.result.irrTarget.isNumber).toList();
-    final withIssues = rows.where((r) => r.result.qaFlags.isNotEmpty).length;
-    final inferredFields = rows.fold<int>(0, (a, r) => a + r.item.meta.values.where((m) => m.flag == 'inferred').length);
+    final priced = included.where((r) => r.irrTarget != null).toList();
     final projects = app.pb.docs.projects();
     final fxEur = app.pb.pumpEngine().eurRateTarget;
     final method = methodByCode(s.escalationMethod);
-
-    // تفکیک زیرگروه (تعداد و سهم)
-    final bySub = <String, (int, int)>{};
-    for (final r in included) {
-      final k = asText(r.item.values['sub_category']);
-      final e = bySub[k.isEmpty ? '—' : k] ?? (0, 0);
-      bySub[k.isEmpty ? '—' : k] = (e.$1 + 1, e.$2 + (r.result.irrTarget.isNumber ? 1 : 0));
-    }
-    final subOpts = {for (final o in app.pb.catalog.options('SubCat')) o.value: o.labelFa ?? ''};
+    final catsUsed = rows.map((r) => r.categoryId).toSet().length;
+    final quotes = rows.fold<int>(0, (a, r) => a + r.item.observations.where((o) => o.kind == 'quote').length);
+    // رده‌هایی که روش تعدیل اختصاصی دارند
+    final custom = [
+      for (final c in app.pb.estimableCategories())
+        if (c.code != 'PUMP' && s.catMethod(c.code) != null) '${c.nameFa}: ${s.catMethod(c.code)}',
+    ];
 
     return ListView(padding: const EdgeInsets.fromLTRB(24, 20, 24, 28), children: [
       PageHeader(
@@ -48,16 +42,16 @@ class DashboardPage extends StatelessWidget {
         title: 'داشبورد',
         subtitle: 'سال هدف ${fa(s.targetYear)} · نرخ ارز «${_fxName(app)}» · روش تعدیل ${method.code}',
       ),
-      if (rows.isEmpty) _ImportCard(),
-      if (rows.isEmpty) const SizedBox(height: 16),
-      _StartSteps(hasData: rows.isNotEmpty, method: method.code),
+      if (app.pumps.isEmpty) _ImportCard(),
+      if (app.pumps.isEmpty) const SizedBox(height: 16),
+      _StartSteps(hasData: rows.isNotEmpty, hasPumps: app.pumps.isNotEmpty, method: method.code),
       const SizedBox(height: 16),
       Wrap(spacing: 12, runSpacing: 12, children: [
         KpiTile(
-          label: 'پمپ‌های ثبت‌شده',
+          label: 'تجهیزات ثبت‌شده',
           value: fa(rows.length),
-          sub: '${fa(included.length)} شمارش‌شده در جمع‌ها',
-          icon: Icons.water_rounded,
+          sub: '${fa(catsUsed)} رده · ${fa(included.length)} شمارش‌شده در جمع‌ها',
+          icon: Icons.precision_manufacturing_rounded,
           onTap: () => AppShell.go(context, AppShell.equipment),
         ),
         KpiTile(
@@ -76,10 +70,10 @@ class DashboardPage extends StatelessWidget {
           onTap: () => AppShell.go(context, AppShell.indices),
         ),
         KpiTile(
-          label: 'رکوردهای دارای هشدار داده',
-          value: fa(withIssues),
-          sub: '${fa(inferredFields)} مقدار استنباطی',
-          icon: Icons.warning_amber_rounded,
+          label: 'استعلام‌های فروشندگان',
+          value: fa(quotes),
+          sub: '${fa(rows.where((r) => r.item.observations.any((o) => o.kind == 'quote')).length)} قلم دارای استعلام',
+          icon: Icons.request_quote_outlined,
           color: Tones.warn(context),
         ),
         KpiTile(
@@ -96,50 +90,13 @@ class DashboardPage extends StatelessWidget {
       const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
-      const _CategoriesCard(),
-      const SizedBox(height: 16),
       LayoutBuilder(builder: (context, cons) {
         final wide = cons.maxWidth > 1100;
-        final table = SectionCard(
-          title: 'تفکیک بر اساس زیرگروه پمپ',
-          subtitle: 'فقط رکوردهای شمارش‌شده در جمع‌ها',
-          icon: Icons.donut_small_outlined,
-          child: Column(children: [
-            for (final e in (bySub.entries.toList()..sort((a, b) => b.value.$1.compareTo(a.value.$1))))
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 5),
-                child: Row(children: [
-                  SizedBox(
-                    width: 220,
-                    child: Text.rich(TextSpan(children: [
-                      TextSpan(text: e.key, style: const TextStyle(fontWeight: FontWeight.w700)),
-                      TextSpan(text: '  ${subOpts[e.key] ?? ''}', style: TextStyle(color: t.colorScheme.onSurfaceVariant)),
-                    ]), style: t.textTheme.bodySmall, overflow: TextOverflow.ellipsis),
-                  ),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                        value: included.isEmpty ? 0 : e.value.$1 / included.length,
-                        minHeight: 10,
-                        color: AppColors.teal,
-                        backgroundColor: t.colorScheme.surfaceContainerHigh,
-                      ),
-                    ),
-                  ),
-                  SizedBox(
-                    width: 120,
-                    child: Text('${fa(e.value.$1)} پمپ · ${fa(e.value.$2)} با قیمت',
-                        textAlign: TextAlign.end, style: t.textTheme.bodySmall),
-                  ),
-                ]),
-              ),
-          ]),
-        );
+        final cats = _CategoriesCard(rows: rows, unit: unit, targetYear: s.targetYear);
         final recent = _RecentChanges();
-        if (!wide) return Column(children: [table, const SizedBox(height: 16), recent]);
+        if (!wide) return Column(children: [cats, const SizedBox(height: 16), recent]);
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(flex: 3, child: table),
+          Expanded(flex: 3, child: cats),
           const SizedBox(width: 16),
           Expanded(flex: 2, child: recent),
         ]);
@@ -159,6 +116,13 @@ class DashboardPage extends StatelessWidget {
             '${method.usesFloor ? ' کف قیمت ${faNum(s.floorEur)} یورو (سطح ${fa(s.floorBaseYear)}) فقط برای پمپ گریز از مرکز API 610 با کلاس متریال S یا D.' : ''}',
             style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.9),
           ),
+          const SizedBox(height: 4),
+          Text(
+            custom.isEmpty
+                ? 'همه‌ی رده‌ها با همین روش تعدیل می‌شوند (روش اختصاصی هر رده در «تنظیمات رده» صفحه‌ی تجهیزات).'
+                : 'رده‌های با روش اختصاصی: ${custom.join('، ')}',
+            style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.9),
+          ),
         ]),
       ),
     ]);
@@ -172,10 +136,10 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
-/// جمع قیمت پمپ‌های هر پروژه: در سال قیمت منبع و در سال هدف، کنار هم.
+/// جمع قیمت تجهیزات هر پروژه (همه‌ی رده‌ها): در سال قیمت منبع و در سال هدف، کنار هم.
 class _ProjectTotals extends StatelessWidget {
   const _ProjectTotals({required this.rows, required this.unit, required this.targetYear});
-  final List<PumpRow> rows;
+  final List<EquipRow> rows;
   final MoneyUnit unit;
   final int targetYear;
 
@@ -187,15 +151,14 @@ class _ProjectTotals extends StatelessWidget {
       final name = r.item.projectName ?? 'بدون پروژه';
       final a = aggs[name] ??= _ProjAgg(name);
       a.count++;
-      final res = r.result;
-      if (res.irrSource.isNumber && res.irrTarget.isNumber && res.eurSource.isNumber && res.eurTarget.isNumber) {
-        final q = r.item.quantity ?? 1;
+      if (r.priced) {
+        final q = r.qty;
         a.priced++;
         a.units += q;
-        a.irrSrc += res.irrSource.number! * q;
-        a.eurSrc += res.eurSource.number! * q;
-        a.irrTgt += res.irrTarget.number! * q;
-        a.eurTgt += res.eurTarget.number! * q;
+        a.irrSrc += r.irrSource! * q;
+        a.eurSrc += r.eurSource! * q;
+        a.irrTgt += r.irrTarget! * q;
+        a.eurTgt += r.eurTarget! * q;
         final y = r.item.primary?.costYear;
         if (y != null) a.years.add(y);
       }
@@ -209,14 +172,14 @@ class _ProjectTotals extends StatelessWidget {
         : SizedBox(width: width, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: child));
 
     return SectionCard(
-      title: 'جمع قیمت پمپ‌ها به تفکیک پروژه',
+      title: 'جمع قیمت تجهیزات به تفکیک پروژه',
       subtitle: 'قیمت واحد × تعداد · «سال منبع» = با نرخ ارز همان سال قیمت؛ «سال هدف» = تعدیل‌شده با روش فعال به سال ${fa(targetYear)}',
       icon: Icons.account_tree_outlined,
       padding: const EdgeInsets.fromLTRB(0, 12, 0, 6),
       child: list.isEmpty
           ? Padding(
               padding: const EdgeInsets.all(16),
-              child: Text('هنوز پمپی ثبت نشده.', style: t.textTheme.bodySmall),
+              child: Text('هنوز تجهیزی ثبت نشده.', style: t.textTheme.bodySmall),
             )
           : Column(children: [
               Container(
@@ -227,7 +190,7 @@ class _ProjectTotals extends StatelessWidget {
                 ),
                 child: Row(children: [
                   cell(Text('پروژه', style: head), flex: 3),
-                  cell(Text('پمپ‌ها', style: head, textAlign: TextAlign.center), width: 90),
+                  cell(Text('اقلام', style: head, textAlign: TextAlign.center), width: 90),
                   cell(Text('سال قیمت منبع', style: head, textAlign: TextAlign.center), width: 120),
                   cell(Text('جمع در سال منبع', style: head, textAlign: TextAlign.center), flex: 2),
                   cell(Text('جمع در سال ${fa(targetYear)}', style: head, textAlign: TextAlign.center), flex: 2),
@@ -495,21 +458,27 @@ class _ImportCardState extends State<_ImportCard> {
 
 /// چهار گام «شروع کار» — هم‌ترتیب با منوی کناری؛ هر گام صفحه‌ی مربوط را باز می‌کند.
 class _StartSteps extends StatelessWidget {
-  const _StartSteps({required this.hasData, required this.method});
+  const _StartSteps({required this.hasData, required this.hasPumps, required this.method});
   final bool hasData;
+  final bool hasPumps;
   final String method;
 
   @override
   Widget build(BuildContext context) {
     final steps = <(int, IconData, String, String, int?)>[
       (1, Icons.upload_file_rounded, 'ورود داده‌ها',
-          hasData ? 'داده‌های v8 وارد شده‌اند ✓' : 'فایل Pumps_Price_Bank_v8.xlsx را از کارت بالا وارد کنید (یک بار).', null),
+          hasData
+              ? (hasPumps
+                  ? 'داده‌ها وارد شده‌اند ✓ — برای افزودن تجهیزات، MTO پروژه‌ی تازه را از کارت «تجهیزات به تفکیک رده» وارد کنید.'
+                  : 'MTO وارد شده ✓ — بانک پمپ‌ها (v8) را هم از کارت بالا وارد کنید.')
+              : 'بانک پمپ‌ها (v8) را از کارت بالا و MTO پروژه‌ها را از «ورود MTO» وارد کنید.',
+          null),
       (2, Icons.query_stats_rounded, 'شاخص‌ها و ارز',
           'نرخ ارز و شاخص‌ها را تکمیل کنید؛ جدول نرخ ارز تازه با نام دلخواه هم همان‌جا ساخته می‌شود.', AppShell.indices),
       (3, Icons.science_rounded, 'روش تعدیل و سال هدف',
           'روش فعال: $method. سال هدف، جدول نرخ ارز و روش را از نوار بالا انتخاب کنید.', AppShell.methods),
       (4, Icons.precision_manufacturing_rounded, 'تجهیزات و تخمین',
-          'جستجو، فیلتر و ویرایش پمپ‌ها؛ تخمین پمپ جدید و انتقال قیمت قدیم به سال هدف.', AppShell.equipment),
+          'جستجوی پارامتریک و ویرایش همه‌ی تجهیزات؛ تخمین تجهیز جدید و انتقال قیمت قدیم به سال هدف.', AppShell.equipment),
     ];
     return SectionCard(
       title: 'شروع کار',
@@ -588,7 +557,7 @@ class _StepCard extends StatelessWidget {
 /// نشانگر ماوس روی هر ستون، مبلغ دقیق را نشان می‌دهد؛ ستون‌ها با انیمیشن رشد می‌کنند.
 class _ProjectChart extends StatefulWidget {
   const _ProjectChart({required this.rows, required this.unit, required this.targetYear});
-  final List<PumpRow> rows;
+  final List<EquipRow> rows;
   final MoneyUnit unit;
   final int targetYear;
 
@@ -604,12 +573,11 @@ class _ProjectChartState extends State<_ProjectChart> {
     final t = Theme.of(context);
     final data = <String, (double, double)>{};
     for (final r in widget.rows) {
-      final res = r.result;
-      if (!(res.irrSource.isNumber && res.irrTarget.isNumber)) continue;
-      final q = r.item.quantity ?? 1;
+      if (r.irrSource == null || r.irrTarget == null) continue;
+      final q = r.qty;
       final k = r.item.projectName ?? 'بدون پروژه';
       final e = data[k] ?? (0, 0);
-      data[k] = (e.$1 + res.irrSource.number! * q, e.$2 + res.irrTarget.number! * q);
+      data[k] = (e.$1 + r.irrSource! * q, e.$2 + r.irrTarget! * q);
     }
     final list = data.entries.toList()..sort((a, b) => b.value.$2.compareTo(a.value.$2));
     if (list.isEmpty) return const SizedBox();
@@ -639,7 +607,7 @@ class _ProjectChartState extends State<_ProjectChart> {
 
     return SectionCard(
       title: 'مقایسه‌ی پروژه‌ها: سال منبع در برابر سال ${fa(widget.targetYear)}',
-      subtitle: 'نشانگر ماوس را روی هر ستون نگه دارید تا مبلغ دقیق دیده شود (${unitLabel(widget.unit)}، قیمت × تعداد)',
+      subtitle: 'همه‌ی تجهیزات · نشانگر ماوس را روی هر ستون نگه دارید تا مبلغ دقیق دیده شود (${unitLabel(widget.unit)}، قیمت × تعداد)',
       icon: Icons.bar_chart_rounded,
       trailing: Wrap(spacing: 12, children: [
         _legendDot(context, srcColor, 'سال منبع'),
@@ -701,27 +669,37 @@ class _ProjectChartState extends State<_ProjectChart> {
 }
 
 
-/// اقلام هر رده‌ی تجهیزات + ورود MTO.
+/// تفکیک تجهیزات بر اساس رده: تعداد، سهم از جمع سال هدف، استعلام‌ها + ورود MTO.
 class _CategoriesCard extends StatelessWidget {
-  const _CategoriesCard();
+  const _CategoriesCard({required this.rows, required this.unit, required this.targetYear});
+  final List<EquipRow> rows;
+  final MoneyUnit unit;
+  final int targetYear;
 
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final t = Theme.of(context);
-    final cats = app.pb.catalog.categories();
-    final parents = {for (final c in cats) c.parentId};
-    final counts = {
-      for (final r in app.pb.db.query(
-          "SELECT category_id, COUNT(*) AS n, (SELECT COUNT(*) FROM price_obs o JOIN items j ON j.id = o.item_id "
-          "WHERE j.category_id = i.category_id AND o.kind = 'quote' AND j.status = 'active') AS q "
-          "FROM items i WHERE status = 'active' GROUP BY category_id"))
-        r['category_id'] as int: (r['n'] as int, r['q'] as int),
-    };
-    final leafs = cats.where((c) => c.enabled && !parents.contains(c.id)).toList();
+    final cats = app.pb.estimableCategories();
+    final agg = <int, (int, int, double, int)>{}; // تعداد، با قیمت، جمع ریالی هدف، استعلام
+    for (final r in rows) {
+      final e = agg[r.categoryId] ?? (0, 0, 0.0, 0);
+      final inc = r.item.include && r.irrTarget != null;
+      agg[r.categoryId] = (
+        e.$1 + 1,
+        e.$2 + (r.irrTarget != null ? 1 : 0),
+        e.$3 + (inc ? r.irrTarget! * r.qty : 0),
+        e.$4 + r.item.observations.where((o) => o.kind == 'quote').length,
+      );
+    }
+    final total = agg.values.fold<double>(0, (a, e) => a + e.$3);
+    final list = [...cats]..sort((a, b) {
+        final c = (agg[b.id]?.$3 ?? 0).compareTo(agg[a.id]?.$3 ?? 0);
+        return c != 0 ? c : (agg[b.id]?.$1 ?? 0).compareTo(agg[a.id]?.$1 ?? 0);
+      });
     return SectionCard(
       title: 'تجهیزات به تفکیک رده',
-      subtitle: 'روی هر رده بزنید تا فهرستش باز شود · اقلام غیرپمپ با «ورود MTO» وارد می‌شوند',
+      subtitle: 'سهم هر رده از جمع سال ${fa(targetYear)} (شمارش‌شده‌ها) · روی هر رده بزنید تا فهرستش باز شود',
       icon: Icons.category_outlined,
       trailing: app.canEdit('MECH')
           ? FilledButton.icon(
@@ -730,50 +708,61 @@ class _CategoriesCard extends StatelessWidget {
               label: const Text('ورود MTO'),
             )
           : null,
-      child: Wrap(spacing: 10, runSpacing: 10, children: [
-        for (final c in leafs)
-          HoverLift(
-            radius: 12,
-            child: Material(
-              color: t.colorScheme.surfaceContainerLow,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: t.colorScheme.outlineVariant),
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: InkWell(
-                onTap: () {
-                  EquipmentPage.selectedCategory = c.code;
-                  AppShell.go(context, AppShell.equipment);
-                },
-                child: Container(
-                  width: 200,
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  child: Row(children: [
-                    Expanded(
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(c.nameFa, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
-                        Text(
-                          (counts[c.id]?.$1 ?? 0) == 0
-                              ? 'خالی'
-                              : '${fa(counts[c.id]!.$2)} استعلام',
-                          style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant),
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
+      child: Column(children: [
+        for (final c in list)
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () {
+                EquipmentPage.selectedCategory = c.code;
+                AppShell.go(context, AppShell.equipment);
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                child: Row(children: [
+                  SizedBox(
+                    width: 150,
+                    child: Text(c.nameFa,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            color: (agg[c.id]?.$1 ?? 0) == 0 ? t.colorScheme.outline : null)),
+                  ),
+                  SizedBox(width: 44, child: Center(child: CountBadge(agg[c.id]?.$1 ?? 0))),
+                  Expanded(
+                    child: Tooltip(
+                      message: total <= 0 ? '' : '${faNum((agg[c.id]?.$3 ?? 0) * 100 / total, decimals: 1)}٪ از جمع',
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: LinearProgressIndicator(
+                          value: total <= 0 ? 0 : (agg[c.id]?.$3 ?? 0) / total,
+                          minHeight: 10,
+                          color: AppColors.teal,
+                          backgroundColor: t.colorScheme.surfaceContainerHigh,
                         ),
-                      ]),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (counts[c.id]?.$1 ?? 0) == 0 ? t.colorScheme.surfaceContainerHigh : AppColors.petrol,
-                        borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Text(fa(counts[c.id]?.$1 ?? 0),
-                          style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              color: (counts[c.id]?.$1 ?? 0) == 0 ? t.colorScheme.outline : Colors.white)),
                     ),
-                  ]),
-                ),
+                  ),
+                  SizedBox(
+                    width: 130,
+                    child: Text(
+                      (agg[c.id]?.$3 ?? 0) <= 0 ? '—' : money(agg[c.id]!.$3, unit, compact: true),
+                      textAlign: TextAlign.end,
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.petrolDark),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 84,
+                    child: Text(
+                      (agg[c.id]?.$4 ?? 0) == 0 ? '' : '${fa(agg[c.id]!.$4)} استعلام',
+                      textAlign: TextAlign.end,
+                      style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant),
+                    ),
+                  ),
+                ]),
               ),
             ),
           ),

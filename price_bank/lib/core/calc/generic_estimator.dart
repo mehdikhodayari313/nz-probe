@@ -58,23 +58,74 @@ class GenericEstimate {
   String? note;
 }
 
+/// توان پیش‌فرض ضریب وزن: قیمت ظرف تقریباً ∝ وزن^۰٫۸
+const defaultWeightExponent = 0.8;
+
+/// «وزن ویژه» یک قلم = وزن خالی ÷ پارامتر اندازه (مثلاً kg به ازای m³ حجم ظرف).
+double? weightDensity(EquipmentProfile p, Map<String, Object?> values) {
+  final k = p.weightKey;
+  if (k == null) return null;
+  final w = values[k];
+  final s = p.sizeOf(values);
+  if (w is! num || w <= 0 || s == null) return null;
+  return w / s;
+}
+
+/// میانه‌ی وزن ویژه‌ی اقلامی که وزن دارند؛ کمتر از دو قلم = null (ضریب وزن بی‌اثر).
+double? medianWeightDensity(EquipmentProfile p, Iterable<Map<String, Object?>> items) {
+  final l = [for (final v in items) if (weightDensity(p, v) case final d?) d]..sort();
+  if (l.length < 2) return null;
+  final m = l.length ~/ 2;
+  return l.length.isOdd ? l[m] : (l[m - 1] + l[m]) / 2;
+}
+
 class GenericEstimator {
-  const GenericEstimator({required this.profile, required this.factors, required this.n, this.eurRate, this.usdRate});
+  const GenericEstimator({
+    required this.profile,
+    required this.factors,
+    required this.n,
+    this.eurRate,
+    this.usdRate,
+    this.weightRef,
+    this.weightExp = defaultWeightExponent,
+  });
   final EquipmentProfile profile;
   final FactorTable factors;
   final double n;
   final double? eurRate;
   final double? usdRate;
 
+  /// میانه‌ی وزن ویژه‌ی رده (مرجع ضریب وزن)؛ null = ضریب وزن غیرفعال
+  final double? weightRef;
+  final double weightExp;
+
+  /// ضریب وزن یک قلم: (وزن ویژه ÷ میانه‌ی رده)^m ؛ وقتی وزن یا مرجع نیست، null (بی‌اثر).
+  double? weightFactor(Map<String, Object?> values) {
+    final ref = weightRef;
+    final d = weightDensity(profile, values);
+    if (ref == null || d == null || ref <= 0 || weightExp <= 0) return null;
+    return math.pow(d / ref, weightExp).toDouble();
+  }
+
   /// ضریب کل پیکربندی برای مقادیر یک قلم.
+  /// اگر ضریب وزن فعال باشد جای ضریب فشار را می‌گیرد (اثر فشار در ضخامت و وزن دیده شده است).
   (double, Map<String, (String?, double)>) configFactor(Map<String, Object?> values) {
     var all = 1.0;
     final m = <String, (String?, double)>{};
+    final wf = weightFactor(values);
     for (final g in profile.factorGroups) {
+      if (g == 'PRESS' && wf != null) {
+        m[g] = ('با وزن جایگزین شد', 1.0);
+        continue;
+      }
       final opt = factorOption(g, values);
       final f = opt == null ? 1.0 : factors.get(g, opt);
       m[g] = (opt, f);
       all *= f;
+    }
+    if (profile.weightKey != null) {
+      m['WEIGHT'] = (wf == null ? null : 'وزن ثبت‌شده', wf ?? 1.0);
+      if (wf != null) all *= wf;
     }
     return (all, m);
   }

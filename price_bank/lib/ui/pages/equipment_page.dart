@@ -43,6 +43,9 @@ const _enumFilters = <String, String>{
 };
 
 class _EquipmentPageState extends State<EquipmentPage> {
+  /// رده‌ی همین نمونه‌ی صفحه (با «بازگشت» همان رده و همان فیلترها برمی‌گردد)
+  late String _cat = EquipmentPage.selectedCategory;
+
   final _search = TextEditingController();
   final Map<String, String?> _filters = {};
   final _ranges = <String, (TextEditingController, TextEditingController)>{
@@ -133,17 +136,17 @@ class _EquipmentPageState extends State<EquipmentPage> {
     final showCats = _showCats ?? width >= 1300;
     final method = app.settings.escalationMethod;
     final panel = _CategoryPanel(
-      selected: EquipmentPage.selectedCategory,
-      onSelect: (code) => setState(() => EquipmentPage.selectedCategory = code),
+      selected: _cat,
+      onSelect: (code) => setState(() => _cat = EquipmentPage.selectedCategory = code),
       onClose: () => setState(() => _showCats = false),
     );
-    if (EquipmentPage.selectedCategory != 'PUMP') {
+    if (_cat != 'PUMP') {
       return Row(children: [
         if (showCats) panel,
         Expanded(
           child: GenericCategoryView(
-            key: ValueKey(EquipmentPage.selectedCategory),
-            code: EquipmentPage.selectedCategory,
+            key: ValueKey(_cat),
+            code: _cat,
             onShowCategories: showCats ? null : () => setState(() => _showCats = true),
           ),
         ),
