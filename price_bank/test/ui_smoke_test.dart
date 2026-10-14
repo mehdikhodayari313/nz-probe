@@ -196,6 +196,8 @@ void main() {
 
     // داشبورد: کارت رده‌ها
     await go(tester, 0);
+    await tester.dragUntilVisible(find.text('تجهیزات به تفکیک رده'), find.byType(ListView).last, const Offset(0, -300));
+    await tester.pumpAndSettle();
     expect(find.text('تجهیزات به تفکیک رده'), findsOneWidget);
     // فهرست ظرف‌ها
     EquipmentPage.selectedCategory = 'VESSEL';
