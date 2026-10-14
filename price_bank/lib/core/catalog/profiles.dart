@@ -931,7 +931,7 @@ const _categoryWords = <(String, String)>[
 /// کلیدواژه‌های خاص که بر جایگاه واژه مقدم‌اند (مثل «Pig Launcher & Receiver» که ظرف نیست)
 const _priorityWords = <(String, String)>[
   (r'pig\s*(launcher|receiver)|stripp', 'MISC_PKG'),
-  (r'iwwtp|waste ?water|water ?treatment|reverse ?osmosis|\br\.\s?o\.|تصفیه', 'WATER_TREAT'),
+  (r'iwwtp|water ?treatment|reverse ?osmosis|\br\.\s?o\.\s*(package|unit|system)|پکیج تصفیه|تصفیه‌خانه', 'WATER_TREAT'),
   (r'hvac|air ?condition|fan ?coil|تهویه', 'HVAC'),
 ];
 
