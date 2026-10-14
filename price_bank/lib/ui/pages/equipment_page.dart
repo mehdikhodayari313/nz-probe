@@ -12,10 +12,14 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_grid.dart';
+import 'generic_equipment.dart';
 import 'pump_detail_page.dart';
 
 class EquipmentPage extends StatefulWidget {
   const EquipmentPage({super.key});
+
+  /// رده‌ی انتخاب‌شده (از داشبورد هم قابل تنظیم است)
+  static String selectedCategory = 'PUMP';
 
   @override
   State<EquipmentPage> createState() => _EquipmentPageState();
@@ -126,11 +130,28 @@ class _EquipmentPageState extends State<EquipmentPage> {
     final canEdit = app.canEdit('MECH');
 
     final width = MediaQuery.sizeOf(context).width;
-    final showCats = _showCats ?? width >= 1700;
+    final showCats = _showCats ?? width >= 1300;
     final method = app.settings.escalationMethod;
+    final panel = _CategoryPanel(
+      selected: EquipmentPage.selectedCategory,
+      onSelect: (code) => setState(() => EquipmentPage.selectedCategory = code),
+      onClose: () => setState(() => _showCats = false),
+    );
+    if (EquipmentPage.selectedCategory != 'PUMP') {
+      return Row(children: [
+        if (showCats) panel,
+        Expanded(
+          child: GenericCategoryView(
+            key: ValueKey(EquipmentPage.selectedCategory),
+            code: EquipmentPage.selectedCategory,
+            onShowCategories: showCats ? null : () => setState(() => _showCats = true),
+          ),
+        ),
+      ]);
+    }
 
     return Row(children: [
-      if (showCats) _CategoryPanel(count: all.length, onClose: () => setState(() => _showCats = false)),
+      if (showCats) panel,
       Expanded(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -593,8 +614,9 @@ class _EquipmentPageState extends State<EquipmentPage> {
 
 /// ستون رده‌ها: رشته ← گروه ← رده. رده‌های غیرفعال با برچسب «به‌زودی».
 class _CategoryPanel extends StatelessWidget {
-  const _CategoryPanel({required this.count, required this.onClose});
-  final int count;
+  const _CategoryPanel({required this.selected, required this.onSelect, required this.onClose});
+  final String selected;
+  final ValueChanged<String> onSelect;
   final VoidCallback onClose;
 
   @override
@@ -606,29 +628,45 @@ class _CategoryPanel extends StatelessWidget {
     List<Category> children(String disc, int? parent) =>
         cats.where((c) => c.disciplineCode == disc && c.parentId == parent).toList();
 
+    final counts = {
+      for (final r in app.pb.db.query(
+          "SELECT category_id, COUNT(*) AS n FROM items WHERE status = 'active' GROUP BY category_id"))
+        r['category_id'] as int: r['n'] as int,
+    };
+
     Widget node(Category c, int depth) {
       final kids = cats.where((k) => k.parentId == c.id).toList();
-      final isPump = c.code == 'PUMP';
       final isGroup = kids.isNotEmpty;
+      final isSel = c.code == selected;
+      final n = counts[c.id] ?? 0;
+      final clickable = !isGroup && c.enabled;
       return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-          margin: EdgeInsetsDirectional.only(start: 8.0 + depth * 14, end: 8, top: 2, bottom: 2),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: isPump ? t.colorScheme.primaryContainer : null,
+        Padding(
+          padding: EdgeInsetsDirectional.only(start: 8.0 + depth * 14, end: 8, top: 2, bottom: 2),
+          child: Material(
+            color: isSel ? t.colorScheme.primaryContainer : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
-          ),
-          child: Row(children: [
-            Expanded(
-              child: Text(c.nameFa,
-                  style: (isGroup ? t.textTheme.labelLarge : t.textTheme.bodySmall)?.copyWith(
-                    fontWeight: isGroup || isPump ? FontWeight.w700 : null,
-                    color: c.enabled || isGroup ? null : t.colorScheme.outline,
-                  )),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(10),
+              onTap: clickable ? () => onSelect(c.code) : null,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                child: Row(children: [
+                  Expanded(
+                    child: Text(c.nameFa,
+                        style: (isGroup ? t.textTheme.labelLarge : t.textTheme.bodySmall)?.copyWith(
+                          fontWeight: isGroup || isSel ? FontWeight.w700 : null,
+                          color: c.enabled || isGroup ? null : t.colorScheme.outline,
+                        )),
+                  ),
+                  if (clickable)
+                    Pill(fa(n), color: n == 0 ? t.colorScheme.outline : null)
+                  else if (!c.enabled && !isGroup)
+                    Pill('به‌زودی', color: t.colorScheme.outline),
+                ]),
+              ),
             ),
-            if (isPump) Pill(fa(count))
-            else if (!c.enabled && !isGroup) Pill('به‌زودی', color: t.colorScheme.outline),
-          ]),
+          ),
         ),
         for (final k in kids) node(k, depth + 1),
       ]);
@@ -666,7 +704,7 @@ class _CategoryPanel extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.all(16),
           child: Text(
-            'رده‌های «به‌زودی» در مراحل بعد (ورود MTO، پایپینگ، برق و ابزار دقیق) فعال می‌شوند. ساختار دیتابیس از هم‌اکنون برای همه‌ی آن‌ها آماده است.',
+            'روی هر رده بزنید تا اقلامش نمایش داده شود. اقلام غیرپمپ با «ورود MTO» (داشبورد یا پروژه‌ها و اسناد) وارد می‌شوند. رده‌های «به‌زودی» (پایپینگ، برق، ابزار دقیق، آزمایشگاه) در مراحل بعد فعال می‌شوند.',
             style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8),
           ),
         ),

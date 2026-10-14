@@ -7,6 +7,7 @@ import '../../core/repo/docs_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/mto_import_dialog.dart';
 
 class DocumentsPage extends StatelessWidget {
   const DocumentsPage({super.key});
@@ -23,6 +24,14 @@ class DocumentsPage extends StatelessWidget {
         icon: Icons.folder_rounded,
         title: 'پروژه‌ها و اسناد منبع',
         subtitle: '${fa(projects.length)} پروژه · ${fa(docs.length)} سند',
+        actions: [
+          if (canEdit)
+            FilledButton.icon(
+              onPressed: () => showMtoImportDialog(context),
+              icon: const Icon(Icons.upload_file_rounded),
+              label: const Text('ورود MTO'),
+            ),
+        ],
       ),
       const HelpPanel(
         id: 'documents',

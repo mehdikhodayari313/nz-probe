@@ -63,6 +63,17 @@ class AppState extends ChangeNotifier {
 
   bool canEdit(String discipline) => pb.users.canEdit(user, discipline);
 
+  // کش محاسبه‌ی رده‌های غیرپمپ برای همان revision
+  int _genRev = -1;
+  final Map<int, List<GenericRow>> _gen = {};
+  List<GenericRow> genericRows(int categoryId) {
+    if (_genRev != revision) {
+      _gen.clear();
+      _genRev = revision;
+    }
+    return _gen[categoryId] ??= pb.computeCategory(categoryId);
+  }
+
   // کش محاسبه‌ی پمپ‌ها برای همان revision
   int _pumpRev = -1;
   List<PumpRow> _pumps = const [];

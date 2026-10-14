@@ -11,6 +11,8 @@ import '../format.dart';
 import '../shell.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/mto_import_dialog.dart';
+import 'equipment_page.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({super.key});
@@ -93,6 +95,8 @@ class DashboardPage extends StatelessWidget {
       _ProjectChart(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
+      const SizedBox(height: 16),
+      const _CategoriesCard(),
       const SizedBox(height: 16),
       LayoutBuilder(builder: (context, cons) {
         final wide = cons.maxWidth > 1100;
@@ -694,4 +698,86 @@ class _ProjectChartState extends State<_ProjectChart> {
         const SizedBox(width: 5),
         Text(s, style: Theme.of(context).textTheme.labelSmall),
       ]);
+}
+
+
+/// اقلام هر رده‌ی تجهیزات + ورود MTO.
+class _CategoriesCard extends StatelessWidget {
+  const _CategoriesCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = Theme.of(context);
+    final cats = app.pb.catalog.categories();
+    final parents = {for (final c in cats) c.parentId};
+    final counts = {
+      for (final r in app.pb.db.query(
+          "SELECT category_id, COUNT(*) AS n, (SELECT COUNT(*) FROM price_obs o JOIN items j ON j.id = o.item_id "
+          "WHERE j.category_id = i.category_id AND o.kind = 'quote' AND j.status = 'active') AS q "
+          "FROM items i WHERE status = 'active' GROUP BY category_id"))
+        r['category_id'] as int: (r['n'] as int, r['q'] as int),
+    };
+    final leafs = cats.where((c) => c.enabled && !parents.contains(c.id)).toList();
+    return SectionCard(
+      title: 'تجهیزات به تفکیک رده',
+      subtitle: 'روی هر رده بزنید تا فهرستش باز شود · اقلام غیرپمپ با «ورود MTO» وارد می‌شوند',
+      icon: Icons.category_outlined,
+      trailing: app.canEdit('MECH')
+          ? FilledButton.icon(
+              onPressed: () => showMtoImportDialog(context),
+              icon: const Icon(Icons.upload_file_rounded),
+              label: const Text('ورود MTO'),
+            )
+          : null,
+      child: Wrap(spacing: 10, runSpacing: 10, children: [
+        for (final c in leafs)
+          HoverLift(
+            radius: 12,
+            child: Material(
+              color: t.colorScheme.surfaceContainerLow,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: t.colorScheme.outlineVariant),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  EquipmentPage.selectedCategory = c.code;
+                  AppShell.go(context, AppShell.equipment);
+                },
+                child: Container(
+                  width: 200,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  child: Row(children: [
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(c.nameFa, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                        Text(
+                          (counts[c.id]?.$1 ?? 0) == 0
+                              ? 'خالی'
+                              : '${fa(counts[c.id]!.$2)} استعلام',
+                          style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant),
+                        ),
+                      ]),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (counts[c.id]?.$1 ?? 0) == 0 ? t.colorScheme.surfaceContainerHigh : AppColors.petrol,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(fa(counts[c.id]?.$1 ?? 0),
+                          style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              color: (counts[c.id]?.$1 ?? 0) == 0 ? t.colorScheme.outline : Colors.white)),
+                    ),
+                  ]),
+                ),
+              ),
+            ),
+          ),
+      ]),
+    );
+  }
 }

@@ -6,7 +6,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:price_bank/app/app_state.dart';
 import 'package:price_bank/core/price_bank.dart';
 import 'package:price_bank/core/xlsx/xlsx_reader.dart';
+import 'package:price_bank/core/import/mto_importer.dart';
 import 'package:price_bank/main.dart';
+import 'package:price_bank/ui/pages/equipment_page.dart';
+import 'package:price_bank/ui/pages/generic_item_page.dart';
+import 'package:price_bank/ui/widgets/mto_import_dialog.dart';
 import 'package:price_bank/ui/pages/pump_detail_page.dart';
 
 import 'support.dart';
@@ -171,6 +175,62 @@ void main() {
     await tester.pumpAndSettle();
     expect(app.pb.docs.projects().length, before - 1);
     debugPrint('✓ ' 'حذف پروژه');
+  });
+
+  testWidgets('ورود MTO از پیش‌نمایش، فهرست رده‌ی ظرف و صفحه‌ی قلم', (tester) async {
+    final app = await boot(tester);
+    final a = MtoImporter.analyze(XlsxWorkbook.openFile('test/fixtures/MTO_sample_14040105.xlsx'),
+        fileName: 'MTO_sample_14040105.xlsx');
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).first);
+    showDialog<void>(context: nav.context, builder: (_) => MtoPreviewDialog(analysis: a));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('ورود ۱۹ قلم'), findsOneWidget);
+    await tester.tap(find.textContaining('ورود ۱۹ قلم'));
+    await tester.pumpAndSettle();
+    expect(find.text('ورود MTO کامل شد'), findsOneWidget);
+    await tester.tap(find.text('بسیار خوب'));
+    await tester.pumpAndSettle();
+    final vessel = app.pb.catalog.categoryByCode('VESSEL')!;
+    expect(app.pb.items.count(vessel.id), 4);
+    debugPrint('✓ ' 'ورود MTO از پیش‌نمایش');
+
+    // داشبورد: کارت رده‌ها
+    await go(tester, 0);
+    expect(find.text('تجهیزات به تفکیک رده'), findsOneWidget);
+    // فهرست ظرف‌ها
+    EquipmentPage.selectedCategory = 'VESSEL';
+    await go(tester, nEquipment);
+    expect(find.text('V-141'), findsWidgets);
+    debugPrint('✓ ' 'فهرست ظرف‌ها');
+    for (final code in ['DESALTER', 'CIP', 'CRANE', 'HEX', 'TANK']) {
+      EquipmentPage.selectedCategory = code;
+      await go(tester, 0);
+      await go(tester, nEquipment);
+      debugPrint('✓ ' 'رده‌ی $code');
+    }
+    EquipmentPage.selectedCategory = 'PUMP';
+
+    // صفحه‌ی قلم
+    final id = app.genericRows(vessel.id).firstWhere((r) => r.item.tag == 'V-141').item.id;
+    nav.push(MaterialPageRoute<void>(builder: (_) => GenericItemPage(itemId: id)));
+    await tester.pumpAndSettle();
+    for (final tab in ['مشخصات', 'قیمت‌ها و استعلام‌ها', 'محاسبه‌ی قیمت', 'تاریخچه']) {
+      await tester.tap(find.textContaining(tab).first);
+      await tester.pumpAndSettle();
+      debugPrint('✓ ' 'قلم V-141 — زبانه‌ی $tab');
+    }
+    await tester.tap(find.textContaining('قیمت‌ها و استعلام‌ها').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('مبنا شود').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ثبت'));
+    await tester.pumpAndSettle();
+    expect(app.pb.items.get(id)!.primary!.kind, isNot('estimate'));
+    await tester.tap(find.text('مشخصات').first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ویرایش'));
+    await tester.pumpAndSettle();
+    debugPrint('✓ ' 'مبنا شدن استعلام و حالت ویرایش');
   });
 
   testWidgets('جزئیات پمپ: همه‌ی زبانه‌ها و حالت ویرایش', (tester) async {
