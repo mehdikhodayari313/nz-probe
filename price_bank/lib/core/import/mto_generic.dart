@@ -216,6 +216,12 @@ class MtoGeneric {
     int? bestRow;
     var bestScore = 0;
     for (var r = 1; r <= 40 && r <= sh.maxRow; r++) {
+      // خود سطر عنوان دست‌کم دو عنوان دارد (نه سطر خالی یا عنوان سراسری بالای جدول)
+      var own = 0;
+      for (var c = 1; c <= sh.maxCol && c <= 120; c++) {
+        if (sh.text(r, c).isNotEmpty) own++;
+      }
+      if (own < 2) continue;
       final sub = _subRows(sh, r);
       var desc = false, tag = false, qty = false, price = false;
       for (var c = 1; c <= sh.maxCol && c <= 120; c++) {
@@ -391,7 +397,7 @@ class MtoGeneric {
         n++;
         if (RegExp(r'^\d{1,4}(\.\d+)?$').hasMatch(t)) k++;
       }
-      return n == 0 ? 1 : k / n;
+      return n == 0 ? 0 : k / n;
     }
 
     // شرح: طولانی‌ترین متن میان نامزدها
@@ -407,7 +413,11 @@ class MtoGeneric {
     if (tags.length > 1) {
       tags.sort((a, b) {
         final s = _score(b.label).compareTo(_score(a.label));
-        return s != 0 ? s : numericShare(b).compareTo(numericShare(a));
+        if (s != 0) return s;
+        final e = (avgLen(a) == 0 ? 1 : 0).compareTo(avgLen(b) == 0 ? 1 : 0); // ستون خالی آخر
+        if (e != 0) return e;
+        final n = numericShare(b).compareTo(numericShare(a));
+        return n != 0 ? n : a.col.compareTo(b.col);
       });
       for (final t in tags.skip(1)) {
         if (numericShare(t) < 0.5) {

@@ -117,7 +117,7 @@ void main() {
       expect(tk.goingIrr, closeTo(530386.0 * 142134, 1));
       expect(groupOf(a, 'TANK').items.map((i) => i.tag), contains('TK-003'));
       expect(groupOf(a, 'HEX').items.map((i) => i.tag), containsAll(['E-001-A/B', 'E-002-A/B']));
-      expect(groupOf(a, 'HEATER').items.length, 2);
+      expect(groupOf(a, 'HEATER').items.map((i) => i.tag).toList(), ['H-001-A1/A2', 'H-001-B1/B2']);
       expect(groupOf(a, 'VESSEL').items.map((i) => i.tag), contains('V-001-A/B'));
       expect(groupOf(a, 'PUMP').items.map((i) => i.tag), containsAll(['P-001-A/B', 'P-902']));
       expect(groupOf(a, 'CRANE').items.length, 13);
