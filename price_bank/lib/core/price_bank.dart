@@ -2,13 +2,16 @@
 // این فایل به Flutter وابسته نیست؛ هم در برنامه و هم در آزمون‌ها استفاده می‌شود.
 
 import 'calc/estimator.dart';
+import 'calc/generic_engine.dart';
 import 'calc/pump_engine.dart';
 import 'calc/series.dart';
 import 'db/db.dart';
+import 'import/mto_importer.dart';
 import 'import/v8_importer.dart';
 import 'repo/audit.dart';
 import 'repo/catalog_repo.dart';
 import 'repo/docs_repo.dart';
+import 'repo/generic_templates.dart';
 import 'repo/indices_repo.dart';
 import 'repo/items_repo.dart';
 import 'repo/seed.dart';
@@ -19,6 +22,22 @@ class PumpRow {
   const PumpRow(this.item, this.result);
   final ItemRecord item;
   final PumpCalcResult result;
+}
+
+/// یک قلم غیرپمپ با نتیجه‌ی محاسبه‌ی قیمت اصلی و آمار استعلام‌ها (همه به یوروی سال هدف).
+class GenericRow {
+  GenericRow(this.item, this.result, this.quoteEurTargets);
+  final ItemRecord item;
+  final GenericCalcResult result;
+
+  /// قیمت هر استعلام فروشنده، تعدیل‌شده به یوروی سال هدف
+  final List<double> quoteEurTargets;
+
+  int get quoteCount => item.observations.where((o) => o.kind == 'quote').length;
+  double? get quoteMin => quoteEurTargets.isEmpty ? null : quoteEurTargets.reduce((a, b) => a < b ? a : b);
+  double? get quoteMax => quoteEurTargets.isEmpty ? null : quoteEurTargets.reduce((a, b) => a > b ? a : b);
+  double? get quoteAvg =>
+      quoteEurTargets.isEmpty ? null : quoteEurTargets.reduce((a, b) => a + b) / quoteEurTargets.length;
 }
 
 class PriceBank {
@@ -49,6 +68,7 @@ class PriceBank {
 
   static PriceBank _init(Db db, SeedData seed) {
     seedDatabase(db, seed);
+    ensureGenericTemplates(db);
     final pb = PriceBank._(db);
     pb.audit.userId = pb.users.defaultUser().id;
     return pb;
@@ -57,6 +77,8 @@ class PriceBank {
   void close() => db.close();
 
   V8Importer v8Importer() => V8Importer(db, audit, catalog, items, docs);
+
+  MtoImporter mtoImporter() => MtoImporter(db, audit, catalog, items, docs);
 
   // ---------------------------------------------------------------------------
   // محاسبات
@@ -80,6 +102,37 @@ class PriceBank {
             .toPumpSettings(fxTypeOverride: fxType, targetYearOverride: targetYear, methodOverride: method),
         factorTable,
       );
+
+  GenericEngine genericEngine({String? fxType, int? targetYear, String? method}) => GenericEngine(
+        seriesSnapshot,
+        settingsRepo
+            .load()
+            .toPumpSettings(fxTypeOverride: fxType, targetYearOverride: targetYear, methodOverride: method),
+      );
+
+  static GenericInput genericInputFor(PriceObs? o) => GenericInput(
+        unitPrice: o?.amountValue,
+        currency: o?.currency,
+        costYear: o?.costYearValue,
+        costMonth: o?.costMonth,
+        sourceFxRate: o?.effectiveSourceFx,
+      );
+
+  /// همه‌ی اقلام یک رده‌ی غیرپمپ با محاسبه.
+  List<GenericRow> computeCategory(int categoryId, {GenericEngine? engine}) {
+    final e = engine ?? genericEngine();
+    return [
+      for (final it in items.loadCategory(categoryId))
+        GenericRow(
+          it,
+          e.calculate(genericInputFor(it.primary)),
+          [
+            for (final o in it.observations.where((o) => o.kind == 'quote'))
+              if (e.calculate(genericInputFor(o)).eurTarget.number case final v?) v,
+          ],
+        ),
+    ];
+  }
 
   static PumpInput inputFor(ItemRecord item) {
     final o = item.primary;

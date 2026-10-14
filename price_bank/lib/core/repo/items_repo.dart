@@ -326,6 +326,50 @@ LEFT JOIN vendors v ON v.id = o.vendor_id''';
     );
   }
 
+  /// افزودن یک مشاهده‌ی قیمت (استعلام، برآورد، …) به قلم. اگر [primary] باشد، قیمت اصلی محاسبه می‌شود.
+  int addObservation(
+    int itemId, {
+    int? documentId,
+    int? vendorId,
+    String kind = 'estimate',
+    bool primary = false,
+    String? currency,
+    Object? amount,
+    Object? costYear,
+    String? costYearText,
+    int? costMonth,
+    String? sourceLocation,
+    double? sourceFxRate,
+    String? notes,
+  }) {
+    return db.transaction(() {
+      if (primary) db.execute('UPDATE price_obs SET is_primary = 0 WHERE item_id = ?', [itemId]);
+      return _insertObs(itemId, {
+        'document_id': documentId,
+        'vendor_id': vendorId,
+        'kind': kind,
+        'is_primary': primary ? 1 : 0,
+        'currency': currency,
+        'amount': amount,
+        'cost_year': costYear ?? costYearText,
+        'cost_month': costMonth,
+        'source_location': sourceLocation,
+        'source_fx_rate': sourceFxRate,
+        'notes': (notes == null || notes.isEmpty) ? null : notes,
+      });
+    });
+  }
+
+  /// انتخاب یک مشاهده‌ی قیمت به عنوان قیمت اصلی قلم (مبنای تعدیل).
+  void setPrimary(int itemId, int obsId, {String? reason}) {
+    final old = db.scalar('SELECT id FROM price_obs WHERE item_id = ? AND is_primary = 1', [itemId]);
+    if (old == obsId) return;
+    db.transaction(() {
+      db.execute('UPDATE price_obs SET is_primary = CASE WHEN id = ? THEN 1 ELSE 0 END WHERE item_id = ?', [obsId, itemId]);
+      audit.log(entity: 'item', entityId: itemId, field: 'قیمت اصلی', oldValue: old, newValue: obsId, reason: reason);
+    });
+  }
+
   /// ویرایش چند فیلد یک قلم؛ فقط فیلدهای تغییرکرده ذخیره و در تاریخچه ثبت می‌شوند.
   /// برمی‌گرداند: تعداد فیلدهای تغییرکرده.
   int update(int itemId, Map<String, Object?> changes, {String? reason}) {

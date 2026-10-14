@@ -114,6 +114,69 @@ class CatalogRepo {
           EnumOption(r['value'] as String, r['label_fa'] as String?, r['description'] as String?),
       ];
 
+  /// کلید فیلد مشخصات از روی برچسب منبع: «Design Pressure» ← «mto_design_pressure».
+  static String specKey(String label) {
+    var k = label.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]+'), '_').replaceAll(RegExp(r'^_+|_+$'), '');
+    if (k.isEmpty) k = 'f${label.hashCode.abs()}';
+    if (k.length > 48) k = k.substring(0, 48);
+    return 'mto_$k';
+  }
+
+  /// فیلد مشخصات فنی با برچسب [label] (از شرح MTO) را اگر نیست به قالب رده اضافه می‌کند.
+  /// برمی‌گرداند: (کلید، تازه ساخته شد؟)
+  (String, bool) ensureSpecField(int categoryId, String label) {
+    final key = specKey(label);
+    if (fields(categoryId).any((f) => f.key == key)) return (key, false);
+    final sort = (db.scalar('SELECT COALESCE(MAX(sort), 0) + 1 FROM field_defs WHERE category_id = ?', [categoryId]) as int);
+    db.execute(
+      'INSERT OR IGNORE INTO field_defs(category_id, key, label_fa, label_en, group_key, group_fa, storage, data_type, '
+      "sort, source_ref) VALUES (?,?,?,?,'mto_specs','مشخصات فنی (از MTO)','spec','text',?,'شرح MTO')",
+      [categoryId, key, specLabelFa(label), label, sort],
+    );
+    _fieldCache.remove(categoryId);
+    return (key, true);
+  }
+
+  /// ترجمه‌ی برچسب‌های رایج شرح MTO.
+  static String specLabelFa(String label) {
+    var t = label.trim();
+    const words = <String, String>{
+      'design pressure': 'فشار طراحی',
+      'design press.': 'فشار طراحی',
+      'design temperature': 'دمای طراحی',
+      'design code & standard': 'کد و استاندارد طراحی',
+      'design codes & standards': 'کد و استاندارد طراحی',
+      'installation position': 'وضعیت نصب',
+      'roof type': 'نوع سقف',
+      'heat exchanged': 'حرارت مبادله‌شده',
+      'rated heat exchanged': 'حرارت نامی',
+      'max. injection rate': 'حداکثر نرخ تزریق',
+      'max. discharge pressure': 'حداکثر فشار رانش',
+      'max. flow rate': 'حداکثر دبی',
+      'normal flow rate': 'دبی نرمال',
+      'rated flow rate': 'دبی نامی',
+      'inlet flow rate': 'دبی ورودی',
+      'design flow': 'دبی طراحی',
+      'discharge pressure': 'فشار رانش',
+      'total capacity': 'ظرفیت کل',
+      'capacity': 'ظرفیت',
+      'agitator required': 'همزن',
+      'tank capacity': 'حجم مخزن',
+      'pumps qty.': 'تعداد پمپ',
+      'type': 'نوع',
+      'size': 'ابعاد',
+      'material': 'جنس',
+      'mat.': 'جنس',
+    };
+    final l = t.toLowerCase();
+    for (final e in words.entries) {
+      if (l == e.key) return e.value;
+      if (l.startsWith('${e.key} ')) return '${e.value} ${t.substring(e.key.length).trim()}';
+    }
+    if (l.startsWith("nace 'mr-0175' required")) return 'الزام NACE MR-0175${t.length > 24 ? ' ${t.substring(24).trim()}' : ''}';
+    return t;
+  }
+
   /// افزودن گزینه‌ی جدید به یک فهرست (مثلاً سرویس جدید یا کلاس متریال جدید).
   void addOption(String listKey, String value, {String? labelFa}) {
     final sort = (db.scalar('SELECT COALESCE(MAX(sort),0)+1 FROM enum_options WHERE list_key = ?', [listKey]) as int?) ?? 0;
