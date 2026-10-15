@@ -2,6 +2,7 @@
 
 | نسخه | فایل | کد منبع |
 |---|---|---|
+| ۰٫۹٫۱ (۱۴۰۵/۰۷/۲۳) — دیسالتر: جدول سه روش در پنجره‌ی باریک، Scope و مرحله‌ی پروژه فقط در تخمین، فیلترهای مؤثر | [price_bank_v0.9.1_windows.zip](price_bank_v0.9.1_windows.zip) | [commit e547e92](https://github.com/mehdikhodayari313/nz-probe/tree/e547e926f9e93743bf3acd2a88140bcd5c6d6e6b/price_bank) |
 | ۰٫۹ (۱۴۰۵/۰۷/۲۳) — بانک کمپرسور هوا، همه‌ی استعلام‌ها، شاخص BLS 333912 | [price_bank_v0.9_windows.zip](price_bank_v0.9_windows.zip) | [commit 9ed5fc3](https://github.com/mehdikhodayari313/nz-probe/tree/9ed5fc32b06cc7b111ec1cbb1497ffaeed63a42d/price_bank) |
 | ۰٫۸ (۱۴۰۵/۰۷/۲۳) — بانک دیسالتر، شاخص ترکیبی، روش تعدیل مستقل هر تجهیز | [price_bank_v0.8_windows.zip](price_bank_v0.8_windows.zip) | [commit 852156f](https://github.com/mehdikhodayari313/nz-probe/tree/852156f42afd01267c4340637e19aa187dd5b977/price_bank) |
 | ۰٫۷ (۱۴۰۵/۰۷/۲۳) | [price_bank_v0.7_windows.zip](price_bank_v0.7_windows.zip) | [commit 4e72739](https://github.com/mehdikhodayari313/nz-probe/tree/4e727393748f0dfe0f13d6e13111ddb5543e6548/price_bank) |
