@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'price_bank/**'
+      - '!price_bank/spec/**'
       - '.github/workflows/price_bank.yml'
   workflow_dispatch:
 

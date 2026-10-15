@@ -1,0 +1,47 @@
+name: spec_extract
+
+# اکسل آپلودشده در price_bank/spec/inbox → خلاصه‌ی موارد قطعی در price_bank/spec/pending
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'price_bank/spec/inbox/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: spec_extract
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: price_bank
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -q openpyxl
+      - name: Extract final items
+        run: |
+          shopt -s nullglob nocaseglob
+          files=(spec/inbox/*.xlsx spec/inbox/*.xlsm)
+          if [ ${#files[@]} -eq 0 ]; then echo "inbox خالی است"; exit 0; fi
+          for f in "${files[@]}"; do
+            echo "== $f"
+            python3 -I tool/extract_final.py "$f" --spec spec
+          done
+      - name: Commit summaries
+        run: |
+          git config user.name spec-bot
+          git config user.email spec-bot@users.noreply.github.com
+          git add spec/pending spec/state.json
+          if git diff --cached --quiet; then echo "تغییری نیست"; exit 0; fi
+          git commit -m "spec: extract final items from inbox"
+          git push
