@@ -71,6 +71,9 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   (`catalog/eurostat_ppi.dart`, inserted on startup with INSERT OR IGNORE).
 - `_reparseExisting` now fills new template fields once per template change (app_meta `profile_fields_<CODE>`).
 - Finding: Pazanan R02 1393 (2.5 M€) escalated to 1404 ≈ 3.41 M€ vs 1404 quotes avg 1.93 M€ (−43%).
+- Delivered to user: v0.8 zip (chat + `price-bank-releases`) and `docs/data/PPI_all_series_14050723.csv` (all PPI
+  series, Gregorian + Jalali blend, status official/imputed/forecast); later extended by the HEX session.
+- User statement: "روش تعدیل هر تجهیز جدا باشه" (each equipment its own escalation method) — standing rule.
 
 ## User statements worth remembering
 - Templates/parameters for electrical, instrumentation and remaining mechanical equipment will come later; the

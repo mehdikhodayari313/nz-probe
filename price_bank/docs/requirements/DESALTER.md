@@ -31,4 +31,5 @@ Escalation_Index، Assumptions، Test_Cases). فایل کامل commit نمی‌
 - n_B برازش‌شده ≈ ۰٫۳۰ (۶ نقطه) — صرفه‌ی مقیاس قوی؛ فعلاً ۰٫۶ Provisional.
 
 ## باز
+- مرجع شاخص‌ها برای بررسی بعدی: `docs/data/PPI_all_series_14050723.csv` (سری‌های سبد: PPI_EU_C2529/C2711/C2813_JALALI).
 - kVA ترانس‌ها، سال CSV، کالیبره‌ی ضرایب و وزن‌های سبد شاخص (Provisional).

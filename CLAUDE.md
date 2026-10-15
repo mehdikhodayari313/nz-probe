@@ -42,6 +42,13 @@
   2. وقتی کاربر گفت «نهایی است/اعمال کن»: وضعیت را «قطعی» کن، چند نمونه‌ی واقعی همان اکسل را خودت به‌عنوان
      آزمون (ورودی → قیمت مورد انتظار) در `test/spec/` بگذار، فهرست تغییرات را نشان بده، پس از تأیید اعمال و build کن.
   اکسل واقعی را commit نکن؛ فقط اعداد لازم در md/آزمون‌ها.
+- **شاخص‌ها (PPI):** مرجع همه‌ی سری‌ها برای بررسی‌ها `price_bank/docs/data/PPI_all_series_14050723.csv`
+  (میلادی + معادل سال شمسی ۰٫۷۹×(Y+621)+۰٫۲۱×(Y+622)، پیش‌بینی ۲۰۲۶–۲۷ با +۲٪). یوروستات از محیط Claude بسته است:
+  سری جدید → کد NACE را به `tool/fetch_eurostat.py` اضافه و push کن؛ workflow `pb_indices` نتیجه را در شاخه‌ی
+  `ci-pb-indices` می‌گذارد (`eurostat_ppi.json`). سری‌ای که برنامه باید داشته باشد → `lib/core/catalog/eurostat_ppi.dart`
+  (هنگام باز شدن برنامه با INSERT OR IGNORE اضافه می‌شود؛ مهاجرت لازم نیست).
+- اکسل/بانکی که کاربر برای آزمون می‌دهد: فقط نسخه‌ی کوچک (ورودی‌ها + Test_Cases، بدون فرمول) در `test/fixtures_private/`
+  (نمونه: `tool/make_desalter_fixture.py`)؛ فایل کامل commit نشود.
 - `spec/state.json` را دستی ویرایش نکن (فقط اسکریپت).
 - فایل‌های واقعی پروژه‌ها محرمانه‌اند؛ مخزن خصوصی است و نباید عمومی شود.
 
@@ -78,6 +85,12 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   Read with `git clone -q --depth 1 -b <branch> https://github.com/mehdikhodayari313/nz-probe <dir>`;
   check `commit.txt` == pushed SHA (test ≈4 min, Windows build ≈8–10 min after push).
 - Quick failure scan: `grep -E " error |warning" analyze.txt; grep -n "\[E\]\|All tests\|Some tests" test.txt`.
+- `gh` works in the sandbox (`gh run list/view/rerun`). Two pushes a few minutes apart run in parallel and both
+  force-push the ci-pb-* branches; the OLDER run can finish last. Always compare `commit.txt` with the released SHA;
+  if it differs, `gh run rerun <run-id>` of the final commit before taking the zip.
+- Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx]` (CI passes both
+  fixtures; expects 146 pumps and 9 desalters).
+- Current released version: **0.8** (1405/07/23, commit 852156f; zip on `price-bank-releases`).
 - Releases/tags cannot be created from Claude sessions (403). Published builds live on branch
   **`price-bank-releases`** (`price_bank_vX.Y_windows.zip` + README table) — add each new version there.
 - Commit trailer (always):
@@ -100,6 +113,10 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   validation workbook (repo is private). `test/fixtures/*` and `test/fixtures/full/*` are anonymized copies
   (project names replaced, numbers randomized) — regenerate the same way if needed.
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.
+- Bank importers must read **cached values** of input columns: some inputs are formulas (e.g. desalter capacity
+  `=ROUND(536*BPD_per_m3h,0)`); skipping formula cells silently lost them.
+- The indices page series list is lazy; adding series pushes others off-screen → UI tests must `scrollUntilVisible`.
+- `_reparseExisting` fills new template fields only once per template change (app_meta `profile_fields_<CODE>`).
 
 ## Code map (`price_bank/lib`)
 - `core/` (pure Dart, used by tests): `price_bank.dart` (facade: repos, engines, `computeCategory`,
@@ -110,30 +127,45 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - `core/calc/`: `pump_engine.dart` (v8-exact pump calc, golden-tested on 146 records), `methods.dart`
   (M0–M6 definitions/stats, `MethodFactors`, `methodLabelFor`), `generic_engine.dart` (non-pump escalation),
   `estimator.dart` (pump estimator + transfer calculator), `generic_estimator.dart` (CAP/NEAR/MANUAL,
-  config factor incl. optional WEIGHT factor), `backtest.dart` (method accuracy from bank: old price vs quotes).
+  config factor incl. optional WEIGHT factor), `backtest.dart` (method accuracy from bank: old price vs quotes),
+  `desalter.dart` (desalter bank = Calc_Spec of Desalters_Price_Bank v8: factors, NormEsc, Coef A/B, ln-ln fit,
+  estimator A/B/C + weighted final; `computeCategory('DESALTER')` uses it and puts `GenericRow.des`).
+  `methods.dart` also has M7 composite basket (`MixPart`, `MethodFactors.compositeIndex`, `mixLabel`).
 - `core/catalog/profiles.dart`: per-category templates (fields, MTO label rules, size driver + n, factor groups,
   `weightKey`), `parseMtoDescription`, `extractPumpSpecs`, `extractFreeSpecs` (free text like
-  "ID=5300 mm, 19.5 bar D.P."), `suggestCategoryFromText` (+priority words).
+  "ID=5300 mm, 19.5 bar D.P."), `suggestCategoryFromText` (+priority words), `defaultCategoryMethod` /
+  `defaultCategoryMix`, `factorOption(g, v, code:)`; part file `desalter_profile.dart` (desalter fields, Factors_DES
+  seeds, lists DES_*, `inferDesalter` from MTO text); `eurostat_ppi.dart` (PPI series seeded on startup).
 - `core/import/`: `mto_importer.dart` (Pazanan quote-block format + orchestration, `run()` writes items and
   observations, doc info, revision date, filename info), `mto_generic.dart` (any other layout: sheet kind
   items/install/skip, header detection incl. multi-row/merged headers, column roles, multi-row items,
-  sections, Kg units, continuation pages, install-sheet weights), `v8_importer.dart`.
+  sections, Kg units, continuation pages, install-sheet weights), `v8_importer.dart`, `desalter_importer.dart`
+  (Desalters bank: columns by header text, cached values, vendors/quotes, KPL year correction, MTO duplicates).
 - `core/xlsx/xlsx_reader.dart`: own xlsx reader (merges, comments, fills).
 - `app/app_state.dart`: AppState (revision-cached pumps / genericRows / allRows), AppScope.
 - `ui/`: `shell.dart` (sidebar, top bar: target year, FX table, method chip, Rial/Toman, Back button),
   `pages/` (dashboard, indices, methods, equipment + generic_equipment + item pages, estimator +
-  generic_estimator_tab, factors, documents, history, users, settings), `widgets/` (common, data_grid,
+  generic_estimator_tab + desalter_estimator_tab, factors, documents, history, users, settings), `widgets/` (common, data_grid,
   field_editor, factor_dialog, mto_import_dialog, category_picker), `theme.dart`, `format.dart`.
 - Outside `lib/`: `spec/` (Excel «خروجی_قطعی» → `pending/*.json` via `tool/extract_final.py` and the
   `spec_extract` workflow; see Part 1 above), `tool/` (gen_seed, extract_final, make_export_template),
-  `docs/HISTORY.md`, `test/fixtures*/` (anonymized MTO fixtures; real client files are never committed).
+  `docs/HISTORY.md`, `docs/requirements/<CODE>.md` (per-category decisions; DESALTER قطعی, HEX در حال بررسی),
+  `docs/data/` (PPI CSV), `tool/fetch_eurostat.py` + `.github/workflows/pb_indices.yml`, `tool/data/` (raw Eurostat JSON),
+  `test/fixtures*/` (anonymized MTO fixtures; real client files are never committed).
 
 ## Domain essentials
 - Default escalation **M6** = EU pump PPI (C28.13) + API 610 price floor (pumps S/D only). For non-pump
   categories M6 ≡ M4 with the category's PPI. **User rule: each equipment has its own escalation method** (the
   top-bar/pump method never applies to other categories); M7 = composite PPI basket per category (`cat_mix_<CODE>`).
-- Desalter = user's Desalters_Price_Bank v8.x method (docs/requirements/DESALTER.md); bank file is the reference. Per-category settings keys: `cat_method_<CODE>`, `cat_ppi_<CODE>`,
-  `cat_n_<CODE>`, `cat_est_<CODE>`, `cat_wexp_<CODE>`. Factor sets `PUMP_ROT`, `GEN_<CODE>`.
+- Per-category settings keys: `cat_method_<CODE>`, `cat_ppi_<CODE>`, `cat_n_<CODE>`, `cat_est_<CODE>`, `cat_wexp_<CODE>`,
+  `cat_mix_<CODE>` ("PPI_EU_C2529_GREG:0.7;…"; empty = profile default), `cat_mixrule_<CODE>` (Strict | empty =
+  Renormalize). `AppSettings.methodFor(code)` = cat_method else `defaultCategoryMethod` (DESALTER M7, others M4).
+  Factor sets `PUMP_ROT`, `GEN_<CODE>`.
+- Desalter = user's Desalters_Price_Bank v8.x method (docs/requirements/DESALTER.md); the bank file is the reference.
+  User decisions: KPL-476 cost year 1394/10 (corrected on import), Pazanan 1393 R02 and 1404 quotes are separate
+  records, MTO desalter with same tag base + same amount = duplicate (archived/skipped). Params keys `des_n_a`,
+  `des_fit_a`, `des_n_b`, `des_fit_b`, `des_kva_on`, `des_kva_m`, `des_kva_base`, `des_final`. Desalter keeps the
+  empty-weight field but no WEIGHT/PRESS factor.
 - Price flow: unit price in source currency → EUR at source year (IRR via document source FX if set) → escalate
   EUR → convert with target-year FX table. CPI/rial inflation is NOT used (validation showed ~50% under-estimate).
 - Vessel-type empty weight (`empty_weight_kg`) is optional and neutral until ≥2 items of the category have it;
@@ -147,9 +179,13 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
    in `profiles.dart` (new fields of existing MTO items are filled once automatically on startup).
 2. Escalation per equipment type: each category has its own method (`methodFor`, default M4; DESALTER M7 composite).
    User may send exact methods/baskets per type → `defaultCategoryMethod` / `defaultCategoryMix` in profiles.dart.
-3. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
-   basket weights are still Provisional. Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
-4. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
+3. HEX (heat exchangers): draft in `docs/requirements/HEX.md` (در حال بررسی) — proposed C28.25 + optional M7 baskets
+   (C24.1 steel, C24.44 copper, C24.42 aluminium); fired heater → HEATER. Those series are only in the PPI CSV /
+   `tool/data/eurostat_ppi_20261015b.json`, NOT yet in the app (`eurostat_ppi.dart`) — add when the user approves.
+4. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
+   basket weights are still Provisional. Finding to discuss: Pazanan 1393 estimate escalated ≈3.41 M€ vs 1404 quotes
+   1.93 M€ (−43%). Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
+5. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens
 - Read only the files the task touches (use the code map). Prefer targeted `grep`/`sed -n` over whole files.
