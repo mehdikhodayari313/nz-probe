@@ -9,13 +9,16 @@ import os
 import sys
 import urllib.request
 
-NACE = ["C2420", "C2511", "C2529", "C2530", "C2651", "C2711", "C2712", "C2813", "C2814", "C2829", "C28"]
+NACE = ["C2410", "C2420", "C2442", "C2444", "C2511", "C2529", "C2530", "C2651", "C2711", "C2712", "C2813", "C2814",
+        "C2825", "C2829", "C28"]
+# اگر EA20 خالی بود (محرمانه)، همین سری برای EU27_2020 هم گرفته می‌شود (کلید <nace>_EU27)
+FALLBACK_GEO = "EU27_2020"
 URL = ("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sts_inppd_a"
-       "?format=JSON&geo=EA20&nace_r2={n}&unit=I21&lang=EN")
+       "?format=JSON&geo={g}&nace_r2={n}&unit=I21&lang=EN")
 
 
-def fetch(n):
-    with urllib.request.urlopen(URL.format(n=n), timeout=90) as r:
+def fetch(n, g="EA20"):
+    with urllib.request.urlopen(URL.format(n=n, g=g), timeout=90) as r:
         d = json.load(r)
     time_idx = d["dimension"]["time"]["category"]["index"]
     label = d["dimension"]["nace_r2"]["category"]["label"].get(n, n)
@@ -45,6 +48,11 @@ def main():
             res[n] = {"label": label, "values": series, "dims": dims}
             ys = sorted(series)
             summ.append(f"{n}\t{label}\t{ys[0] if ys else '-'}..{ys[-1] if ys else '-'}\t{len(ys)} years\t{dims}")
+            if not ys:
+                label2, series2, dims2 = fetch(n, FALLBACK_GEO)
+                res[n + "_EU27"] = {"label": label2, "values": series2, "dims": dims2}
+                y2 = sorted(series2)
+                summ.append(f"{n}_EU27\t{label2}\t{y2[0] if y2 else '-'}..{y2[-1] if y2 else '-'}\t{len(y2)} years")
         except Exception as e:  # noqa
             res[n] = {"error": str(e)}
             summ.append(f"{n}\tERROR {e}")
