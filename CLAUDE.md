@@ -90,9 +90,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - `gh` works in the sandbox (`gh run list/view/rerun`). Two pushes a few minutes apart run in parallel and both
   force-push the ci-pb-* branches; the OLDER run can finish last. Always compare `commit.txt` with the released SHA;
   if it differs, `gh run rerun <run-id>` of the final commit before taking the zip.
-- Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx]` (CI passes both
-  fixtures; expects 146 pumps and 9 desalters).
-- Current released version: **0.8** (1405/07/23, commit 852156f; zip on `price-bank-releases`).
+- Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx] [compressor bank xlsx]` (CI passes
+  all three fixtures; expects 146 pumps, 9 desalters, 10 compressors / 3 quotes / 4 peers).
+- Current released version: **0.9** (1405/07/23, air compressor bank; zip on `price-bank-releases`).
 - Releases/tags cannot be created from Claude sessions (403). Published builds live on branch
   **`price-bank-releases`** (`price_bank_vX.Y_windows.zip` + README table) — add each new version there.
 - Commit trailer (always):
@@ -130,19 +130,22 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   (M0–M6 definitions/stats, `MethodFactors`, `methodLabelFor`), `generic_engine.dart` (non-pump escalation),
   `estimator.dart` (pump estimator + transfer calculator), `generic_estimator.dart` (CAP/NEAR/MANUAL,
   config factor incl. optional WEIGHT factor), `backtest.dart` (method accuracy from bank: old price vs quotes),
-  `desalter.dart` (desalter bank = Calc_Spec of Desalters_Price_Bank v8: factors, NormEsc, Coef A/B, ln-ln fit,
+  `compressor.dart` (air compressor bank = Calc_Spec of Air_Compressor v8: per-compressor NormEsc, estimator A/A2/B/C/E;
+  `computeCategory('COMPRESSOR')` puts `GenericRow.cmp`), `desalter.dart` (desalter bank = Calc_Spec of Desalters_Price_Bank v8: factors, NormEsc, Coef A/B, ln-ln fit,
   estimator A/B/C + weighted final; `computeCategory('DESALTER')` uses it and puts `GenericRow.des`).
   `methods.dart` also has M7 composite basket (`MixPart`, `MethodFactors.compositeIndex`, `mixLabel`).
 - `core/catalog/profiles.dart`: per-category templates (fields, MTO label rules, size driver + n, factor groups,
   `weightKey`), `parseMtoDescription`, `extractPumpSpecs`, `extractFreeSpecs` (free text like
   "ID=5300 mm, 19.5 bar D.P."), `suggestCategoryFromText` (+priority words), `defaultCategoryMethod` /
   `defaultCategoryMix`, `factorOption(g, v, code:)`; part file `desalter_profile.dart` (desalter fields, Factors_DES
-  seeds, lists DES_*, `inferDesalter` from MTO text); `eurostat_ppi.dart` (PPI series seeded on startup).
+  seeds, lists DES_*, `inferDesalter` from MTO text); part file `compressor_profile.dart` (Factors_CMP seeds, lists CMP_*,
+  `inferCompressor`); `us_ppi.dart` (BLS PCU333912 seeded on startup); `eurostat_ppi.dart` (PPI series seeded on startup).
 - `core/import/`: `mto_importer.dart` (Pazanan quote-block format + orchestration, `run()` writes items and
   observations, doc info, revision date, filename info), `mto_generic.dart` (any other layout: sheet kind
   items/install/skip, header detection incl. multi-row/merged headers, column roles, multi-row items,
   sections, Kg units, continuation pages, install-sheet weights), `v8_importer.dart`, `desalter_importer.dart`
-  (Desalters bank: columns by header text, cached values, vendors/quotes, KPL year correction, MTO duplicates).
+  (Desalters bank: columns by header text, cached values, vendors/quotes, KPL year correction, MTO duplicates),
+  `compressor_importer.dart` (air compressor bank: all quotes incl. no-reply, KPL fix, price-less AIR_DRYER item per IA/PA package).
 - `core/xlsx/xlsx_reader.dart`: own xlsx reader (merges, comments, fills).
 - `app/app_state.dart`: AppState (revision-cached pumps / genericRows / allRows), AppScope.
 - `ui/`: `shell.dart` (sidebar, top bar: target year, FX table, method chip, Rial/Toman, Back button),
@@ -160,6 +163,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   categories M6 ≡ M4 with the category's PPI. **User rule: each equipment has its own escalation method** (the
   top-bar/pump method never applies to other categories); M7 = composite PPI basket per category (`cat_mix_<CODE>`).
 - Per-category settings keys: `cat_method_<CODE>`, `cat_ppi_<CODE>`, `cat_n_<CODE>`, `cat_est_<CODE>`, `cat_wexp_<CODE>`,
+  M5 uses `defaultCategoryUsPpi(code)` (COMPRESSOR = PPI_US_333912_GREG, others pump 333914).
+  Compressor params `cmp_n`, `cmp_fit`, `cmp_kw`, `cmp_bench`, `cmp_min_peers`, `cmp_final`.
   `cat_mix_<CODE>` ("PPI_EU_C2529_GREG:0.7;…"; empty = profile default), `cat_mixrule_<CODE>` (Strict | empty =
   Renormalize). `AppSettings.methodFor(code)` = cat_method else `defaultCategoryMethod` (DESALTER M7, others M4).
   Factor sets `PUMP_ROT`, `GEN_<CODE>`.
@@ -187,8 +192,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 4. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
    basket weights are still Provisional. Finding to discuss: Pazanan 1393 estimate escalated ≈3.41 M€ vs 1404 quotes
    1.93 M€ (−43%). Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
-5. Air compressor bank (docs/requirements/COMPRESSOR.md): FINAL (user decisions in md: KPL 1394/10, all quotes,
-   IA/PA package in COMPRESSOR + AIR_DRYER, BLS PCU333912 + method E). Waiting user OK on package/dryer report, then implement.
+5. Air compressor bank (docs/requirements/COMPRESSOR.md): implemented in v0.9. Factors_CMP still Provisional (4 peers only;
+   Domestic 0.6 is circular). Next: AIR_DRYER bank — price-less items CMP-00xx-DRY wait for manual prices (estimate in remarks).
 6. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens

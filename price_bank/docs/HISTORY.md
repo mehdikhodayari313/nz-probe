@@ -90,3 +90,14 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - PPI CSV: added C28.25, C24/C24.1(≡C24.10), C24.2(≡C24.20), C25.3(≡C25.30, DE chain-linked <2018), C24.42, C24.44 (Eurostat) and US BLS 331110/331210/332410(-1) as check-only alternatives.
 - Workflow pb_indices now also runs tool/fetch_bls.py; fetch_eurostat.py fetches group-level and country series.
 - HeatExchangers_Price_Bank_v8.1.xlsx built (17 records, basket escalation); H-CAT-OIL moved to heater bank. App code unchanged.
+
+## v0.9 (1405/07/23) — air compressor bank
+- User's `Air_Compressor_Price_Bank_v8.2.xlsx` (+ JSON export) implemented exactly (Calc_Spec): `core/calc/compressor.dart`
+  (TYPE/STD/ORIGIN/DRV + 8 scope factors, per-compressor NormEsc, Coef A/B, ln-ln fit, estimator A/A2/B/C/E + weighted final),
+  `import/compressor_importer.dart`, `catalog/compressor_profile.dart`, `ui/pages/compressor_estimator_tab.dart`.
+- User decisions: KPL-476 year 1394/10; **all vendor quotes imported for every equipment** (incl. no-reply/declined, amount
+  empty, status in notes); complete IA/PA package shown in COMPRESSOR and as a price-less AIR_DRYER item (estimate +
+  reasoning in remarks; price to be entered manually when the dryer bank is built); dryer×receiver×filter scope = 1.53
+  (SC_DRY|Y = 1.53/1.071; Excel 1.10); BLS PCU333912 added (`catalog/us_ppi.dart`), M5 uses a per-category US series
+  (`defaultCategoryUsPpi`, `MethodFactors.usPpiSeries`).
+- Golden test vs reduced fixture (270 Master values + TC1–TC3 at 1e-9 with Excel factors). Smoke test takes a 5th arg (compressor bank).
