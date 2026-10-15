@@ -84,3 +84,9 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 ## Review: air compressor bank v8.2 (1405/07/23)
 - Reviewed user's `Air_Compressor_Price_Bank_v8_2.xlsx` (10 records, 4 peers, methods A/A2/B/C/E). No code change.
   FX and C28.13 match the app; BLS PCU333912 missing. Findings and open questions in `docs/requirements/COMPRESSOR.md`.
+
+
+## 1405/07/23 – HEX price bank (Excel) + PPI series
+- PPI CSV: added C28.25, C24/C24.1(≡C24.10), C24.2(≡C24.20), C25.3(≡C25.30, DE chain-linked <2018), C24.42, C24.44 (Eurostat) and US BLS 331110/331210/332410(-1) as check-only alternatives.
+- Workflow pb_indices now also runs tool/fetch_bls.py; fetch_eurostat.py fetches group-level and country series.
+- HeatExchangers_Price_Bank_v8.1.xlsx built (17 records, basket escalation); H-CAT-OIL moved to heater bank. App code unchanged.
