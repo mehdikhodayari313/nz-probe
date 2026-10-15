@@ -49,6 +49,8 @@
   (هنگام باز شدن برنامه با INSERT OR IGNORE اضافه می‌شود؛ مهاجرت لازم نیست).
 - اکسل/بانکی که کاربر برای آزمون می‌دهد: فقط نسخه‌ی کوچک (ورودی‌ها + Test_Cases، بدون فرمول) در `test/fixtures_private/`
   (نمونه: `tool/make_desalter_fixture.py`)؛ فایل کامل commit نشود.
+- **همه‌ی استعلام‌های فروشندگان** (قیمت‌دار، بی‌پاسخ، انصراف) برای همه‌ی تجهیزات وارد برنامه می‌شوند، مثل پمپ‌ها.
+- پکیجی که چند رده را یکجا قیمت داده (مثل پکیج کامل هوای ابزار دقیق) در همه‌ی رده‌های مربوط دیده شود (یک رکورد، بدون شمارش دوباره).
 - `spec/state.json` را دستی ویرایش نکن (فقط اسکریپت).
 - فایل‌های واقعی پروژه‌ها محرمانه‌اند؛ مخزن خصوصی است و نباید عمومی شود.
 
@@ -185,8 +187,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 4. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
    basket weights are still Provisional. Finding to discuss: Pazanan 1393 estimate escalated ≈3.41 M€ vs 1404 quotes
    1.93 M€ (−43%). Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
-5. Air compressor bank (docs/requirements/COMPRESSOR.md): reviewed v8.2, status «در حال بررسی»; 5 open questions to user
-   (KPL year 1394/10?, JSON file, Vendor_Quotes, IA/PA package category, add BLS PCU333912 + method E?).
+5. Air compressor bank (docs/requirements/COMPRESSOR.md): FINAL (user decisions in md: KPL 1394/10, all quotes,
+   IA/PA package in COMPRESSOR + AIR_DRYER, BLS PCU333912 + method E). Waiting user OK on package/dryer report, then implement.
 6. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens
