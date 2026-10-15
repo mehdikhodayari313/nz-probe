@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/methods.dart';
+import '../../core/import/compressor_importer.dart';
 import '../../core/import/desalter_importer.dart';
 import '../../core/import/v8_importer.dart';
 import '../../core/xlsx/xlsx_reader.dart';
@@ -42,6 +43,11 @@ class DashboardPage extends StatelessWidget {
         (app.pb.db.scalar("SELECT COUNT(*) FROM items WHERE category_id = ? AND legacy_ref LIKE 'DES-%'", [desCat.id])
                 as int) >
             0;
+    final cmpCat = app.pb.catalog.categoryByCode('COMPRESSOR');
+    final hasCmpBank = cmpCat != null &&
+        (app.pb.db.scalar("SELECT COUNT(*) FROM items WHERE category_id = ? AND legacy_ref LIKE 'CMP-%'", [cmpCat.id])
+                as int) >
+            0;
 
     return ListView(padding: const EdgeInsets.fromLTRB(24, 20, 24, 28), children: [
       PageHeader(
@@ -49,7 +55,8 @@ class DashboardPage extends StatelessWidget {
         title: 'داشبورد',
         subtitle: 'سال هدف ${fa(s.targetYear)} · نرخ ارز «${_fxName(app)}» · روش تعدیل ${method.code}',
       ),
-      if (app.pumps.isEmpty || !hasDesBank) _ImportCard(pumps: app.pumps.isNotEmpty, desalters: hasDesBank),
+      if (app.pumps.isEmpty || !hasDesBank || !hasCmpBank)
+        _ImportCard(pumps: app.pumps.isNotEmpty, desalters: hasDesBank, compressors: hasCmpBank),
       if (app.pumps.isEmpty) const SizedBox(height: 16),
       _StartSteps(hasData: rows.isNotEmpty, hasPumps: app.pumps.isNotEmpty, method: method.code),
       const SizedBox(height: 16),
@@ -373,10 +380,10 @@ class _RecentChanges extends StatelessWidget {
 }
 
 class _ImportCard extends StatefulWidget {
-  const _ImportCard({required this.pumps, required this.desalters});
+  const _ImportCard({required this.pumps, required this.desalters, required this.compressors});
 
-  /// بانک پمپ / بانک دیسالتر قبلاً وارد شده است
-  final bool pumps, desalters;
+  /// بانک پمپ / بانک دیسالتر / بانک کمپرسور هوا قبلاً وارد شده است
+  final bool pumps, desalters, compressors;
 
   @override
   State<_ImportCard> createState() => _ImportCardState();
@@ -387,7 +394,7 @@ class _ImportCardState extends State<_ImportCard> {
 
   Future<void> _run() async {
     final res = await FilePicker.platform.pickFiles(
-      dialogTitle: 'انتخاب فایل بانک قیمت v8 (Pumps_Price_Bank_v8.xlsx یا Desalters_Price_Bank_v8.xlsx)',
+      dialogTitle: 'انتخاب فایل بانک قیمت v8 (پمپ، دیسالتر یا کمپرسور هوا)',
       type: FileType.custom,
       allowedExtensions: const ['xlsx'],
     );
@@ -399,6 +406,35 @@ class _ImportCardState extends State<_ImportCard> {
       if (!mounted) return;
       final app = AppScope.read(context);
       final wb = XlsxWorkbook.openFile(path);
+      if (CompressorImporter.isCompressorBank(wb)) {
+        final err = CompressorImporter.validate(wb);
+        if (err != null) throw FormatException(err);
+        final rep = app.pb.compressorImporter().run(wb, fileName: res!.files.single.name);
+        app.dataChanged(calcInputs: true);
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: Icon(rep.alreadyImported ? Icons.info_outline : Icons.check_circle_rounded, color: Tones.good(ctx), size: 40),
+            title: Text(rep.alreadyImported ? 'بانک کمپرسور هوا قبلاً وارد شده است' : 'انتقال بانک کمپرسور هوا کامل شد'),
+            content: rep.alreadyImported
+                ? const Text('برای جلوگیری از رکورد تکراری، ورود دوباره انجام نشد.')
+                : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('کمپرسورها و پکیج‌ها: ${fa(rep.items)}'),
+                    Text('پروژه‌ها: ${fa(rep.projects)} · اسناد منبع: ${fa(rep.documents)}'),
+                    Text('فروشندگان: ${fa(rep.vendors)} · استعلام‌ها: ${fa(rep.quotes)} (${fa(rep.quotesPriced)} قیمت‌دار، بقیه بی‌پاسخ/انصراف)'),
+                    Text('مقادیر استنباطی (زرد): ${fa(rep.inferredFlags)} · یادداشت‌های شاهد: ${fa(rep.notes)}'),
+                    if (rep.corrections > 0) Text('اصلاح تأییدشده: سال قیمت KPL-476 ← ۱۳۹۴/۱۰ (${fa(rep.corrections)} قلم)'),
+                    if (rep.dryerLinks > 0)
+                      Text('پکیج کامل هوای ابزار دقیق در رده‌ی خشک‌کن هوا هم ثبت شد: ${fa(rep.dryerLinks)} قلم بدون قیمت '
+                          '(برآورد سهم خشک‌کن در ملاحظات)'),
+                    for (final w in rep.warnings.take(5)) Text('⚠ $w', style: TextStyle(color: Tones.warn(ctx))),
+                  ]),
+            actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('بسیار خوب'))],
+          ),
+        );
+        return;
+      }
       if (DesalterImporter.isDesalterBank(wb)) {
         final err = DesalterImporter.validate(wb);
         if (err != null) throw FormatException(err);
@@ -472,12 +508,13 @@ class _ImportCardState extends State<_ImportCard> {
         const SizedBox(width: 18),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.pumps ? 'ورود بانک قیمت دیسالتر' : 'ورود داده‌های بانک قیمت v8',
+            Text(widget.pumps ? 'ورود بانک‌های قیمت تجهیزات' : 'ورود داده‌های بانک قیمت v8',
                 style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: t.colorScheme.onPrimaryContainer)),
             const SizedBox(height: 4),
             Text(
               '${widget.pumps ? '' : 'فایل Pumps_Price_Bank_v8.xlsx (۱۴۶ پمپ) یا '}'
               '${widget.desalters ? '' : 'فایل Desalters_Price_Bank_v8.xlsx (دیسالترها) '}'
+              '${widget.compressors ? '' : '${widget.desalters ? 'فایل' : 'یا'} Air_Compressor_Price_Bank_v8.xlsx (کمپرسور هوا) '}'
               'را انتخاب کنید؛ نوع فایل خودکار تشخیص داده می‌شود. همه‌ی مشخصات، پروژه‌ها، اسناد منبع، فروشندگان، استعلام‌ها، '
               'یادداشت‌های شاهد و برچسب مقادیر استنباطی منتقل می‌شوند. فایل اکسل تغییر نمی‌کند.',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onPrimaryContainer, height: 1.8),

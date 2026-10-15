@@ -112,14 +112,20 @@ class _MethodsPageState extends State<MethodsPage> {
     if (!isPump && effective == 'M6') effective = 'M4'; // M6 در رده‌های غیرپمپ همان M4 است
     final ppiCode = isPump ? s.ppiSeries : (s.catPpi(_code) ?? s.ppiSeries);
     final ppiName = app.pb.indices.series().where((x) => x.code == ppiCode).map((x) => x.nameFa).firstOrNull ?? ppiCode;
+    final usCode = isPump ? defaultUsPpiSeries : s.catUsPpi(_code);
+    final usName = app.pb.indices.series().where((x) => x.code == usCode).map((x) => x.nameFa).firstOrNull ?? usCode;
     final mf = MethodFactors(app.pb.seriesSnapshot,
-        ppiSeries: ppiCode, fxType: s.fxRateType, mix: s.catMix(_code), mixStrict: s.catMixStrict(_code));
+        ppiSeries: ppiCode,
+        fxType: s.fxRateType,
+        mix: s.catMix(_code),
+        mixStrict: s.catMixStrict(_code),
+        usPpiSeries: usCode);
     _compute(app, isPump, selectable);
     final bt = _bt;
     final refCode = isPump ? defaultMethodCode : effective;
     final ref = _impact[refCode]?.eurSum;
 
-    String title(EscalationMethod m) => isPump ? m.nameFa : methodLabelFor(m, pump: false, ppiName: ppiName).split(' — ').last;
+    String title(EscalationMethod m) => isPump ? m.nameFa : methodLabelFor(m, pump: false, ppiName: ppiName, usPpiName: usName).split(' — ').last;
 
     return ListView(padding: const EdgeInsets.fromLTRB(24, 20, 24, 28), children: [
       PageHeader(

@@ -5,6 +5,8 @@
 
 - `Pumps_Price_Bank_v8.xlsx` — بانک قیمت پمپ (۱۴۶ رکورد)
 - `Pump_Escalation_Validation_2.xlsx` — صحت‌سنجی روش‌های تعدیل (M6)
+- `Compressors_bank_test.xlsx` — نسخه‌ی کوچک بانک کمپرسور هوا v8 (ورودی‌های Master، فروشندگان، استعلام‌ها، Test_Cases و
+  مقادیر ستون‌های فرمولی در شیت Expected؛ بدون فرمول) — ساخته‌شده با `tool/make_compressor_fixture.py`
 - `Desalters_bank_test.xlsx` — نسخه‌ی کوچک بانک دیسالتر v8.1 (فقط سلول‌های ورودی Master، فروشندگان، استعلام‌ها و
   شیت Test_Cases؛ بدون فرمول) — ساخته‌شده با `tool/make_desalter_fixture.py` از فایل کامل کاربر
 

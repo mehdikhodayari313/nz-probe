@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
+import '../../core/calc/compressor.dart';
 import '../../core/calc/desalter.dart';
 import '../../core/calc/generic_engine.dart';
 import '../../core/calc/pump_engine.dart' show CalcStep;
@@ -51,6 +52,9 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
     final result = engine.calculate(PriceBank.genericInputFor(item.primary));
     final des = cat.code == 'DESALTER'
         ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.des
+        : null;
+    final cmp = cat.code == 'COMPRESSOR'
+        ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.cmp
         : null;
     final canEdit = app.canEdit(cat.disciplineCode);
     final t = Theme.of(context);
@@ -119,7 +123,7 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
           child: TabBarView(controller: _tabs, children: [
             _specTab(context, fields, item),
             _PricesTab(item: item, engine: engine, canEdit: canEdit),
-            _CalcTab(result: result, des: des),
+            _CalcTab(result: result, des: des, cmp: cmp),
             _HistoryTab(entries: pb.audit.history('item', item.id), fields: fields),
           ]),
         ),
@@ -434,9 +438,10 @@ class _PricesTab extends StatelessWidget {
 }
 
 class _CalcTab extends StatelessWidget {
-  const _CalcTab({required this.result, this.des});
+  const _CalcTab({required this.result, this.des, this.cmp});
   final GenericCalcResult result;
   final DesalterCalc? des;
+  final CompressorCalc? cmp;
 
   @override
   Widget build(BuildContext context) {
@@ -445,6 +450,10 @@ class _CalcTab extends StatelessWidget {
     return ListView(padding: const EdgeInsets.all(20), children: [
       if (d != null) ...[
         _DesalterCalcCard(d: d),
+        const SizedBox(height: 14),
+      ],
+      if (cmp case final c?) ...[
+        _CompressorCalcCard(c: c),
         const SizedBox(height: 14),
       ],
       SectionCard(
@@ -510,6 +519,61 @@ class _DesalterCalcCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text('کنترل کیفیت: ${d.qaFlag}', style: TextStyle(color: Tones.warn(context), fontSize: 12.5)),
+          ),
+      ]),
+    );
+  }
+}
+
+/// محاسبات بانک کمپرسور هوا یک قلم (هم‌نام ستون‌های فرمولی بانک Air_Compressor v8)
+class _CompressorCalcCard extends StatelessWidget {
+  const _CompressorCalcCard({required this.c});
+  final CompressorCalc c;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    String n(double? v, [String unit = '']) => v == null ? '—' : '${faSmart(v)}${unit.isEmpty ? '' : ' $unit'}';
+    String f((String?, double)? x) => x == null ? '—' : '× ${faSmart(x.$2)}${x.$1 == null ? ' (خالی)' : ' («${x.$1}»)'}';
+    final p = c.factors.parts;
+    final bank = c.bank;
+    final rows = <(String, String)>[
+      ('دبی هر کمپرسور', n(c.flow, 'Nm³/h')),
+      ('توان محور تخمینی (دبی × توان ویژه)', n(c.shaftKw, 'kW')),
+      ('خانواده / استانداردها', '${c.family} · ${c.standards}'),
+      ('تعداد کمپرسور در واحد قیمت', n(c.perUnit)),
+      ('ضریب نوع TYPE_F', f(p['TYPE'])),
+      ('ضریب استاندارد STD_F', f(p['STD'])),
+      ('ضریب مبدأ ORIGIN_F', f(p['ORIGIN'])),
+      ('ضریب محرک DRIVE_F', f(p['DRV'])),
+      ('ضریب Scope (حاصل‌ضرب ۸ ضریب)', '× ${faSmart(c.factors.scope)}'),
+      ('ALL_F (کل پیکربندی)', '× ${faSmart(c.factors.all)}'),
+      ('یورو سال منبع', n(c.eurSource, '€')),
+      ('یورو نرمال‌شده‌ی هر کمپرسور (سال منبع)', n(c.normEurSource, '€')),
+      ('شاخص پایه / هدف', '${n(c.indexBase)} / ${n(c.indexTarget)}'),
+      ('یورو نرمال‌شده‌ی تعدیل‌شده‌ی هر کمپرسور', n(c.normEsc, '€')),
+      ('Coef A = NormEsc ÷ Flow^n', '${n(c.coefA)}${bank == null ? '' : '  (n = ${faSmart(bank.n)})'}'),
+      ('Coef B = NormEsc ÷ وزن (€/kg)', n(c.coefB)),
+      ('همتای تخمین', c.isPeer ? 'بله' : 'خیر'),
+    ];
+    return SectionCard(
+      title: 'محاسبات بانک کمپرسور هوا',
+      subtitle: 'نرمال‌سازی به پیکربندی پایه و هر کمپرسور، و ضریب هزینه‌ی روش‌های تخمین A و B',
+      icon: Icons.calculate_outlined,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (var i = 0; i < rows.length; i++)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            color: i.isOdd ? AppColors.zebra : null,
+            child: Row(children: [
+              Expanded(child: Text(rows[i].$1, style: t.textTheme.bodySmall)),
+              Flexible(child: Text(fa(rows[i].$2), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5))),
+            ]),
+          ),
+        if (c.qaFlag.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('کنترل کیفیت: ${c.qaFlag}', style: TextStyle(color: Tones.warn(context), fontSize: 12.5)),
           ),
       ]),
     );

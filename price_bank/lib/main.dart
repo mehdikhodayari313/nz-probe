@@ -136,6 +136,16 @@ Future<void> _smoke(List<String> a) async {
           'priced: $priced, method: ${pb.settingsRepo.load().methodFor('DESALTER')}');
       ok = ok && rep.items == 9 && priced >= 7;
     }
+    final cmpPath = a.length > 4 ? a[4] : null;
+    if (cmpPath != null && File(cmpPath).existsSync()) {
+      final rep = pb.compressorImporter().run(XlsxWorkbook.openFile(cmpPath), fileName: 'compressors');
+      final cat = pb.catalog.categoryByCode('COMPRESSOR')!;
+      final rows = pb.computeCategory(cat.id);
+      final peers = rows.where((r) => r.cmp?.isPeer ?? false).length;
+      b.writeln('compressors: ${rep.items}, quotes: ${rep.quotes} (${rep.quotesPriced} priced), '
+          'corrections: ${rep.corrections}, dryer links: ${rep.dryerLinks}, peers: $peers');
+      ok = ok && rep.items == 10 && rep.quotes == 3 && peers == 4;
+    }
     pb.close();
     // باز کردن دوباره: مهاجرت تکراری یا داده‌ی پایه‌ی تکراری نباید رخ دهد
     final again = PriceBank.open(dbPath, await loadSeedAssets());

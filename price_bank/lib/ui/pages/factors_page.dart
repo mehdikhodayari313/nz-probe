@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/pump_engine.dart' show asText;
+import '../../core/calc/compressor.dart';
 import '../../core/calc/desalter.dart';
 import '../../core/catalog/profiles.dart';
 import '../../core/price_bank.dart';
@@ -45,6 +46,22 @@ const _desGroupFa = {
   'SC_PIP': 'Scope: لوله‌کشی مربوط در قیمت (پایه = بله)',
   'SC_INS': 'Scope: ابزار دقیق و کنترل در قیمت (پایه = بله)',
   'SC_CT': 'Scope: گمرک و حمل در قیمت (پایه = خیر)',
+};
+
+/// گروه‌های ضریب کمپرسور هوا (Factors_CMP بانک کمپرسور)
+const _cmpGroupFa = {
+  'TYPE': 'نوع کمپرسور (پایه: رفت‌وبرگشتی بدون روغن = ۱)',
+  'STD': 'استاندارد کمپرسور (پایه: API 618 = ۱)',
+  'ORIGIN': 'مبدأ ساخت (پایه: ساخت خارج = ۱)',
+  'DRV': 'محرک (پایه: موتور برقی = ۱)',
+  'SC_DRY': 'Scope: خشک‌کن هوا در قیمت (پایه = خیر؛ خشک‌کن × مخزن × فیلتر = ۱٫۵۳)',
+  'SC_REC': 'Scope: مخزن هوا در قیمت (پایه = خیر)',
+  'SC_FLT': 'Scope: فیلترهای Pre/After در قیمت (پایه = خیر)',
+  'SC_ACL': 'Scope: کولر میانی و انتهایی در قیمت (پایه = بله)',
+  'SC_PNL': 'Scope: پنل کنترل محلی در قیمت (پایه = بله)',
+  'SC_SPR': 'Scope: یدکی در قیمت (پایه = خیر)',
+  'SC_VS': 'Scope: خدمات سازنده در سایت (پایه = خیر)',
+  'SC_TRN': 'Scope: حمل تا سایت (پایه = خیر)',
 };
 
 /// فیلد هر گروه ضریب پمپ (برای شمارش اقلام هر گزینه)
@@ -173,7 +190,10 @@ class _FactorsPageState extends State<FactorsPage> {
       for (final g in order)
         if (groups[g] case final list?) ...[
           SectionCard(
-            title: (isPump ? _groupFa[g] : (_code == 'DESALTER' ? _desGroupFa[g] : _genGroupFa[g])) ?? g,
+            title: (isPump
+                    ? _groupFa[g]
+                    : (_code == 'DESALTER' ? _desGroupFa[g] : (_code == 'COMPRESSOR' ? _cmpGroupFa[g] : _genGroupFa[g]))) ??
+                g,
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
             child: Table(
               columnWidths: const {
@@ -265,7 +285,7 @@ class _EstimationParams extends StatelessWidget {
         icon: const Icon(Icons.edit_rounded, size: 18),
         label: const Text('تغییر در تنظیمات رده'),
       ),
-      child: code == 'DESALTER' ? _desalter(app, item) : Wrap(spacing: 10, runSpacing: 10, children: [
+      child: code == 'DESALTER' ? _desalter(app, item) : code == 'COMPRESSOR' ? _compressor(app, item) : Wrap(spacing: 10, runSpacing: 10, children: [
         item('پارامتر اندازه', '${profile.driver.labelFa} (${profile.driver.unit})', 'از مشخصات هر قلم محاسبه می‌شود'),
         item('توان اندازه n', faSmart(n), custom ? 'تعیین‌شده در تنظیمات رده' : 'پیش‌فرض قالب رده'),
         if (profile.weightKey != null)
@@ -295,6 +315,24 @@ Widget _desalter(AppState app, Widget Function(String, String, String) item) {
         '${p.useFittedB ? 'نمای برازش‌شده' : 'Provisional'} · ${fit(bank?.fittedB, bank?.pointsB ?? 0)}'),
     item('محرک kVA', p.kvaActive ? 'فعال (m = ${faSmart(p.kvaExponent)})' : 'خاموش', 'مبنا ${faSmart(p.kvaBase)} kVA · KVA_F = (kVA ÷ مبنا)^m'),
     item('نتیجه‌ی نهایی', DesalterParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات رده» قابل تغییر'),
+  ]);
+}
+
+/// پارامترهای تخمین کمپرسور هوا: نمای دبی (با مقدار برازش‌شده)، توان ویژه، بنچمارک E و مبنای نتیجه
+Widget _compressor(AppState app, Widget Function(String, String, String) item) {
+  final cat = app.pb.catalog.categoryByCode('COMPRESSOR')!;
+  final rows = app.genericRows(cat.id);
+  final bank = rows.isEmpty ? null : rows.first.cmp?.bank;
+  final p = app.settings.compressorParams;
+  final fit = bank?.fitted == null
+      ? 'برازش: کمتر از ۳ نقطه (${fa(bank?.points ?? 0)})'
+      : 'برازش از ${fa(bank!.points)} همتا: ${faSmart(bank.fitted)}';
+  return Wrap(spacing: 10, runSpacing: 10, children: [
+    item('روش A — دبی هر کمپرسور', 'Nm³/h^${faSmart(bank?.n ?? p.n)}', '${p.useFitted ? 'نمای برازش‌شده' : 'Provisional'} · $fit'),
+    item('توان ویژه', '${faSmart(p.specificPower)} kW per Nm³/h', 'برای kW تخمینی و روش E'),
+    item('روش E — ضریب پکیج نفتی', faSmart(p.benchmarkFactor), 'Seider (اسکرو، موتور برقی) × BLS 333912 — فقط کنترل'),
+    item('حداقل همتا', fa(p.minPeers), 'کمتر از این = هشدار'),
+    item('نتیجه‌ی نهایی', CompressorParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات رده» قابل تغییر'),
   ]);
 }
 

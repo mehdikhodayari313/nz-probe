@@ -98,6 +98,16 @@ Map<String, Object?> estimatorValues(Map<String, Object?> i) => {
       'scope_transport': i['scope_transport'],
     };
 
+/// بانک کمپرسور C28.13 شمسی را گرد نکرده (۱۴۰۴ = ۱۲۳٫۴۱۶۱۸)؛ سری برنامه از بانک پمپ v8 سه رقم اعشار دارد (۱۲۳٫۴۱۶).
+/// اختلاف ۱e-۶ نسبی است؛ برای مقایسه‌ی دقیق با اکسل، مقدار بدون گرد در آزمون گذاشته می‌شود.
+PriceBank bankWithExcelIndex() {
+  final pb = PriceBank.memory(loadSeed());
+  pb.db.execute("UPDATE index_values SET value = ? WHERE series_code = 'PPI_EU_C2813' AND year = 1404", [123.41618]);
+  pb.db.execute("UPDATE index_values SET value = ? WHERE series_code = 'PPI_EU_C2813' AND year = 1405", [125.8845036]);
+  pb.invalidateCalc();
+  return pb;
+}
+
 void main() {
   test('شاخص BLS 333912، روش M5 کمپرسور و ضرایب Factors_CMP در دیتابیس تازه', () {
     final pb = PriceBank.memory(loadSeed());
@@ -156,7 +166,7 @@ void main() {
         );
 
     test('ستون‌های فرمولی Master برابر اکسل (ضرایب اکسل، بدون اصلاح)', () {
-      final pb = PriceBank.memory(loadSeed());
+      final pb = bankWithExcelIndex();
       final bank = excelBank(pb);
       final ex = wb.sheet('Expected')!;
       var n = 0;
@@ -209,7 +219,7 @@ void main() {
 
     for (final (col, name) in [(3, 'TC1'), (4, 'TC2'), (5, 'TC3')]) {
       test('Estimator $name برابر Test_Cases (ضرایب اکسل)', () {
-        final pb = PriceBank.memory(loadSeed());
+        final pb = bankWithExcelIndex();
         final bank = excelBank(pb);
         final (i, x) = testCase(wb.sheet('Test_Cases')!, col);
         final engine = pb.genericEngine(categoryCode: 'COMPRESSOR');
@@ -236,7 +246,7 @@ void main() {
     }
 
     test('ورود فایل: سال KPL ۱۳۹۴/۱۰، همه‌ی استعلام‌ها، قلم خشک‌کن، تخمین با ضریب ۱٫۵۳', () {
-      final pb = PriceBank.memory(loadSeed());
+      final pb = bankWithExcelIndex();
       final rep = pb.compressorImporter().run(wb, fileName: 'Air_Compressor_Price_Bank_v8.xlsx');
       expect(rep.items, 10);
       expect(rep.corrections, 1);

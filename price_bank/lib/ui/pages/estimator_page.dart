@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
 import '../widgets/category_picker.dart';
 import 'equipment_page.dart';
+import 'compressor_estimator_tab.dart';
 import 'desalter_estimator_tab.dart';
 import 'generic_estimator_tab.dart';
 
@@ -65,6 +66,7 @@ class _EquipmentEstimatorState extends State<_EquipmentEstimator> {
     final picker = EquipmentCategoryPicker(value: _code, onChanged: (v) => setState(() => _code = v));
     if (_code == 'PUMP') return _NewPumpEstimator(key: const ValueKey('PUMP'), picker: picker);
     if (_code == 'DESALTER') return DesalterEstimatorTab(key: const ValueKey('DESALTER'), picker: picker);
+    if (_code == 'COMPRESSOR') return CompressorEstimatorTab(key: const ValueKey('COMPRESSOR'), picker: picker);
     return GenericEstimatorTab(key: ValueKey(_code), code: _code, picker: picker);
   }
 }
@@ -457,6 +459,8 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
     final catMethod = isPump ? null : st.methodFor(_cat);
     final ppiCode = isPump ? s.ppiSeries : (st.catPpi(_cat) ?? s.ppiSeries);
     final ppiName = app.pb.indices.series().where((x) => x.code == ppiCode).map((x) => x.nameFa).firstOrNull ?? ppiCode;
+    final usCode = isPump ? defaultUsPpiSeries : st.catUsPpi(_cat);
+    final usName = app.pb.indices.series().where((x) => x.code == usCode).map((x) => x.nameFa).firstOrNull ?? usCode;
     final catName = app.pb.catalog.categoryByCode(_cat)?.nameFa ?? _cat;
     final override = parseUserNumber(_eurOverride.text);
     final engine = PumpEngine(
@@ -473,6 +477,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         method: _method ?? catMethod ?? s.method,
         mix: isPump ? const [] : st.catMix(_cat),
         mixStrict: !isPump && st.catMixStrict(_cat),
+        usPpiSeries: usCode,
       ),
       app.pb.factorTable,
     );
@@ -550,7 +555,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                       value: m.code,
                       child: Row(children: [
                         Expanded(
-                          child: DdText(methodLabelFor(m, pump: isPump, ppiName: ppiName), overflow: TextOverflow.ellipsis),
+                          child: DdText(methodLabelFor(m, pump: isPump, ppiName: ppiName, usPpiName: usName), overflow: TextOverflow.ellipsis),
                         ),
                         if (m.code == (catMethod ?? s.method)) const Pill('پیش‌فرض رده'),
                       ]),
@@ -652,7 +657,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
       LayoutBuilder(builder: (context, c) {
         final res = SectionCard(
             title: 'محاسبه‌ی گام‌به‌گام',
-            subtitle: '$catName · ${methodLabelFor(method, pump: isPump, ppiName: ppiName)}',
+            subtitle: '$catName · ${methodLabelFor(method, pump: isPump, ppiName: ppiName, usPpiName: usName)}',
             icon: Icons.stairs_outlined,
             child: steps);
         if (c.maxWidth < 1000) return Column(children: [inputs, const SizedBox(height: 14), res]);

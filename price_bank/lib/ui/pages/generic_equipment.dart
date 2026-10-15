@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
+import '../../core/calc/compressor.dart';
 import '../../core/calc/desalter.dart';
 import '../../core/calc/generic_estimator.dart';
 import '../../core/calc/methods.dart';
@@ -532,6 +533,12 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
   String _desFinal = DesalterParams.weighted;
   bool get _isDes => widget.code == 'DESALTER';
 
+  // پارامترهای بانک کمپرسور هوا
+  final _cmpN = <String, TextEditingController>{};
+  bool _cmpFit = false;
+  String _cmpFinal = CompressorParams.weighted;
+  bool get _isCmp => widget.code == 'COMPRESSOR';
+
   @override
   void initState() {
     super.initState();
@@ -550,6 +557,14 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
       _desB['des_kva_on'] = d.kvaActive;
       _desFinal = d.finalBasis;
     }
+    if (_isCmp) {
+      final c = s.compressorParams;
+      for (final (k, v) in [('cmp_n', c.n), ('cmp_kw', c.specificPower), ('cmp_bench', c.benchmarkFactor), ('cmp_min_peers', c.minPeers)]) {
+        _cmpN[k] = TextEditingController(text: '$v');
+      }
+      _cmpFit = c.useFitted;
+      _cmpFinal = c.finalBasis;
+    }
     final w = s.catWeightExp(widget.code);
     _w = TextEditingController(text: w == null ? '' : '$w');
     _method = s.catMethod(widget.code);
@@ -566,7 +581,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
     for (final (_, c) in _mix) {
       c.dispose();
     }
-    for (final c in _desN.values) {
+    for (final c in [..._desN.values, ..._cmpN.values]) {
       c.dispose();
     }
     super.dispose();
@@ -592,6 +607,10 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
       showSnack(context, 'پارامترهای دیسالتر باید عدد مثبت باشند.', error: true);
       return;
     }
+    if (_cmpN.entries.any((e) => parseUserNumber(e.value.text) == null || parseUserNumber(e.value.text)! <= 0)) {
+      showSnack(context, 'پارامترهای کمپرسور باید عدد مثبت باشند.', error: true);
+      return;
+    }
     app.pb.settingsRepo.set('cat_wexp_${widget.code}', w == null ? null : '$w', reason: 'تنظیمات رده');
     const reason = 'تنظیمات رده';
     final defMix = MixPart.format(defaultCategoryMix(widget.code));
@@ -609,6 +628,17 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
         app.pb.settingsRepo.set(e.key, e.value ? 'Y' : null, reason: reason);
       }
       app.pb.settingsRepo.set('des_final', _desFinal == DesalterParams.weighted ? null : _desFinal, reason: reason);
+    }
+    if (_isCmp) {
+      const def = CompressorParams();
+      final defs = {'cmp_n': def.n, 'cmp_kw': def.specificPower, 'cmp_bench': def.benchmarkFactor, 'cmp_min_peers': def.minPeers};
+      for (final e in _cmpN.entries) {
+        final v = parseUserNumber(e.value.text)!;
+        final s = e.key == 'cmp_min_peers' ? '${v.round()}' : '$v';
+        app.pb.settingsRepo.set(e.key, v == defs[e.key] ? null : s, reason: reason);
+      }
+      app.pb.settingsRepo.set('cmp_fit', _cmpFit ? 'Y' : null, reason: reason);
+      app.pb.settingsRepo.set('cmp_final', _cmpFinal == CompressorParams.weighted ? null : _cmpFinal, reason: reason);
     }
     app.pb.settingsRepo.set('cat_method_${widget.code}', _method, reason: reason);
     app.pb.settingsRepo.set('cat_ppi_${widget.code}', _ppi, reason: reason);
@@ -669,7 +699,8 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               onChanged: (v) => setState(() => _method = v),
             ),
             help: 'هر تجهیز روش تعدیل خودش را دارد و روش پمپ‌ها روی آن اثر ندارد. '
-                'کف قیمت M6 فقط برای پمپ‌هاست؛ در این رده M6 همان M4 است. M7 = شاخص ترکیبی با سبد پایین.',
+                'کف قیمت M6 فقط برای پمپ‌هاست؛ در این رده M6 همان M4 است. M7 = شاخص ترکیبی با سبد پایین.'
+                '${_isCmp ? ' M5 در این رده = PPI کمپرسور هوا و گاز آمریکا (BLS 333912) به یورو — گزینه‌ی BLS بانک کمپرسور.' : ''}',
           ),
           _mixEditor(context, app),
           row(
@@ -687,7 +718,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
             help: 'برای تجهیزات ساخت داخل (ظرف، مخزن، سازه) می‌توانید PPI بخشی ایران (مثلاً ISIC 25 محصولات فلزی) را انتخاب کنید؛ ابتدا مقادیر آن را در «شاخص‌ها و ارز» کامل کنید.',
           ),
           if (p != null) ...[
-          if (!_isDes)
+          if (!_isDes && !_isCmp)
           row(
             'توان اندازه n',
             TextField(
@@ -706,7 +737,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               ),
               help: 'فقط وقتی وزن خالی برای قلم و دست‌کم دو قلم این رده ثبت شده باشد اثر دارد. صفر = وزن نادیده گرفته شود.',
             ),
-          if (!_isDes)
+          if (!_isDes && !_isCmp)
           row(
             'روش تخمین پیش‌فرض',
             DropdownButtonFormField<String?>(itemHeight: null, 
@@ -719,6 +750,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
             ),
           ),
           if (_isDes) _desalterParams(context),
+          if (_isCmp) _compressorParams(context),
           Text('پارامتر اندازه‌ی این رده: ${p.driver.labelFa} (${p.driver.unit}). ضرایب نرمال‌سازی: ${p.factorGroups.isEmpty ? 'ندارد' : p.factorGroups.join('، ')} — در صفحه‌ی «ضرایب».',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8)),
           ] else
@@ -827,6 +859,51 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
         ),
       ]),
     );
+  }
+
+  /// پارامترهای بانک کمپرسور هوا: نمای دبی، برازش، توان ویژه، بنچمارک E و مبنای نتیجه‌ی نهایی
+  Widget _compressorParams(BuildContext context) {
+    Widget num(String key, String label, {String? help}) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(children: [
+            _label(context, label, help: help),
+            Expanded(child: TextField(controller: _cmpN[key], textDirection: TextDirection.ltr)),
+          ]),
+        );
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Divider(height: 20),
+      Text('پارامترهای بانک کمپرسور هوا', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      num('cmp_n', 'نمای دبی n', help: 'قیمت ∝ Nm³/h^n (روش A و C) — Provisional ۰٫۴ از دو رکورد گچساران'),
+      SwitchListTile(
+        value: _cmpFit,
+        onChanged: (v) => setState(() => _cmpFit = v),
+        dense: true,
+        contentPadding: EdgeInsets.zero,
+        title: const Text('استفاده از n برازش‌شده از همتاها (حداقل ۳ نقطه، بین ۰٫۲ و ۱٫۰)'),
+      ),
+      num('cmp_kw', 'توان ویژه (kW به ازای Nm³/h)', help: 'فقط برای kW تخمینی و روش E'),
+      num('cmp_bench', 'ضریب پکیج نفتی روش E', help: 'Seider × BLS 333912 × این ضریب — فقط کنترل'),
+      num('cmp_min_peers', 'حداقل همتا پیش از هشدار'),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(children: [
+          _label(context, 'نتیجه‌ی نهایی تخمین'),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              itemHeight: null,
+              value: _cmpFinal,
+              isExpanded: true,
+              items: [
+                for (final b in CompressorParams.finalBases)
+                  DropdownMenuItem(value: b, child: DdText(CompressorParams.finalBasesFa[b]!)),
+              ],
+              onChanged: (v) => setState(() => _cmpFinal = v ?? CompressorParams.weighted),
+            ),
+          ),
+        ]),
+      ),
+    ]);
   }
 
   /// پارامترهای بانک دیسالتر: نماها، برازش از داده‌ی بانک، محرک kVA و مبنای نتیجه‌ی نهایی تخمین
