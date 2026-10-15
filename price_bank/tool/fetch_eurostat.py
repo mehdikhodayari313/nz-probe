@@ -9,10 +9,13 @@ import os
 import sys
 import urllib.request
 
-NACE = ["C24", "C241", "C2410", "C2420", "C2442", "C2444", "C2511", "C2529", "C2530", "C2651", "C2711", "C2712", "C2813", "C2814",
+NACE = ["C24", "C241", "C242", "C253", "C2410", "C2420", "C2442", "C2444", "C2511", "C2529", "C2530", "C2651", "C2711", "C2712", "C2813", "C2814",
         "C2825", "C2829", "C28"]
 # اگر EA20 خالی بود (محرمانه)، همین سری برای EU27_2020 هم گرفته می‌شود (کلید <nace>_EU27)
 FALLBACK_GEO = "EU27_2020"
+# برای بازسازی سری‌های محرمانه از داده‌ی کشورها
+COUNTRY_SERIES = ["C2410", "C2420", "C2530", "C242", "C253"]
+COUNTRIES = ["DE", "FR", "IT", "ES", "AT", "NL", "BE", "FI", "PL", "CZ", "SE"]
 URL = ("https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data/sts_inppd_a"
        "?format=JSON&geo={g}&nace_r2={n}&unit=I21&lang=EN")
 
@@ -56,6 +59,15 @@ def main():
         except Exception as e:  # noqa
             res[n] = {"error": str(e)}
             summ.append(f"{n}\tERROR {e}")
+    for n in COUNTRY_SERIES:
+        for g in COUNTRIES:
+            try:
+                label, series, dims = fetch(n, g)
+                if series:
+                    res[f"{n}_{g}"] = {"label": label, "values": series, "dims": dims}
+                    ys = sorted(series); summ.append(f"{n}_{g}\t{ys[0]}..{ys[-1]}\t{len(ys)} years")
+            except Exception as e:  # noqa
+                summ.append(f"{n}_{g}\tERROR {str(e)[:60]}")
     with open(os.path.join(od, "eurostat_ppi.json"), "w", encoding="utf-8") as f:
         json.dump(res, f, ensure_ascii=False, indent=1, sort_keys=True)
     with open(os.path.join(od, "summary.txt"), "w", encoding="utf-8") as f:
