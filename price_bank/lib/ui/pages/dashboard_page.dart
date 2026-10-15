@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/methods.dart';
+import '../../core/import/desalter_importer.dart';
 import '../../core/import/v8_importer.dart';
 import '../../core/xlsx/xlsx_reader.dart';
 import '../format.dart';
@@ -30,11 +31,17 @@ class DashboardPage extends StatelessWidget {
     final method = methodByCode(s.escalationMethod);
     final catsUsed = rows.map((r) => r.categoryId).toSet().length;
     final quotes = rows.fold<int>(0, (a, r) => a + r.item.observations.where((o) => o.kind == 'quote').length);
-    // رده‌هایی که روش تعدیل اختصاصی دارند
+    // روش تعدیل هر رده‌ی دارای قلم (هر تجهیز روش خودش را دارد)
+    final counts = app.pb.categoryCounts();
     final custom = [
       for (final c in app.pb.bankCategories())
-        if (c.code != 'PUMP' && s.catMethod(c.code) != null) '${c.nameFa}: ${s.catMethod(c.code)}',
+        if (c.code != 'PUMP' && (counts[c.id] ?? 0) > 0) '${c.nameFa}: ${s.methodFor(c.code)}',
     ];
+    final desCat = app.pb.catalog.categoryByCode('DESALTER');
+    final hasDesBank = desCat != null &&
+        (app.pb.db.scalar("SELECT COUNT(*) FROM items WHERE category_id = ? AND legacy_ref LIKE 'DES-%'", [desCat.id])
+                as int) >
+            0;
 
     return ListView(padding: const EdgeInsets.fromLTRB(24, 20, 24, 28), children: [
       PageHeader(
@@ -42,7 +49,7 @@ class DashboardPage extends StatelessWidget {
         title: 'داشبورد',
         subtitle: 'سال هدف ${fa(s.targetYear)} · نرخ ارز «${_fxName(app)}» · روش تعدیل ${method.code}',
       ),
-      if (app.pumps.isEmpty) _ImportCard(),
+      if (app.pumps.isEmpty || !hasDesBank) _ImportCard(pumps: app.pumps.isNotEmpty, desalters: hasDesBank),
       if (app.pumps.isEmpty) const SizedBox(height: 16),
       _StartSteps(hasData: rows.isNotEmpty, hasPumps: app.pumps.isNotEmpty, method: method.code),
       const SizedBox(height: 16),
@@ -119,8 +126,8 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             custom.isEmpty
-                ? 'همه‌ی رده‌ها با همین روش تعدیل می‌شوند (روش اختصاصی هر رده در «تنظیمات رده» صفحه‌ی تجهیزات).'
-                : 'رده‌های با روش اختصاصی: ${custom.join('، ')}',
+                ? 'این روش پمپ‌هاست؛ هر تجهیز دیگر روش تعدیل خودش را دارد («تنظیمات رده» صفحه‌ی تجهیزات).'
+                : 'روش پمپ‌ها؛ روش سایر تجهیزات: ${custom.join('، ')}',
             style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.9),
           ),
         ]),
@@ -366,6 +373,11 @@ class _RecentChanges extends StatelessWidget {
 }
 
 class _ImportCard extends StatefulWidget {
+  const _ImportCard({required this.pumps, required this.desalters});
+
+  /// بانک پمپ / بانک دیسالتر قبلاً وارد شده است
+  final bool pumps, desalters;
+
   @override
   State<_ImportCard> createState() => _ImportCardState();
 }
@@ -375,7 +387,7 @@ class _ImportCardState extends State<_ImportCard> {
 
   Future<void> _run() async {
     final res = await FilePicker.platform.pickFiles(
-      dialogTitle: 'انتخاب فایل Pumps_Price_Bank_v8.xlsx',
+      dialogTitle: 'انتخاب فایل بانک قیمت v8 (Pumps_Price_Bank_v8.xlsx یا Desalters_Price_Bank_v8.xlsx)',
       type: FileType.custom,
       allowedExtensions: const ['xlsx'],
     );
@@ -387,6 +399,34 @@ class _ImportCardState extends State<_ImportCard> {
       if (!mounted) return;
       final app = AppScope.read(context);
       final wb = XlsxWorkbook.openFile(path);
+      if (DesalterImporter.isDesalterBank(wb)) {
+        final err = DesalterImporter.validate(wb);
+        if (err != null) throw FormatException(err);
+        final rep = app.pb.desalterImporter().run(wb, fileName: res!.files.single.name);
+        app.dataChanged(calcInputs: true);
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: Icon(rep.alreadyImported ? Icons.info_outline : Icons.check_circle_rounded, color: Tones.good(ctx), size: 40),
+            title: Text(rep.alreadyImported ? 'بانک دیسالتر قبلاً وارد شده است' : 'انتقال بانک دیسالتر کامل شد'),
+            content: rep.alreadyImported
+                ? const Text('برای جلوگیری از رکورد تکراری، ورود دوباره انجام نشد.')
+                : Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('دیسالترها: ${fa(rep.items)}'),
+                    Text('پروژه‌ها: ${fa(rep.projects)} · اسناد منبع: ${fa(rep.documents)}'),
+                    Text('فروشندگان: ${fa(rep.vendors)} · استعلام‌ها: ${fa(rep.quotes)}'),
+                    Text('مقادیر استنباطی (زرد): ${fa(rep.inferredFlags)} · یادداشت‌های شاهد: ${fa(rep.notes)}'),
+                    if (rep.corrections > 0) Text('اصلاح تأییدشده: سال قیمت KPL-476 ← ۱۳۹۴/۱۰ (${fa(rep.corrections)} قلم)'),
+                    if (rep.archivedDuplicates > 0)
+                      Text('دیسالترهای تکراری MTO بایگانی شد: ${fa(rep.archivedDuplicates)} (بانک دیسالتر مرجع است)'),
+                    for (final w in rep.warnings.take(5)) Text('⚠ $w', style: TextStyle(color: Tones.warn(ctx))),
+                  ]),
+            actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('بسیار خوب'))],
+          ),
+        );
+        return;
+      }
       final err = V8Importer.validate(wb);
       if (err != null) throw FormatException(err);
       final rep = app.pb.v8Importer().run(wb, fileName: res!.files.single.name);
@@ -432,11 +472,13 @@ class _ImportCardState extends State<_ImportCard> {
         const SizedBox(width: 18),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('ورود داده‌های بانک قیمت v8',
+            Text(widget.pumps ? 'ورود بانک قیمت دیسالتر' : 'ورود داده‌های بانک قیمت v8',
                 style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: t.colorScheme.onPrimaryContainer)),
             const SizedBox(height: 4),
             Text(
-              'فایل Pumps_Price_Bank_v8.xlsx را انتخاب کنید. ۱۴۶ پمپ با همه‌ی مشخصات، پروژه‌ها، اسناد منبع، فروشندگان، استعلام‌ها، '
+              '${widget.pumps ? '' : 'فایل Pumps_Price_Bank_v8.xlsx (۱۴۶ پمپ) یا '}'
+              '${widget.desalters ? '' : 'فایل Desalters_Price_Bank_v8.xlsx (دیسالترها) '}'
+              'را انتخاب کنید؛ نوع فایل خودکار تشخیص داده می‌شود. همه‌ی مشخصات، پروژه‌ها، اسناد منبع، فروشندگان، استعلام‌ها، '
               'یادداشت‌های شاهد و برچسب مقادیر استنباطی منتقل می‌شوند. فایل اکسل تغییر نمی‌کند.',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onPrimaryContainer, height: 1.8),
             ),
@@ -448,7 +490,7 @@ class _ImportCardState extends State<_ImportCard> {
           icon: _busy
               ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
               : const Icon(Icons.file_open_rounded),
-          label: Text(_busy ? 'در حال انتقال…' : 'انتخاب فایل v8'),
+          label: Text(_busy ? 'در حال انتقال…' : 'انتخاب فایل'),
         ),
       ]),
     );

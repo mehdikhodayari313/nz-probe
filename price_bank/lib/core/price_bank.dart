@@ -4,6 +4,7 @@
 import 'dart:math' as math;
 
 import 'calc/backtest.dart';
+import 'calc/desalter.dart';
 import 'calc/estimator.dart';
 import 'calc/generic_estimator.dart';
 import 'catalog/profiles.dart';
@@ -11,6 +12,7 @@ import 'calc/generic_engine.dart';
 import 'calc/pump_engine.dart';
 import 'calc/series.dart';
 import 'db/db.dart';
+import 'import/desalter_importer.dart';
 import 'import/mto_importer.dart';
 import 'import/v8_importer.dart';
 import 'repo/audit.dart';
@@ -31,9 +33,12 @@ class PumpRow {
 
 /// یک قلم غیرپمپ با نتیجه‌ی محاسبه‌ی قیمت اصلی و آمار استعلام‌ها (همه به یوروی سال هدف).
 class GenericRow {
-  GenericRow(this.item, this.result, this.quoteEurTargets, {this.size, this.allF = 1, this.coef});
+  GenericRow(this.item, this.result, this.quoteEurTargets, {this.size, this.allF = 1, this.coef, this.des});
   final ItemRecord item;
   final GenericCalcResult result;
+
+  /// محاسبات بانک دیسالتر (فقط رده‌ی دیسالتر)
+  final DesalterCalc? des;
 
   /// پارامتر اندازه‌ی قالب رده (حجم، توان حرارتی، دبی، …)
   final double? size;
@@ -94,6 +99,8 @@ class PriceBank {
 
   MtoImporter mtoImporter() => MtoImporter(db, audit, catalog, items, docs);
 
+  DesalterImporter desalterImporter() => DesalterImporter(db, audit, catalog, items, docs);
+
   // ---------------------------------------------------------------------------
   // محاسبات
 
@@ -125,9 +132,47 @@ class PriceBank {
       st.toPumpSettings(
         fxTypeOverride: fxType,
         targetYearOverride: targetYear,
-        methodOverride: method ?? (categoryCode == null ? null : st.catMethod(categoryCode)),
+        methodOverride: method ?? (categoryCode == null ? null : st.methodFor(categoryCode)),
         ppiOverride: categoryCode == null ? null : st.catPpi(categoryCode),
+        mixOverride: categoryCode == null ? null : st.catMix(categoryCode),
+        mixStrict: categoryCode != null && st.catMixStrict(categoryCode),
       ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // دیسالتر (روش بانک Desalters v8)
+
+  DesalterParams get desalterParams => settingsRepo.load().desalterParams;
+
+  /// محاسبه‌ی همه‌ی دیسالترهای بانک (ضرایب، نرمال‌سازی، Coef A/B، نمای برازش‌شده).
+  DesalterBankResult computeDesalters(List<ItemRecord> all, {GenericEngine? engine}) => computeDesalterBank(
+        [
+          for (final it in all)
+            DesalterRecord(
+              id: it.id,
+              label: '${it.projectName ?? ''} | ${it.tag ?? ''}',
+              values: it.values,
+              price: genericInputFor(it.primary),
+              include: it.include,
+            ),
+        ],
+        engine: engine ?? genericEngine(categoryCode: 'DESALTER'),
+        factors: indices.factorTable(factorSetOf('DESALTER')),
+        params: desalterParams,
+      );
+
+  /// تخمین پکیج دیسالتر جدید از اقلام محاسبه‌شده‌ی بانک.
+  DesalterEstimate estimateDesalterPackage(DesalterEstimateInput input, DesalterBankResult bank,
+      {Map<String, double> overrides = const {}}) {
+    final e = genericEngine(categoryCode: 'DESALTER');
+    return estimateDesalter(
+      input,
+      bank,
+      factors: indices.factorTable(factorSetOf('DESALTER')).withOverrides(overrides),
+      params: desalterParams,
+      eurRate: e.eurRateTarget,
+      usdRate: e.usdRateTarget,
     );
   }
 
@@ -199,6 +244,24 @@ class PriceBank {
     final e = engine ?? genericEngine(categoryCode: cat.code);
     final profile = equipmentProfiles[cat.code];
     final all = items.loadCategory(categoryId);
+    if (cat.code == 'DESALTER') {
+      final bank = computeDesalters(all, engine: e);
+      return [
+        for (final c in bank.rows)
+          GenericRow(
+            all.firstWhere((it) => it.id == c.record.id),
+            c.price,
+            [
+              for (final o in all.firstWhere((it) => it.id == c.record.id).observations.where((o) => o.kind == 'quote'))
+                if (e.calculate(genericInputFor(o)).eurTarget.number case final v?) v,
+            ],
+            size: c.totalVolume,
+            allF: c.factors.all,
+            coef: c.coefB,
+            des: c,
+          ),
+      ];
+    }
     final est = profile == null
         ? null
         : genericEstimator(cat.code, weightRef: medianWeightDensity(profile, all.map((it) => it.values)));
@@ -231,8 +294,15 @@ class PriceBank {
   /// روش‌های قابل انتخاب برای رده‌های غیرپمپ (M6 در این رده‌ها همان M4 است).
   static const genericMethodCodes = ['M0', 'M1', 'M2', 'M4', 'M5'];
 
+  /// روش‌های یک رده: روش‌های عمومی + شاخص ترکیبی M7 اگر سبد شاخص برای رده تعریف شده باشد.
+  List<String> methodCodesFor(String categoryCode) => [
+        ...genericMethodCodes,
+        if (settingsRepo.load().catMix(categoryCode).isNotEmpty) 'M7',
+      ];
+
   /// صحت‌سنجی روش‌های تعدیل با اقلام همین رده که هم قیمت قدیمی و هم استعلام جدید دارند.
-  BacktestResult backtestCategory(String categoryCode, {List<String> methods = genericMethodCodes}) {
+  BacktestResult backtestCategory(String categoryCode, {List<String>? methods}) {
+    methods ??= methodCodesFor(categoryCode);
     final cat = catalog.categoryByCode(categoryCode);
     final pairs = <BacktestPair>[];
     if (cat == null) return BacktestResult(pairs, methods);

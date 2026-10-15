@@ -30,6 +30,9 @@ class GenericCalcResult {
   String factorDetail = '';
   String methodCode = defaultMethodCode;
   double? eurRateTarget, usdRateTarget, baseRate;
+
+  /// شاخص (ترکیبی) سال پایه و هدف در روش‌های شاخص‌محور
+  double? indexBase, indexTarget;
   final List<CalcStep> steps = [];
 }
 
@@ -44,6 +47,19 @@ class GenericEngine {
       settings.eurTargetOverride ?? _fx(settings.fxEurCode, settings.targetYear, settings.targetMonth);
   double? get usdRateTarget =>
       settings.usdTargetOverride ?? _fx(settings.fxUsdCode, settings.targetYear, settings.targetMonth);
+
+  /// سطح شاخص روش فعال در یک سال (M7: شاخص ترکیبی؛ M4/M6: PPI رده؛ سایر روش‌ها: null)
+  double? indexAt(int year) {
+    final code = methodByCode(settings.method).code;
+    final mf = MethodFactors(series,
+        ppiSeries: settings.ppiSeries, fxType: settings.fxType, mix: settings.mix, mixStrict: settings.mixStrict);
+    if (code == compositeMethodCode) return mf.compositeIndex(year);
+    if (code == 'M4' || code == 'M6') {
+      final v = series.resolve(settings.ppiSeries, year)?.value;
+      return (v != null && v > 0) ? v : null;
+    }
+    return null;
+  }
 
   GenericCalcResult calculate(GenericInput inp) {
     final r = GenericCalcResult();
@@ -100,9 +116,12 @@ class GenericEngine {
     // ---------- ضریب تعدیل
     final method = methodByCode(settings.method);
     r.methodCode = method.code;
-    final mf = MethodFactors(series, ppiSeries: settings.ppiSeries, fxType: settings.fxType)
+    final mf = MethodFactors(series,
+            ppiSeries: settings.ppiSeries, fxType: settings.fxType, mix: settings.mix, mixStrict: settings.mixStrict)
         .factor(method.code, y, ym, settings.targetYear, settings.targetMonth);
     r.factor = mf.factor;
+    r.indexBase = mf.base;
+    r.indexTarget = mf.target;
     r.factorDetail = mf.detail;
     r.steps.add(CalcStep('۲. ضریب تعدیل (روش ${method.code} — ${method.nameFa})', mf.detail,
         mf.factor == null ? 'محاسبه نشد' : _g(mf.factor!),

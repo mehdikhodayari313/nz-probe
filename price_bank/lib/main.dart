@@ -14,7 +14,7 @@ Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // آزمون دود بدون رابط کاربری (برای خط ساخت خودکار):
-  //   price_bank.exe --smoke <گزارش> <مسیر دیتابیس آزمایشی> [فایل v8]
+  //   price_bank.exe --smoke <گزارش> <مسیر دیتابیس آزمایشی> [فایل v8] [بانک دیسالتر]
   final si = args.indexOf('--smoke');
   if (si >= 0) {
     await _smoke(args.sublist(si + 1));
@@ -125,6 +125,16 @@ Future<void> _smoke(List<String> a) async {
       final total = priced.where((r) => r.item.include).fold<double>(0, (s, r) => s + r.result.irrTarget.number!);
       b.writeln('computed: ${rows.length}, with IRR target: ${priced.length}, sum IRR (include=Y): $total');
       ok = rep.items == 146 && priced.isNotEmpty;
+    }
+    final desPath = a.length > 3 ? a[3] : null;
+    if (desPath != null && File(desPath).existsSync()) {
+      final rep = pb.desalterImporter().run(XlsxWorkbook.openFile(desPath), fileName: 'desalters');
+      final cat = pb.catalog.categoryByCode('DESALTER')!;
+      final rows = pb.computeCategory(cat.id);
+      final priced = rows.where((r) => r.result.eurTarget.isNumber).length;
+      b.writeln('desalters: ${rep.items}, quotes: ${rep.quotes}, corrections: ${rep.corrections}, '
+          'priced: $priced, method: ${pb.settingsRepo.load().methodFor('DESALTER')}');
+      ok = ok && rep.items == 9 && priced >= 7;
     }
     pb.close();
     // باز کردن دوباره: مهاجرت تکراری یا داده‌ی پایه‌ی تکراری نباید رخ دهد

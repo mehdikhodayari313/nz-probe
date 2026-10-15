@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/pump_engine.dart' show asText;
+import '../../core/calc/desalter.dart';
 import '../../core/catalog/profiles.dart';
 import '../../core/price_bank.dart';
 import '../format.dart';
@@ -31,6 +32,19 @@ const _genGroupFa = {
   'NACE': 'NACE MR0175 (پایه: خیر = ۱)',
   'PRESS': 'فشار طراحی (پایه: تا ۱۰ barg = ۱)',
   'LUBE': 'روغن‌کاری کمپرسور (پایه: روغن‌کاری‌شده = ۱)',
+};
+
+/// گروه‌های ضریب دیسالتر (Factors_DES بانک دیسالتر)
+const _desGroupFa = {
+  'TECH': 'فناوری دیسالتر (پایه: Electrostatic AC/DC = ۱)',
+  'MAT': 'متریال بدنه‌ی وسل (پایه: CS SA-516 Gr.70 = ۱)',
+  'NACE': 'NACE MR0175 (پایه: خیر = ۱)',
+  'STAGE': 'تعداد مرحله — فقط روش ظرفیت‌محور A (پایه: دو مرحله = ۱)',
+  'SC_TRF': 'Scope: ترانس‌ها در قیمت (پایه = بله)',
+  'SC_PMP': 'Scope: پمپ‌های Recycle در قیمت (پایه = بله)',
+  'SC_PIP': 'Scope: لوله‌کشی مربوط در قیمت (پایه = بله)',
+  'SC_INS': 'Scope: ابزار دقیق و کنترل در قیمت (پایه = بله)',
+  'SC_CT': 'Scope: گمرک و حمل در قیمت (پایه = خیر)',
 };
 
 /// فیلد هر گروه ضریب پمپ (برای شمارش اقلام هر گزینه)
@@ -101,7 +115,7 @@ class _FactorsPageState extends State<FactorsPage> {
     } else {
       for (final r in app.genericRows(cat.id)) {
         for (final g in profile!.factorGroups) {
-          add(g, factorOption(g, r.item.values));
+          add(g, factorOption(g, r.item.values, code: _code));
         }
       }
     }
@@ -159,7 +173,7 @@ class _FactorsPageState extends State<FactorsPage> {
       for (final g in order)
         if (groups[g] case final list?) ...[
           SectionCard(
-            title: (isPump ? _groupFa[g] : _genGroupFa[g]) ?? g,
+            title: (isPump ? _groupFa[g] : (_code == 'DESALTER' ? _desGroupFa[g] : _genGroupFa[g])) ?? g,
             padding: const EdgeInsets.fromLTRB(8, 6, 8, 8),
             child: Table(
               columnWidths: const {
@@ -251,7 +265,7 @@ class _EstimationParams extends StatelessWidget {
         icon: const Icon(Icons.edit_rounded, size: 18),
         label: const Text('تغییر در تنظیمات رده'),
       ),
-      child: Wrap(spacing: 10, runSpacing: 10, children: [
+      child: code == 'DESALTER' ? _desalter(app, item) : Wrap(spacing: 10, runSpacing: 10, children: [
         item('پارامتر اندازه', '${profile.driver.labelFa} (${profile.driver.unit})', 'از مشخصات هر قلم محاسبه می‌شود'),
         item('توان اندازه n', faSmart(n), custom ? 'تعیین‌شده در تنظیمات رده' : 'پیش‌فرض قالب رده'),
         if (profile.weightKey != null)
@@ -265,6 +279,23 @@ class _EstimationParams extends StatelessWidget {
       ]),
     );
   }
+}
+
+/// پارامترهای تخمین دیسالتر: نماهای A و B (با مقدار برازش‌شده از داده‌ی بانک) و محرک kVA
+Widget _desalter(AppState app, Widget Function(String, String, String) item) {
+  final cat = app.pb.catalog.categoryByCode('DESALTER')!;
+  final rows = app.genericRows(cat.id);
+  final bank = rows.isEmpty ? null : rows.first.des?.bank;
+  final p = app.settings.desalterParams;
+  String fit(double? f, int pts) => f == null ? 'برازش: کمتر از ۳ نقطه ($pts)' : 'برازش از ${fa(pts)} قلم بانک: ${faSmart(f)}';
+  return Wrap(spacing: 10, runSpacing: 10, children: [
+    item('روش A — ظرفیت', 'BPD^${faSmart(bank?.nA ?? p.nA)}',
+        '${p.useFittedA ? 'نمای برازش‌شده' : 'Provisional'} · ${fit(bank?.fittedA, bank?.pointsA ?? 0)}'),
+    item('روش B — حجم پوسته', 'm³^${faSmart(bank?.nB ?? p.nB)}',
+        '${p.useFittedB ? 'نمای برازش‌شده' : 'Provisional'} · ${fit(bank?.fittedB, bank?.pointsB ?? 0)}'),
+    item('محرک kVA', p.kvaActive ? 'فعال (m = ${faSmart(p.kvaExponent)})' : 'خاموش', 'مبنا ${faSmart(p.kvaBase)} kVA · KVA_F = (kVA ÷ مبنا)^m'),
+    item('نتیجه‌ی نهایی', DesalterParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات رده» قابل تغییر'),
+  ]);
 }
 
 class _CalibratedField extends StatefulWidget {

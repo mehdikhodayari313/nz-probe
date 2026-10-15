@@ -6,6 +6,10 @@
 
 import 'dart:math' as math;
 
+import '../calc/methods.dart' show MixPart;
+
+part 'desalter_profile.dart';
+
 /// شرح چندخطی MTO: خط اول نام؛ «کلید: مقدار» مشخصات؛ خط بدون «:» ادامه‌ی مقدار قبلی یا دامنه‌ی کار.
 ({String name, Map<String, String> specs, List<String> scope}) parseMtoDescription(String description) {
   final lines = description.replaceAll('\r', '').split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
@@ -62,9 +66,10 @@ const profileGroupFa = {
   'material': 'جنس، کد و استاندارد',
   'package': 'اجزای پکیج',
   'scope': 'دامنه‌ی تأمین',
+  'source': 'منبع و مبنای قیمت',
 };
 
-const _groupSort = {'key_specs': 100, 'design': 200, 'material': 300, 'package': 400, 'scope': 500};
+const _groupSort = {'key_specs': 100, 'design': 200, 'material': 300, 'package': 400, 'scope': 500, 'source': 550};
 int profileGroupSort(String g) => _groupSort[g] ?? 600;
 
 /// قاعده‌ی تبدیل یک خط شرح MTO به فیلد(های) قالب.
@@ -96,6 +101,7 @@ class EquipmentProfile {
     this.factorGroups = const ['MAT', 'NACE'],
     this.inferType,
     this.weightKey,
+    this.factorSeeds,
   });
   final String code;
   final List<ProfileField> fields;
@@ -110,6 +116,9 @@ class EquipmentProfile {
 
   /// فیلد وزن خالی (ظرف‌ها و مخازن): اگر پر باشد، «ضریب وزن» در تخمین اعمال می‌شود؛ خالی = بی‌اثر.
   final String? weightKey;
+
+  /// ضرایب اولیه‌ی اختصاصی رده (null = ضرایب مشترک [profileFactorSeeds])
+  final List<(String, String, double, String)>? factorSeeds;
 
   /// استنباط فیلدها از نام/عنوان شیت (مثلاً «Burn Pit» ← نوع فلر)
   final void Function(String nameAndTitle, Map<String, Object?> out)? inferType;
@@ -406,14 +415,36 @@ final equipmentProfiles = <String, EquipmentProfile>{
   'DESALTER': EquipmentProfile(
     code: 'DESALTER',
     fields: const [
-      ProfileField('desalter_type', 'نوع', 'key_specs'),
+      ProfileField('sub_category', 'زیرگروه', 'key_specs', type: 'enum', list: 'DES_SUBCAT'),
+      ProfileField('desalting_technology', 'فناوری دیسالتر', 'key_specs', type: 'enum', list: 'DES_TECH',
+          help: 'برای ضریب فناوری (TECH)؛ از شرح «Type:» منبع خودکار تشخیص داده می‌شود.'),
+      ProfileField('desalter_type', 'نوع (متن منبع)', 'key_specs'),
       ProfileField('vessel_tag', 'تگ ظرف دیسالتر', 'key_specs'),
       ProfileField('vessel_id_mm', 'قطر داخلی ظرف', 'key_specs', type: 'number', unit: 'mm'),
       ProfileField('vessel_tl_mm', 'طول TL-TL ظرف', 'key_specs', type: 'number', unit: 'mm'),
+      ProfileField('vessels_per_package', 'تعداد وسل در پکیج', 'key_specs', type: 'number',
+          help: 'حجم کل پوسته = π/4 × ID² × T/T × تعداد وسل (مبنای روش B تخمین).'),
+      ProfileField('trains_per_package', 'تعداد ترین در پکیج', 'key_specs', type: 'number'),
+      ProfileField('no_of_stages', 'تعداد مرحله', 'key_specs', type: 'enum', list: 'DES_STAGE',
+          help: 'ضریب مرحله (STAGE) فقط در روش ظرفیت‌محور (A) به کار می‌رود.'),
+      ProfileField('capacity_bpd', 'ظرفیت کل پکیج', 'key_specs', type: 'number', unit: 'BPD',
+          help: 'ظرفیت کل نفت ورودی پکیج (بشکه در روز)؛ ۱ m³/h = ۱۵۰٫۹۶ BPD. مبنای روش A تخمین.'),
+      ProfileField('capacity_basis', 'مبنای ظرفیت (متن منبع)', 'key_specs'),
       _fWeight,
       _fPress, _fPressText, _fTmin, _fTmax,
-      ProfileField('shell_material', 'جنس ظرف', 'material'),
-      _fMat, _fNace, _fCode,
+      ProfileField('shell_material', 'جنس ظرف (متن منبع)', 'material'),
+      ProfileField('des_material', 'متریال بدنه (ضریب)', 'material', type: 'enum', list: 'DES_MAT',
+          help: 'برای ضریب متریال (MAT)؛ از متن جنس خودکار تشخیص داده می‌شود.'),
+      _fNace,
+      ProfileField('vessel_design_code', 'کد طراحی وسل', 'material', type: 'enum', list: 'DES_VSTD'),
+      ProfileField('ips_standard', 'استاندارد IPS', 'material', type: 'enum', list: 'DES_IPS'),
+      _fCode,
+      ProfileField('n_transformers', 'تعداد ترانس', 'package', type: 'number', help: 'عدد اول در «3 x 50%».'),
+      ProfileField('transformer_sizing', 'ظرفیت هر ترانس (کسر از توان لازم)', 'package', type: 'number',
+          help: 'عدد دوم در «3 x 50%» به صورت کسر: 0.5'),
+      ProfileField('kva_per_transformer', 'kVA هر ترانس', 'package', type: 'number', unit: 'kVA',
+          help: 'در هیچ منبعی نیامده؛ از دیتاشیت سازنده وارد کنید. توان لازم = kVA ÷ کسر ظرفیت (محرک kVA، فعلاً خاموش).'),
+      ProfileField('recycle_pumps', 'پمپ‌های Recycle (متن منبع)', 'package'),
       ProfileField('pumps_tag', 'تگ پمپ‌های گردشی', 'package'),
       ProfileField('pump_type', 'نوع پمپ‌ها', 'package'),
       ProfileField('pump_flow_m3h', 'دبی نامی پمپ', 'package', type: 'number', unit: 'm³/h'),
@@ -421,6 +452,14 @@ final equipmentProfiles = <String, EquipmentProfile>{
       ProfileField('pump_material_class', 'کلاس متریال پمپ (API 610)', 'package'),
       ProfileField('pump_code', 'کد پمپ‌ها', 'package'),
       _fScope,
+      ProfileField('scope_transformers', 'Scope: ترانس‌ها', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
+      ProfileField('scope_recycle_pumps', 'Scope: پمپ‌های Recycle', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
+      ProfileField('scope_related_piping', 'Scope: لوله‌کشی مربوط', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
+      ProfileField('scope_instruments', 'Scope: ابزار دقیق و کنترل', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
+      ProfileField('scope_customs_transport', 'Scope: گمرک و حمل', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('project_phase', 'مرحله‌ی پروژه', 'source', type: 'enum', list: 'Phase'),
+      ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'source'),
+      ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'source'),
     ],
     rules: [
       _text(r'^type', 'desalter_type'),
@@ -438,11 +477,13 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _weight,
       ..._common,
     ],
-    weightKey: weightFieldKey,
-    driver: SizeDriver('حجم ظرف دیسالتر', 'm³', 0.6, (v) => _cyl(v, 'vessel_id_mm', 'vessel_tl_mm')),
-    gridKeys: ['vessel_id_mm', 'vessel_tl_mm', 'desalter_type', 'material_class'],
-    rangeKeys: ['design_pressure_barg'],
-    factorGroups: const ['MAT', 'NACE', 'PRESS'],
+    inferType: inferDesalter,
+    typeKey: 'sub_category',
+    driver: SizeDriver('حجم کل پوسته‌ی وسل‌ها', 'm³', 0.6, desalterShellVolume),
+    gridKeys: ['capacity_bpd', 'vessel_id_mm', 'vessel_tl_mm', 'vessels_per_package', 'desalting_technology', 'no_of_stages'],
+    rangeKeys: ['capacity_bpd', 'design_pressure_barg'],
+    factorGroups: desalterFactorGroups,
+    factorSeeds: desalterFactorSeeds,
   ),
   'CIP': EquipmentProfile(
     code: 'CIP',
@@ -730,6 +771,7 @@ const profileLists = <String, List<(String, String)>>{
   'G_COMP': [('Reciprocating', 'رفت‌وبرگشتی'), ('Screw', 'اسکرو'), ('Centrifugal', 'گریز از مرکز'), ('Other', 'سایر')],
   'G_LUBE': [('Oil-free', 'بدون روغن'), ('Lubricated', 'روغن‌کاری‌شده')],
   'G_CRANE': [('Top Running', 'روی ریل (Top Running)'), ('Under Hung', 'آویز (Under Hung)'), ('Gantry', 'دروازه‌ای'), ('Monorail', 'مونوریل'), ('Other', 'سایر')],
+  ...desalterLists,
 };
 
 /// ضرایب نرمال‌سازی اولیه (قضاوت مهندسی، نسبت به پایه = ۱): (گروه، گزینه، ضریب، شرح)
@@ -754,8 +796,15 @@ const profileFactorSeeds = <(String, String, double, String)>[
 
 String factorSetOf(String categoryCode) => 'GEN_$categoryCode';
 
-/// گزینه‌ی گروه ضریب برای مقادیر یک قلم.
-String? factorOption(String group, Map<String, Object?> v) {
+/// روش تعدیل پیش‌فرض هر رده‌ی غیرپمپ (مستقل از روش پمپ‌ها): دیسالتر = شاخص ترکیبی، بقیه = PPI رده.
+String defaultCategoryMethod(String code) => code == 'DESALTER' ? 'M7' : 'M4';
+
+/// سبد پیش‌فرض شاخص ترکیبی (M7) هر رده.
+List<MixPart> defaultCategoryMix(String code) => code == 'DESALTER' ? desalterDefaultMix : const [];
+
+/// گزینه‌ی گروه ضریب برای مقادیر یک قلم ([code] = رده، برای رده‌هایی که گروه‌های اختصاصی دارند).
+String? factorOption(String group, Map<String, Object?> v, {String? code}) {
+  if (code == 'DESALTER') return desalterFactorOption(group, v);
   switch (group) {
     case 'MAT':
       return v['material_class']?.toString();

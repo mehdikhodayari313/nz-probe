@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
+import '../../core/calc/desalter.dart';
 import '../../core/calc/generic_engine.dart';
 import '../../core/calc/pump_engine.dart' show CalcStep;
 import '../../core/catalog/profiles.dart';
@@ -48,6 +49,9 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
     final engine = pb.genericEngine(categoryCode: cat.code);
     final profile = equipmentProfiles[cat.code];
     final result = engine.calculate(PriceBank.genericInputFor(item.primary));
+    final des = cat.code == 'DESALTER'
+        ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.des
+        : null;
     final canEdit = app.canEdit(cat.disciplineCode);
     final t = Theme.of(context);
 
@@ -115,7 +119,7 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
           child: TabBarView(controller: _tabs, children: [
             _specTab(context, fields, item),
             _PricesTab(item: item, engine: engine, canEdit: canEdit),
-            _CalcTab(result: result),
+            _CalcTab(result: result, des: des),
             _HistoryTab(entries: pb.audit.history('item', item.id), fields: fields),
           ]),
         ),
@@ -430,13 +434,19 @@ class _PricesTab extends StatelessWidget {
 }
 
 class _CalcTab extends StatelessWidget {
-  const _CalcTab({required this.result});
+  const _CalcTab({required this.result, this.des});
   final GenericCalcResult result;
+  final DesalterCalc? des;
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
+    final d = des;
     return ListView(padding: const EdgeInsets.all(20), children: [
+      if (d != null) ...[
+        _DesalterCalcCard(d: d),
+        const SizedBox(height: 14),
+      ],
       SectionCard(
         title: 'محاسبه‌ی گام‌به‌گام قیمت مبنا',
         subtitle: 'روش ${result.methodCode}',
@@ -447,6 +457,62 @@ class _CalcTab extends StatelessWidget {
         ]),
       ),
     ]);
+  }
+}
+
+/// محاسبات بانک دیسالتر یک قلم (هم‌نام ستون‌های فرمولی بانک Desalters v8)
+class _DesalterCalcCard extends StatelessWidget {
+  const _DesalterCalcCard({required this.d});
+  final DesalterCalc d;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    String n(double? v, [String unit = '']) => v == null ? '—' : '${faSmart(v)}${unit.isEmpty ? '' : ' $unit'}';
+    String f((String?, double)? x) => x == null ? '—' : '× ${faSmart(x.$2)}${x.$1 == null ? ' (خالی)' : ' («${x.$1}»)'}';
+    final p = d.factors.parts;
+    final bank = d.bank;
+    final rows = <(String, String)>[
+      ('حجم هر وسل (π/4 × ID² × T/T)', n(d.volumePerVessel, 'm³')),
+      ('حجم کل پوسته (× تعداد وسل)', n(d.totalVolume, 'm³')),
+      ('ظرفیت کل پکیج', n(d.bpd, 'BPD')),
+      ('استانداردها', d.standards),
+      ('kVA نصب‌شده / توان لازم', '${n(d.installedKva)} / ${n(d.demandKva)}'),
+      ('ضریب فناوری TECH_F', f(p['TECH'])),
+      ('ضریب متریال MAT_F', f(p['MAT'])),
+      ('ضریب NACE_F', f(p['NACE'])),
+      ('ضریب Scope (حاصل‌ضرب ۵ ضریب)', '× ${faSmart(d.factors.scope)}'),
+      ('ضریب محرک kVA', '× ${faSmart(d.factors.kvaF)}'),
+      ('ALL_F (کل پیکربندی)', '× ${faSmart(d.factors.all)}'),
+      ('STAGE_F (فقط روش A)', f(p['STAGE'])),
+      ('یورو سال منبع', n(d.eurSource, '€')),
+      ('یورو نرمال‌شده (سال منبع ÷ ALL_F)', n(d.normEurSource, '€')),
+      ('شاخص پایه / هدف', '${n(d.indexBase)} / ${n(d.indexTarget)}'),
+      ('یورو نرمال‌شده‌ی تعدیل‌شده', n(d.normEsc, '€')),
+      ('Coef A = NormEsc ÷ STAGE_F ÷ BPD^n', '${n(d.coefA)}${bank == null ? '' : '  (n = ${faSmart(bank.nA)})'}'),
+      ('Coef B = NormEsc ÷ m³^n', '${n(d.coefB)}${bank == null ? '' : '  (n = ${faSmart(bank.nB)})'}'),
+    ];
+    return SectionCard(
+      title: 'محاسبات بانک دیسالتر',
+      subtitle: 'نرمال‌سازی به پیکربندی پایه و ضریب هزینه‌ی روش‌های تخمین A و B',
+      icon: Icons.calculate_outlined,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        for (var i = 0; i < rows.length; i++)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            color: i.isOdd ? AppColors.zebra : null,
+            child: Row(children: [
+              Expanded(child: Text(rows[i].$1, style: t.textTheme.bodySmall)),
+              Text(fa(rows[i].$2), style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+            ]),
+          ),
+        if (d.qaFlag.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text('کنترل کیفیت: ${d.qaFlag}', style: TextStyle(color: Tones.warn(context), fontSize: 12.5)),
+          ),
+      ]),
+    );
   }
 }
 

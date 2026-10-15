@@ -1,4 +1,7 @@
+import '../calc/desalter.dart';
+import '../calc/methods.dart';
 import '../calc/pump_engine.dart';
+import '../catalog/profiles.dart';
 import '../db/db.dart';
 import 'audit.dart';
 
@@ -21,6 +24,17 @@ class AppSettings {
   // تنظیمات اختصاصی هر رده (خالی = پیش‌فرض برنامه یا قالب رده)
   String? catMethod(String code) => _m['cat_method_$code']?.isEmpty ?? true ? null : _m['cat_method_$code'];
   String? catPpi(String code) => _m['cat_ppi_$code']?.isEmpty ?? true ? null : _m['cat_ppi_$code'];
+  /// روش تعدیل مؤثر هر رده: روش اختصاصی، وگرنه پیش‌فرض همان رده (مستقل از روش پمپ‌ها).
+  String methodFor(String code) =>
+      code == 'PUMP' ? escalationMethod : (catMethod(code) ?? defaultCategoryMethod(code));
+
+  /// سبد شاخص ترکیبی رده (روش M7): تنظیم اختصاصی، وگرنه سبد پیش‌فرض قالب رده.
+  List<MixPart> catMix(String code) {
+    final own = MixPart.parseList(_m['cat_mix_$code']);
+    return own.isNotEmpty ? own : defaultCategoryMix(code);
+  }
+
+  bool catMixStrict(String code) => _m['cat_mixrule_$code'] == 'Strict';
   double? catExponent(String code) => numOrNull('cat_n_$code');
   double? catWeightExp(String code) => numOrNull('cat_wexp_$code');
   String? catEstimation(String code) => _m['cat_est_$code'];
@@ -35,8 +49,25 @@ class AppSettings {
   /// واحد نمایش پول: IRR (ریال) یا IRT (تومان). داده همیشه به ریال ذخیره می‌شود.
   String get displayUnit => str('display_unit', 'IRR');
 
+  // پارامترهای بانک دیسالتر (Assumptions بانک Desalters v8)
+  DesalterParams get desalterParams => DesalterParams(
+        nA: numv('des_n_a', 0.6),
+        useFittedA: str('des_fit_a', 'N') == 'Y',
+        nB: numv('des_n_b', 0.6),
+        useFittedB: str('des_fit_b', 'N') == 'Y',
+        kvaActive: str('des_kva_on', 'N') == 'Y',
+        kvaExponent: numv('des_kva_m', 0.3),
+        kvaBase: numv('des_kva_base', 1000),
+        finalBasis: str('des_final', DesalterParams.weighted),
+      );
+
   PumpCalcSettings toPumpSettings(
-          {String? fxTypeOverride, int? targetYearOverride, String? methodOverride, String? ppiOverride}) =>
+          {String? fxTypeOverride,
+          int? targetYearOverride,
+          String? methodOverride,
+          String? ppiOverride,
+          List<MixPart>? mixOverride,
+          bool mixStrict = false}) =>
       PumpCalcSettings(
         method: methodOverride ?? escalationMethod,
         targetYear: targetYearOverride ?? targetYear,
@@ -50,6 +81,8 @@ class AppSettings {
         eurCheckLimit: eurCheckLimit,
         eurTargetOverride: eurTargetOverride,
         usdTargetOverride: usdTargetOverride,
+        mix: mixOverride ?? const [],
+        mixStrict: mixStrict,
       );
 }
 

@@ -79,7 +79,8 @@ jobs:
           $report = Join-Path (Get-Location) "ci/smoke.txt"
           $db = Join-Path $env:RUNNER_TEMP "smoke.db"
           $v8 = Join-Path (Get-Location) "test/fixtures_private/Pumps_Price_Bank_v8.xlsx"
-          $p = Start-Process -FilePath "$out/price_bank.exe" -ArgumentList "--smoke", "`"$report`"", "`"$db`"", "`"$v8`"" -PassThru
+          $des = Join-Path (Get-Location) "test/fixtures_private/Desalters_bank_test.xlsx"
+          $p = Start-Process -FilePath "$out/price_bank.exe" -ArgumentList "--smoke", "`"$report`"", "`"$db`"", "`"$v8`"", "`"$des`"" -PassThru
           if (-not $p.WaitForExit(240000)) { $p.Kill(); "TIMEOUT" | Set-Content ci/smoke_exit.txt; exit 1 }
           "exit code: $($p.ExitCode)" | Set-Content ci/smoke_exit.txt
           if ($p.ExitCode -ne 0) { exit 1 }

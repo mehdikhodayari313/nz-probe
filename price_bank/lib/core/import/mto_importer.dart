@@ -13,6 +13,7 @@
 import 'package:shamsi_date/shamsi_date.dart';
 
 import '../catalog/profiles.dart';
+import 'desalter_importer.dart' show findDesalterBankDuplicate;
 import 'mto_generic.dart';
 import '../db/db.dart';
 import '../repo/audit.dart';
@@ -124,6 +125,9 @@ class MtoAnalysis {
 
 class MtoImportReport {
   int items = 0, quotes = 0, estimates = 0, vendors = 0, specFields = 0, skippedDuplicates = 0, weights = 0;
+
+  /// دیسالترهایی که در بانک دیسالتر هستند و وارد نشدند (جزء skippedDuplicates)
+  int skippedBankDuplicates = 0;
   bool alreadyImported = false;
   final Map<String, int> perCategory = {};
   final List<String> warnings = [];
@@ -688,6 +692,13 @@ class MtoImporter {
                 [cat.id, pid, it.tag]);
             if (dup != null) {
               rep.skippedDuplicates++;
+              continue;
+            }
+            // دیسالتر: بانک دیسالتر مرجع است؛ همان قلم (پایه‌ی تگ و قیمت یکسان) دوباره وارد نمی‌شود
+            if (cat.code == 'DESALTER' &&
+                findDesalterBankDuplicate(db, cat.id, it.tag, [it.goingEur, it.goingIrr, it.goingUsd]) != null) {
+              rep.skippedDuplicates++;
+              rep.skippedBankDuplicates++;
               continue;
             }
           }

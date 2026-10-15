@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../../app/app_state.dart';
 import '../../core/calc/backtest.dart';
 import '../../core/calc/methods.dart';
-import '../../core/price_bank.dart';
+import '../../core/catalog/profiles.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -76,7 +76,7 @@ class _MethodsPageState extends State<MethodsPage> {
     final reason = await askReason(context,
         title: isPump ? 'تغییر روش تعدیل به ${m.code}' : 'روش تعدیل «$catName»: ${m.code}',
         summary: isPump
-            ? '${m.nameFa}\nروش پمپ‌ها و روش پیش‌فرض رده‌هایی که روش اختصاصی ندارند.'
+            ? '${m.nameFa}\nفقط روش پمپ‌ها؛ روش هر تجهیز دیگر جداگانه تعیین می‌شود.'
             : '${m.nameFa}\nفقط قیمت‌های تعدیل‌شده‌ی این رده دوباره محاسبه می‌شوند.');
     if (reason == null || !context.mounted) return;
     final app = AppScope.read(context);
@@ -103,15 +103,17 @@ class _MethodsPageState extends State<MethodsPage> {
     // روش‌های این رده
     final methods = isPump
         ? escalationMethods
-        : [for (final c in PriceBank.genericMethodCodes) methodByCode(c)];
+        : [for (final c in app.pb.methodCodesFor(_code)) methodByCode(c)];
     final selectable = [for (final m in methods) if (m.selectable) m.code];
     final global = s.escalationMethod;
     final own = isPump ? null : s.catMethod(_code);
-    var effective = isPump ? global : (own ?? global);
+    final catDefault = isPump ? defaultMethodCode : defaultCategoryMethod(_code);
+    var effective = isPump ? global : s.methodFor(_code);
     if (!isPump && effective == 'M6') effective = 'M4'; // M6 در رده‌های غیرپمپ همان M4 است
     final ppiCode = isPump ? s.ppiSeries : (s.catPpi(_code) ?? s.ppiSeries);
     final ppiName = app.pb.indices.series().where((x) => x.code == ppiCode).map((x) => x.nameFa).firstOrNull ?? ppiCode;
-    final mf = MethodFactors(app.pb.seriesSnapshot, ppiSeries: ppiCode, fxType: s.fxRateType);
+    final mf = MethodFactors(app.pb.seriesSnapshot,
+        ppiSeries: ppiCode, fxType: s.fxRateType, mix: s.catMix(_code), mixStrict: s.catMixStrict(_code));
     _compute(app, isPump, selectable);
     final bt = _bt;
     final refCode = isPump ? defaultMethodCode : effective;
@@ -124,7 +126,7 @@ class _MethodsPageState extends State<MethodsPage> {
         icon: Icons.science_rounded,
         title: 'روش‌های تعدیل قیمت',
         subtitle: '${cat.nameFa} · روش فعال: $effective'
-            '${isPump ? ' · پیشنهادی پمپ: M6 (PPI یورو + کف قیمت)' : (own == null ? ' (پیش‌فرض برنامه: $global)' : ' (اختصاصی این رده)')}',
+            '${isPump ? ' · پیشنهادی پمپ: M6 (PPI یورو + کف قیمت)' : (own == null ? ' (پیش‌فرض همین رده)' : ' (انتخاب‌شده برای این رده)')}',
         actions: [
           if (isPump && global != defaultMethodCode && canEdit)
             OutlinedButton.icon(
@@ -132,11 +134,11 @@ class _MethodsPageState extends State<MethodsPage> {
               icon: const Icon(Icons.restart_alt_rounded),
               label: const Text('بازگشت به M6'),
             ),
-          if (!isPump && own != null && canEdit)
+          if (!isPump && own != null && own != catDefault && canEdit)
             OutlinedButton.icon(
-              onPressed: () => app.setSetting('cat_method_$_code', null, reason: 'پیروی از روش پیش‌فرض برنامه'),
+              onPressed: () => app.setSetting('cat_method_$_code', null, reason: 'بازگشت به روش پیش‌فرض رده'),
               icon: const Icon(Icons.restart_alt_rounded),
-              label: Text('پیروی از روش پیش‌فرض برنامه ($global)'),
+              label: Text('بازگشت به پیش‌فرض رده ($catDefault)'),
             ),
         ],
       ),
@@ -148,7 +150,7 @@ class _MethodsPageState extends State<MethodsPage> {
           for (final c in cats)
             CategoryChip(
               key: ValueKey('method-cat-${c.code}'),
-              label: c.code == 'PUMP' || s.catMethod(c.code) == null ? c.nameFa : '${c.nameFa} · ${s.catMethod(c.code)}',
+              label: '${c.nameFa} · ${s.methodFor(c.code)}',
               count: counts[c.id] ?? 0,
               selected: c.code == _code,
               onTap: () => setState(() => _code = c.code),
@@ -164,11 +166,14 @@ class _MethodsPageState extends State<MethodsPage> {
           'روش تعدیل، قیمت یورویی سال منبع را به سال هدف می‌برد. سپس با نرخ یوروی سال هدف به ریال/تومان تبدیل می‌شود.',
           if (isPump) ...[
             'آمار دقت پمپ‌ها از فایل Pump_Escalation_Validation است: قیمت ۱۴ پمپ پازنان ۲ در بهمن ۱۳۹۳ با هر روش به ۱۴۰۴ برده شده و با میانگین استعلام‌های واقعی ۱۴۰۴ مقایسه شده است.',
-            'M6 کمترین خطای میانه و بیشترین تعداد پمپ در بازه‌ی ±۲۵٪ را دارد و پیش‌فرض است. روش پمپ، روش پیش‌فرض رده‌هایی هم هست که روش اختصاصی ندارند.',
+            'M6 کمترین خطای میانه و بیشترین تعداد پمپ در بازه‌ی ±۲۵٪ را دارد و پیش‌فرض است. روش پمپ فقط روی پمپ‌ها اثر دارد؛ هر تجهیز روش تعدیل خودش را دارد.',
           ] else ...[
             'صحت‌سنجی «${cat.nameFa}» خودکار از داده‌های همین بانک است: هر قلمی که هم قیمت قدیمی (مثلاً بازنگری ۱۳۹۳) و هم استعلام جدید دارد، یک آزمون است؛ قیمت قدیمی با هر روش به سال استعلام برده و با میانگین استعلام‌ها مقایسه می‌شود.',
             'با ورود MTO پروژه‌های بیشتر، تعداد آزمون‌ها و اعتبار این مقایسه خودکار بیشتر می‌شود.',
             'M4 در این رده با شاخص PPI انتخاب‌شده در «تنظیمات رده» ($ppiName) محاسبه می‌شود؛ کف قیمت M6 فقط برای پمپ است، پس M6 در این رده همان M4 است.',
+            if (s.catMix(_code).isNotEmpty)
+              'M7 (شاخص ترکیبی) سبدی از چند شاخص PPI با وزن اجزای تجهیز است: ${fa(mixLabel(s.catMix(_code)))}. '
+                  'وزن‌ها در «تنظیمات رده» صفحه‌ی تجهیزات قابل تغییرند. پیش‌فرض این رده: $catDefault.',
           ],
           '«خطای میانه» هرچه کمتر بهتر؛ «سوگیری» منفی یعنی کم‌برآورد؛ «در بازه‌ی ±۲۵٪» یعنی چند قلم خطای کمتر از ۲۵٪ داشته‌اند.',
           'انتخاب روش در پایین صفحه، روی همه‌ی صفحه‌ها (تجهیزات، داشبورد، تخمین و انتقال قیمت) اثر دارد و در تاریخچه ثبت می‌شود.',
@@ -216,7 +221,10 @@ class _MethodsPageState extends State<MethodsPage> {
                 title: title(m),
                 summary: !isPump && m.code == 'M4'
                     ? 'شاخص قیمت تولیدکننده‌ی انتخاب‌شده برای این رده: $ppiName (در «تنظیمات رده» قابل تغییر).'
-                    : m.summaryFa,
+                    : (m.code == 'M7'
+                        ? 'سبد شاخص این رده: ${fa(mixLabel(s.catMix(_code)))}'
+                            '${s.catMixStrict(_code) ? ' · شاخص ناموجود = بدون تعدیل' : ' · شاخص ناموجود = بازتوزیع وزن‌ها'}'
+                        : m.summaryFa),
                 note: !isPump && m.code == 'M5' ? 'از شاخص پمپ آمریکا استفاده می‌کند؛ برای این رده فقط جهت مقایسه.' : m.noteFa,
                 stats: isPump ? m.stats : bt?.stats(m.code),
                 sample: isPump ? validationSampleSize : (bt?.n ?? 0),

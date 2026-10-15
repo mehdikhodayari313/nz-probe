@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../app/app_state.dart';
+import '../../core/calc/desalter.dart';
 import '../../core/calc/generic_estimator.dart';
 import '../../core/calc/methods.dart';
 import '../../core/catalog/profiles.dart';
@@ -121,8 +122,8 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         PageHeader(
           icon: _iconOf(cat.code),
           title: cat.nameFa,
-          subtitle: '${cat.nameEn ?? ''} · ${fa(all.length)} قلم · قیمت‌ها تعدیل‌شده به سال ${fa(s.targetYear)} با روش ${s.catMethod(cat.code) ?? s.escalationMethod}'
-              '${s.catMethod(cat.code) == null ? '' : ' (اختصاصی این رده)'}',
+          subtitle: '${cat.nameEn ?? ''} · ${fa(all.length)} قلم · قیمت‌ها تعدیل‌شده به سال ${fa(s.targetYear)} با روش ${s.methodFor(cat.code)}'
+              '${s.methodFor(cat.code) == 'M7' ? ' (شاخص ترکیبی ${fa(mixLabel(s.catMix(cat.code)))})' : ''}',
           actions: [
             if (widget.onShowCategories != null)
               OutlinedButton.icon(
@@ -521,10 +522,34 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
   late final TextEditingController _n;
   late final TextEditingController _w;
 
+  // سبد شاخص ترکیبی (M7)
+  final List<(String?, TextEditingController)> _mix = [];
+  bool _strict = false;
+
+  // پارامترهای بانک دیسالتر
+  final _desN = <String, TextEditingController>{};
+  final _desB = <String, bool>{};
+  String _desFinal = DesalterParams.weighted;
+  bool get _isDes => widget.code == 'DESALTER';
+
   @override
   void initState() {
     super.initState();
     final s = AppScope.read(context).settings;
+    for (final p in s.catMix(widget.code)) {
+      _mix.add((p.series, TextEditingController(text: '${p.weight}')));
+    }
+    _strict = s.catMixStrict(widget.code);
+    if (_isDes) {
+      final d = s.desalterParams;
+      for (final (k, v) in [('des_n_a', d.nA), ('des_n_b', d.nB), ('des_kva_m', d.kvaExponent), ('des_kva_base', d.kvaBase)]) {
+        _desN[k] = TextEditingController(text: '$v');
+      }
+      _desB['des_fit_a'] = d.useFittedA;
+      _desB['des_fit_b'] = d.useFittedB;
+      _desB['des_kva_on'] = d.kvaActive;
+      _desFinal = d.finalBasis;
+    }
     final w = s.catWeightExp(widget.code);
     _w = TextEditingController(text: w == null ? '' : '$w');
     _method = s.catMethod(widget.code);
@@ -538,6 +563,12 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
   void dispose() {
     _n.dispose();
     _w.dispose();
+    for (final (_, c) in _mix) {
+      c.dispose();
+    }
+    for (final c in _desN.values) {
+      c.dispose();
+    }
     super.dispose();
   }
 
@@ -553,8 +584,32 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
       showSnack(context, 'توان وزن باید عددی بین ۰ و ۱٫۵ باشد.', error: true);
       return;
     }
+    final mix = [
+      for (final (code, c) in _mix)
+        if (code != null && (parseUserNumber(c.text) ?? 0) > 0) MixPart(code, parseUserNumber(c.text)!),
+    ];
+    if (_desN.entries.any((e) => parseUserNumber(e.value.text) == null || parseUserNumber(e.value.text)! < 0)) {
+      showSnack(context, 'پارامترهای دیسالتر باید عدد مثبت باشند.', error: true);
+      return;
+    }
     app.pb.settingsRepo.set('cat_wexp_${widget.code}', w == null ? null : '$w', reason: 'تنظیمات رده');
     const reason = 'تنظیمات رده';
+    final defMix = MixPart.format(defaultCategoryMix(widget.code));
+    final newMix = MixPart.format(mix);
+    app.pb.settingsRepo.set('cat_mix_${widget.code}', newMix == defMix ? null : newMix, reason: reason);
+    app.pb.settingsRepo.set('cat_mixrule_${widget.code}', _strict ? 'Strict' : null, reason: reason);
+    if (_isDes) {
+      const def = DesalterParams();
+      final defs = {'des_n_a': def.nA, 'des_n_b': def.nB, 'des_kva_m': def.kvaExponent, 'des_kva_base': def.kvaBase};
+      for (final e in _desN.entries) {
+        final v = parseUserNumber(e.value.text)!;
+        app.pb.settingsRepo.set(e.key, v == defs[e.key] ? null : '$v', reason: reason);
+      }
+      for (final e in _desB.entries) {
+        app.pb.settingsRepo.set(e.key, e.value ? 'Y' : null, reason: reason);
+      }
+      app.pb.settingsRepo.set('des_final', _desFinal == DesalterParams.weighted ? null : _desFinal, reason: reason);
+    }
     app.pb.settingsRepo.set('cat_method_${widget.code}', _method, reason: reason);
     app.pb.settingsRepo.set('cat_ppi_${widget.code}', _ppi, reason: reason);
     app.pb.settingsRepo.set('cat_est_${widget.code}', _est, reason: reason);
@@ -607,14 +662,17 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               value: _method,
               isExpanded: true,
               items: [
-                DropdownMenuItem<String?>(value: null, child: DdText('پیش‌فرض برنامه (${s.escalationMethod})')),
-                for (final m in escalationMethods.where((m) => m.selectable))
+                DropdownMenuItem<String?>(
+                    value: null, child: DdText('پیش‌فرض این رده (${defaultCategoryMethod(widget.code)})')),
+                for (final m in [...escalationMethods.where((m) => m.selectable), compositeMethod])
                   DropdownMenuItem<String?>(value: m.code, child: DdText('${m.code} — ${m.nameFa}')),
               ],
               onChanged: (v) => setState(() => _method = v),
             ),
-            help: 'کف قیمت M6 فقط برای پمپ‌هاست؛ در این رده M6 همان M4 است.',
+            help: 'هر تجهیز روش تعدیل خودش را دارد و روش پمپ‌ها روی آن اثر ندارد. '
+                'کف قیمت M6 فقط برای پمپ‌هاست؛ در این رده M6 همان M4 است. M7 = شاخص ترکیبی با سبد پایین.',
           ),
+          _mixEditor(context, app),
           row(
             'شاخص PPI (روش‌های M4/M6)',
             DropdownButtonFormField<String?>(itemHeight: null, 
@@ -630,6 +688,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
             help: 'برای تجهیزات ساخت داخل (ظرف، مخزن، سازه) می‌توانید PPI بخشی ایران (مثلاً ISIC 25 محصولات فلزی) را انتخاب کنید؛ ابتدا مقادیر آن را در «شاخص‌ها و ارز» کامل کنید.',
           ),
           if (p != null) ...[
+          if (!_isDes)
           row(
             'توان اندازه n',
             TextField(
@@ -648,6 +707,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               ),
               help: 'فقط وقتی وزن خالی برای قلم و دست‌کم دو قلم این رده ثبت شده باشد اثر دارد. صفر = وزن نادیده گرفته شود.',
             ),
+          if (!_isDes)
           row(
             'روش تخمین پیش‌فرض',
             DropdownButtonFormField<String?>(itemHeight: null, 
@@ -659,6 +719,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               onChanged: (v) => setState(() => _est = v),
             ),
           ),
+          if (_isDes) _desalterParams(context),
           Text('پارامتر اندازه‌ی این رده: ${p.driver.labelFa} (${p.driver.unit}). ضرایب نرمال‌سازی: ${p.factorGroups.isEmpty ? 'ندارد' : p.factorGroups.join('، ')} — در صفحه‌ی «ضرایب».',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.8)),
           ] else
@@ -671,5 +732,149 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
         FilledButton(onPressed: _save, child: const Text('ذخیره')),
       ],
     );
+  }
+
+  Widget _label(BuildContext context, String label, {String? help}) => SizedBox(
+        width: 170,
+        child: Row(children: [
+          Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
+          if (help != null)
+            Tooltip(
+              message: help,
+              child: Padding(
+                padding: const EdgeInsetsDirectional.only(start: 4),
+                child: Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.outline),
+              ),
+            ),
+        ]),
+      );
+
+  /// ویرایش سبد شاخص ترکیبی (روش M7): سری PPI + وزن
+  Widget _mixEditor(BuildContext context, AppState app) {
+    final t = Theme.of(context);
+    final series = app.pb.indices.series().where((x) => x.group.startsWith('ppi')).toList();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: t.colorScheme.outlineVariant),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        Row(children: [
+          Expanded(
+            child: Text('سبد شاخص ترکیبی (روش M7)',
+                style: t.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800)),
+          ),
+          TextButton.icon(
+            onPressed: () => setState(() => _mix.add((null, TextEditingController()))),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('افزودن شاخص'),
+          ),
+          if (defaultCategoryMix(widget.code).isNotEmpty)
+            TextButton(
+              onPressed: () => setState(() {
+                _mix
+                  ..clear()
+                  ..addAll([
+                    for (final p in defaultCategoryMix(widget.code)) (p.series, TextEditingController(text: '${p.weight}')),
+                  ]);
+              }),
+              child: const Text('سبد پیش‌فرض'),
+            ),
+        ]),
+        if (_mix.isEmpty)
+          Text('سبدی تعریف نشده؛ روش M7 برای این رده محاسبه نمی‌شود.',
+              style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.outline)),
+        for (var i = 0; i < _mix.length; i++)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(children: [
+              Expanded(
+                child: DropdownButtonFormField<String?>(
+                  itemHeight: null,
+                  value: series.any((x) => x.code == _mix[i].$1) ? _mix[i].$1 : null,
+                  isExpanded: true,
+                  items: [
+                    for (final x in series)
+                      DropdownMenuItem<String?>(value: x.code, child: DdText(x.nameFa, overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) => setState(() => _mix[i] = (v, _mix[i].$2)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 80,
+                child: TextField(
+                  controller: _mix[i].$2,
+                  textDirection: TextDirection.ltr,
+                  decoration: const InputDecoration(hintText: 'وزن'),
+                ),
+              ),
+              IconButton(
+                tooltip: 'حذف',
+                onPressed: () => setState(() => _mix.removeAt(i).$2.dispose()),
+                icon: const Icon(Icons.close_rounded, size: 18),
+              ),
+            ]),
+          ),
+        SwitchListTile(
+          value: _strict,
+          onChanged: (v) => setState(() => _strict = v),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: const Text('سخت‌گیرانه: اگر یکی از شاخص‌ها در سالی نباشد، تعدیل انجام نشود'),
+          subtitle: const Text('خاموش = وزن‌ها روی شاخص‌های موجود بازتوزیع می‌شوند (Renormalize)'),
+        ),
+      ]),
+    );
+  }
+
+  /// پارامترهای بانک دیسالتر: نماها، برازش از داده‌ی بانک، محرک kVA و مبنای نتیجه‌ی نهایی تخمین
+  Widget _desalterParams(BuildContext context) {
+    Widget num(String key, String label, {String? help}) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(children: [
+            _label(context, label, help: help),
+            Expanded(child: TextField(controller: _desN[key], textDirection: TextDirection.ltr)),
+          ]),
+        );
+    Widget sw(String key, String label) => SwitchListTile(
+          value: _desB[key] ?? false,
+          onChanged: (v) => setState(() => _desB[key] = v),
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          title: Text(label),
+        );
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+      const Divider(height: 20),
+      Text('پارامترهای بانک دیسالتر', style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      num('des_n_a', 'نمای ظرفیت n_A', help: 'قیمت ∝ BPD^n (روش A) — Provisional ۰٫۶'),
+      sw('des_fit_a', 'استفاده از n_A برازش‌شده از داده‌ی بانک (حداقل ۳ نقطه، بین ۰٫۲ و ۱٫۲)'),
+      num('des_n_b', 'نمای حجم n_B', help: 'قیمت ∝ m³^n (روش B) — Provisional ۰٫۶'),
+      sw('des_fit_b', 'استفاده از n_B برازش‌شده از داده‌ی بانک'),
+      sw('des_kva_on', 'محرک kVA فعال (KVA_F = (توان لازم ÷ مبنا)^m)'),
+      num('des_kva_m', 'توان m محرک kVA'),
+      num('des_kva_base', 'kVA مبنا'),
+      Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: Row(children: [
+          _label(context, 'نتیجه‌ی نهایی تخمین'),
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              itemHeight: null,
+              value: _desFinal,
+              isExpanded: true,
+              items: [
+                for (final b in DesalterParams.finalBases)
+                  DropdownMenuItem(value: b, child: DdText(DesalterParams.finalBasesFa[b]!)),
+              ],
+              onChanged: (v) => setState(() => _desFinal = v ?? DesalterParams.weighted),
+            ),
+          ),
+        ]),
+      ),
+    ]);
   }
 }

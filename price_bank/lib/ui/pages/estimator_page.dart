@@ -10,6 +10,7 @@ import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
 import '../widgets/category_picker.dart';
 import 'equipment_page.dart';
+import 'desalter_estimator_tab.dart';
 import 'generic_estimator_tab.dart';
 
 class EstimatorPage extends StatefulWidget {
@@ -63,6 +64,7 @@ class _EquipmentEstimatorState extends State<_EquipmentEstimator> {
     if (!app.pb.estimableCategories().any((c) => c.code == _code)) _code = 'PUMP';
     final picker = EquipmentCategoryPicker(value: _code, onChanged: (v) => setState(() => _code = v));
     if (_code == 'PUMP') return _NewPumpEstimator(key: const ValueKey('PUMP'), picker: picker);
+    if (_code == 'DESALTER') return DesalterEstimatorTab(key: const ValueKey('DESALTER'), picker: picker);
     return GenericEstimatorTab(key: ValueKey(_code), code: _code, picker: picker);
   }
 }
@@ -452,7 +454,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
     final isPump = _cat == 'PUMP';
     final st = app.settings;
     final s = app.settings.toPumpSettings();
-    final catMethod = isPump ? null : st.catMethod(_cat);
+    final catMethod = isPump ? null : st.methodFor(_cat);
     final ppiCode = isPump ? s.ppiSeries : (st.catPpi(_cat) ?? s.ppiSeries);
     final ppiName = app.pb.indices.series().where((x) => x.code == ppiCode).map((x) => x.nameFa).firstOrNull ?? ppiCode;
     final catName = app.pb.catalog.categoryByCode(_cat)?.nameFa ?? _cat;
@@ -469,6 +471,8 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
         eurTargetOverride: override ?? s.eurTargetOverride,
         usdTargetOverride: s.usdTargetOverride,
         method: _method ?? catMethod ?? s.method,
+        mix: isPump ? const [] : st.catMix(_cat),
+        mixStrict: !isPump && st.catMixStrict(_cat),
       ),
       app.pb.factorTable,
     );
@@ -530,7 +534,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                 child: _label(
                     context,
                     'روش تعدیل',
-                    'پیش‌فرض = روش این رده در «تنظیمات رده» و اگر تعیین نشده، روش فعال برنامه (نوار بالا). '
+                    'پیش‌فرض = روش همین رده در «تنظیمات رده» (هر تجهیز روش خودش را دارد؛ روش نوار بالا مخصوص پمپ‌هاست). '
                         'تغییر در اینجا فقط روی همین محاسبه اثر دارد.')),
             Expanded(
               child: DropdownButtonFormField<String>(itemHeight: null, 
@@ -538,7 +542,10 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
                 value: method.code,
                 isExpanded: true,
                 items: [
-                  for (final m in escalationMethods.where((m) => m.selectable))
+                  for (final m in [
+                    ...escalationMethods.where((m) => m.selectable),
+                    if (!isPump && st.catMix(_cat).isNotEmpty) compositeMethod,
+                  ])
                     DropdownMenuItem(
                       value: m.code,
                       child: Row(children: [

@@ -48,7 +48,13 @@ class PumpCalcSettings {
     this.eurTargetOverride,
     this.usdTargetOverride,
     this.method = defaultMethodCode,
+    this.mix = const [],
+    this.mixStrict = false,
   });
+
+  /// سبد شاخص ترکیبی رده (روش M7)
+  final List<MixPart> mix;
+  final bool mixStrict;
 
   /// روش تعدیل (M0، M1، M2، M4، M5، M6) — پیش‌فرض M6
   final String method;
@@ -78,6 +84,8 @@ class PumpCalcSettings {
         eurTargetOverride: eurTargetOverride ?? this.eurTargetOverride,
         usdTargetOverride: usdTargetOverride,
         method: method ?? this.method,
+        mix: mix,
+        mixStrict: mixStrict,
       );
 
   String get fxEurCode => 'FX_EUR_$fxType';
@@ -325,7 +333,8 @@ class PumpEngine {
     // ضریب روش‌های غیر PPI
     MethodFactor? other;
     if (!ppiMethod && y != null) {
-      other = MethodFactors(series, ppiSeries: settings.ppiSeries, fxType: settings.fxType)
+      other = MethodFactors(series,
+              ppiSeries: settings.ppiSeries, fxType: settings.fxType, mix: settings.mix, mixStrict: settings.mixStrict)
           .factor(method.code, y, ym, settings.targetYear, settings.targetMonth);
     }
     r.methodCode = method.code;

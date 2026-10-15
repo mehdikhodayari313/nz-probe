@@ -4,6 +4,8 @@
 // از خط‌های «کلید: مقدار» شرح ساخته و به قالب اضافه می‌شوند (ظرف: ابعاد، فشار طراحی، جنس، …).
 // این تابع در هر بار باز شدن برنامه اجرا می‌شود و تکرار آن بی‌اثر است.
 
+import '../calc/series.dart';
+import '../catalog/eurostat_ppi.dart';
 import '../catalog/profiles.dart';
 import '../db/db.dart';
 import 'catalog_repo.dart';
@@ -72,7 +74,7 @@ void ensureGenericTemplates(Db db) {
             profileGroupSort(f.group) + i],
         );
       }
-      for (final (grp, opt, v, desc) in profileFactorSeeds) {
+      for (final (grp, opt, v, desc) in p.factorSeeds ?? profileFactorSeeds) {
         if (!p.factorGroups.contains(grp)) continue;
         db.execute(
           'INSERT OR IGNORE INTO factors(set_code, grp, option, provisional, description) VALUES (?,?,?,?,?)',
@@ -87,9 +89,48 @@ void ensureGenericTemplates(Db db) {
             [e.key, v, label, i++]);
       }
     }
+    _cleanupDesalterFactors(db);
+    _ensurePpiSeries(db);
   });
   _reparseExisting(db);
   _reparseMtoPumps(db);
+}
+
+/// ضرایب اولیه‌ی قدیمی دیسالتر (فشار و کلاس‌های جنس عمومی) که در روش بانک دیسالتر به کار نمی‌روند؛
+/// فقط ضرایب کالیبره‌نشده حذف می‌شوند.
+void _cleanupDesalterFactors(Db db) {
+  final set = factorSetOf('DESALTER');
+  final groups = desalterFactorGroups.map((g) => "'$g'").join(',');
+  final mats = desalterLists['DES_MAT']!.map((e) => "'${e.$1}'").join(',');
+  db.execute(
+    'DELETE FROM factors WHERE set_code = ? AND calibrated IS NULL AND '
+    "(grp NOT IN ($groups) OR (grp = 'MAT' AND option NOT IN ($mats)))",
+    [set],
+  );
+}
+
+/// سری‌های PPI یوروستات (C25.29، C27.11 و شاخص‌های اجزای پکیج‌ها) برای روش شاخص ترکیبی.
+/// مقادیر موجود (و ویرایش‌های کاربر) دست نمی‌خورند؛ فقط سال‌های ناموجود اضافه می‌شوند.
+void _ensurePpiSeries(Db db) {
+  var sort = (db.scalar('SELECT COALESCE(MAX(sort), 0) FROM index_series') as int?) ?? 0;
+  for (final s in eurostatPpiSeeds) {
+    if (db.scalar('SELECT 1 FROM index_series WHERE code = ?', [s.code]) == null) {
+      db.execute(
+        'INSERT INTO index_series(code, name_fa, name_en, kind, grp, unit, base, source, calendar, sort) '
+        "VALUES (?,?,?,'level','ppi_world','2021=100','2021=100',?,'gregorian',?)",
+        [s.code, s.nameFa, s.nameEn, 'Eurostat sts_inppd_a, NACE ${s.nace}, EA20 (دریافت ۱۴۰۵/۰۷/۲۳)', ++sort],
+      );
+    }
+    for (final (y, v, st) in s.values) {
+      final p = Period.tryParse('$y')!;
+      db.execute(
+        'INSERT OR IGNORE INTO index_values(series_code, period_key, year, quarter, month, value, status, source) '
+        'VALUES (?,?,?,?,?,?,?,?)',
+        [s.code, p.key, p.year, p.quarter, p.month, v, st,
+          st == 'forecast' ? 'پیش‌بینی: رشد ۲٪ سالانه' : 'Eurostat sts_inppd_a${st == 'imputed' ? ' (imputed)' : ''}'],
+      );
+    }
+  }
 }
 
 /// پمپ‌هایی که پیش از این نسخه از MTO وارد شده‌اند (شرح فقط در «ملاحظات»):
@@ -137,6 +178,12 @@ void _reparseExisting(Db db) {
       final catId = db.scalar('SELECT id FROM categories WHERE code = ?', [p.code]) as int?;
       if (catId == null) continue;
       final keys = p.fields.map((f) => f.key).toSet();
+      // فیلدهای تازه‌ی قالب فقط یک بار (پس از تغییر قالب) برای اقلام قبلی پر می‌شوند؛
+      // به این ترتیب مقداری که کاربر عمداً پاک کرده دوباره برنمی‌گردد.
+      final sigKey = 'profile_fields_${p.code}';
+      final stored = (db.scalar('SELECT value FROM app_meta WHERE key = ?', [sigKey]) as String?)?.split(',').toSet();
+      final sig = (keys.toList()..sort()).join(',');
+      final newKeys = stored == null ? keys : keys.difference(stored);
       final rows = db.query(
         "SELECT i.id, i.name, v.value_text AS d FROM items i JOIN item_values v ON v.item_id = i.id "
         "WHERE i.category_id = ? AND v.field_key = 'mto_description'",
@@ -144,17 +191,21 @@ void _reparseExisting(Db db) {
       );
       for (final r in rows) {
         final id = r['id'] as int;
-        final has = db.scalar(
-          'SELECT COUNT(*) FROM item_values WHERE item_id = ? AND field_key IN (${List.filled(keys.length, '?').join(',')})',
-          [id, ...keys],
-        ) as int;
-        if (has > 0) continue;
+        final existing = {
+          for (final x in db.query(
+            'SELECT field_key FROM item_values WHERE item_id = ? AND field_key IN (${List.filled(keys.length, '?').join(',')})',
+            [id, ...keys],
+          ))
+            x['field_key'] as String,
+        };
+        if (existing.isNotEmpty && newKeys.isEmpty) continue;
         final d = parseMtoDescription(r['d'] as String? ?? '');
         final values = p.extract(d.specs, context: '${r['name']}', scope: d.scope);
+        // فقط فیلدهایی که هنوز مقدار ندارند (فیلدهای تازه‌ی قالب)؛ ویرایش‌های کاربر دست نمی‌خورد
         var n = 0;
         for (final e in values.entries) {
           final f = p.field(e.key);
-          if (f == null) continue;
+          if (f == null || existing.contains(f.key) || (existing.isNotEmpty && !newKeys.contains(f.key))) continue;
           final v = e.value;
           db.execute(
             'INSERT OR IGNORE INTO item_values(item_id, field_key, value_text, value_num) VALUES (?,?,?,?)',
@@ -173,6 +224,7 @@ void _reparseExisting(Db db) {
           db.execute('DELETE FROM item_values WHERE item_id = ? AND field_key = ?', [id, CatalogRepo.specKey(label)]);
         }
       }
+      db.execute('INSERT OR REPLACE INTO app_meta(key, value) VALUES (?, ?)', [sigKey, sig]);
       db.execute(
         "DELETE FROM field_defs WHERE category_id = ? AND group_key = 'mto_specs' AND key NOT IN "
         '(SELECT DISTINCT v.field_key FROM item_values v JOIN items i ON i.id = v.item_id WHERE i.category_id = ?)',

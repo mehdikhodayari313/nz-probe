@@ -10,6 +10,7 @@
 //   M4  PPI پمپ منطقه‌ی یورو            ضریب = PPI(هدف) ÷ PPI(پایه)
 //   M5  PPI پمپ آمریکا به یورو          ضریب = USPPI(هدف)/USPPI(پایه) × (یورو/دلار پایه ÷ یورو/دلار هدف)
 //   M6  M4 + کف قیمت پمپ API 610 (S/D)  روش پیش‌فرض
+//   M7  شاخص ترکیبی (سبد PPI)          ضریب = Σwᵢ·PPIᵢ(هدف) ÷ Σwᵢ·PPIᵢ(پایه) — هر رده سبد خودش (دیسالتر: ۰٫۷۰ C25.29 + ۰٫۱۵ C27.11 + ۰٫۱۵ C28.13)
 
 import 'dart:math' as math;
 
@@ -142,23 +143,79 @@ const escalationMethods = <EscalationMethod>[
   ),
 ];
 
-EscalationMethod methodByCode(String? code) =>
-    escalationMethods.firstWhere((m) => m.code == code && m.selectable,
+/// روش شاخص ترکیبی: سبد چند شاخص PPI با وزن‌های هر رده (فقط رده‌های غیرپمپ).
+const compositeMethodCode = 'M7';
+const compositeMethod = EscalationMethod(
+  code: compositeMethodCode,
+  nameFa: 'شاخص ترکیبی (سبد PPI)',
+  summaryFa: 'میانگین وزنی چند شاخص PPI یوروستات مطابق اجزای تجهیز؛ هر رده سبد و وزن‌های خودش را دارد.',
+  formulaFa: 'ضریب = Σ wᵢ·PPIᵢ(هدف) ÷ Σ wᵢ·PPIᵢ(پایه)   (شاخص میلادی با ترکیب ۰٫۷۹×(Y+621) + ۰٫۲۱×(Y+622))',
+  factorRef: null,
+  stats: MethodStats(bias: 0, mdape: 0, mape: 0, within25: 0, totalRatio: 0),
+  noteFa: 'دیسالتر: ۰٫۷۰×C25.29 (بدنه و Internals) + ۰٫۱۵×C27.11 (ترانس) + ۰٫۱۵×C28.13 (پمپ Recycle) — '
+      'شاخص ناموجود: وزن‌ها روی شاخص‌های موجود بازتوزیع می‌شود (یا در حالت سخت‌گیرانه، تعدیل انجام نمی‌شود).',
+);
+
+EscalationMethod methodByCode(String? code) => code == compositeMethodCode
+    ? compositeMethod
+    : escalationMethods.firstWhere((m) => m.code == code && m.selectable,
         orElse: () => escalationMethods.firstWhere((m) => m.code == defaultMethodCode));
+
+/// یک جزء سبد شاخص ترکیبی: کد سری PPI و وزن آن. سری میلادی (پسوند _GREG) به سال شمسی ترکیب می‌شود.
+class MixPart {
+  const MixPart(this.series, this.weight);
+  final String series;
+  final double weight;
+
+  bool get gregorian => series.endsWith('_GREG');
+
+  /// نام کوتاه: PPI_EU_C2529_GREG ← C25.29
+  String get shortName {
+    final m = RegExp(r'C(\d{2})(\d{2})').firstMatch(series);
+    if (m != null) return 'C${m[1]}.${m[2]}';
+    return series.replaceFirst(RegExp(r'^PPI_'), '').replaceFirst(RegExp(r'_GREG$'), '');
+  }
+
+  @override
+  String toString() => '$series:$weight';
+
+  /// «PPI_EU_C2529_GREG:0.7;PPI_EU_C2711_GREG:0.15» ← فهرست اجزا
+  static List<MixPart> parseList(String? s) => [
+        for (final p in (s ?? '').split(';'))
+          if (p.split(':') case [final c, final w] when c.trim().isNotEmpty && double.tryParse(w.trim()) != null)
+            MixPart(c.trim(), double.parse(w.trim())),
+      ];
+
+  static String format(List<MixPart> l) => l.map((p) => '${p.series}:${p.weight}').join(';');
+}
+
+/// «0.70×C25.29 + 0.15×C27.11 + 0.15×C28.13»
+String mixLabel(List<MixPart> mix) =>
+    mix.isEmpty ? '—' : mix.map((p) => '${p.weight.toStringAsFixed(2)}×${p.shortName}').join(' + ');
 
 /// نتیجه‌ی ضریب یک روش برای یک بازه.
 class MethodFactor {
-  const MethodFactor(this.factor, this.detail);
+  const MethodFactor(this.factor, this.detail, {this.base, this.target});
   final double? factor;
   final String detail;
+
+  /// مقدار شاخص (ترکیبی) سال پایه و هدف، وقتی روش شاخص‌محور است
+  final double? base, target;
 }
 
 /// محاسبه‌ی ضریب تعدیل یورویی هر روش (بدون کف؛ کف در موتور اعمال می‌شود).
 class MethodFactors {
-  const MethodFactors(this.series, {required this.ppiSeries, required this.fxType});
+  const MethodFactors(this.series,
+      {required this.ppiSeries, required this.fxType, this.mix = const [], this.mixStrict = false});
   final SeriesLookup series;
   final String ppiSeries;
   final String fxType;
+
+  /// سبد شاخص ترکیبی (روش M7)
+  final List<MixPart> mix;
+
+  /// true = اگر یکی از شاخص‌های سبد نباشد، تعدیل انجام نمی‌شود؛ false = بازتوزیع وزن‌ها روی شاخص‌های موجود
+  final bool mixStrict;
 
   double? _v(String code, int year, [int? month]) {
     final v = series.resolve(code, year, month: month)?.value;
@@ -176,6 +233,37 @@ class MethodFactors {
     if (a == null) return null;
     if (b == null) return a;
     return jalaliBlendWeight * a + (1 - jalaliBlendWeight) * b;
+  }
+
+  /// ترکیب سال شمسی یک سری میلادی؛ اگر یکی از دو سال نباشد null (همان قاعده‌ی بانک دیسالتر).
+  double? _gregBlendStrict(String code, int jYear) {
+    final a = _v(code, jYear + 621), b = _v(code, jYear + 622);
+    if (a == null || b == null || a <= 0 || b <= 0) return null;
+    return jalaliBlendWeight * a + (1 - jalaliBlendWeight) * b;
+  }
+
+  /// مقدار یک جزء سبد در سال شمسی
+  double? mixPartValue(MixPart p, int jYear) {
+    if (p.gregorian) return _gregBlendStrict(p.series, jYear);
+    final v = _v(p.series, jYear);
+    return (v != null && v > 0) ? v : null;
+  }
+
+  /// شاخص ترکیبی سال شمسی: Σw·I ÷ Σw روی اجزای موجود (حالت سخت‌گیرانه: همه لازم‌اند).
+  double? compositeIndex(int jYear) {
+    if (mix.isEmpty) return null;
+    var sw = 0.0, s = 0.0;
+    for (final p in mix) {
+      if (p.weight <= 0) continue;
+      final v = mixPartValue(p, jYear);
+      if (v == null) {
+        if (mixStrict) return null;
+        continue;
+      }
+      sw += p.weight;
+      s += p.weight * v;
+    }
+    return sw > 0 ? s / sw : null;
   }
 
   double? _eurUsd(int year, int? month) {
@@ -227,12 +315,19 @@ class MethodFactors {
         if (eb == null || et == null) return const MethodFactor(null, 'نسبت یورو/دلار از جدول نرخ ارز موجود نیست');
         return MethodFactor(pt / pb * eb / et,
             'USPPI ${_s(pt)} ÷ ${_s(pb)} × یورو/دلار ${_s(eb)} ÷ ${_s(et)}');
+      case compositeMethodCode:
+        if (mix.isEmpty) return const MethodFactor(null, 'سبد شاخص ترکیبی برای این رده تعریف نشده است');
+        final cb = compositeIndex(baseYear), ct = compositeIndex(targetYear);
+        if (cb == null || ct == null) {
+          return MethodFactor(null, 'شاخص ترکیبی سال ${cb == null ? baseYear : targetYear} موجود نیست', base: cb, target: ct);
+        }
+        return MethodFactor(ct / cb, 'شاخص ترکیبی ${_s(ct)} ÷ ${_s(cb)}', base: cb, target: ct);
       case 'M4':
       case 'M6':
       default:
         final a = _ppi(baseYear, baseMonth), b = _ppi(targetYear, targetMonth);
         if (a == null || b == null) return const MethodFactor(null, 'شاخص PPI موجود نیست');
-        return MethodFactor(b / a, 'PPI ${_s(b)} ÷ ${_s(a)}');
+        return MethodFactor(b / a, 'PPI ${_s(b)} ÷ ${_s(a)}', base: a, target: b);
     }
   }
 }
@@ -268,6 +363,7 @@ String methodLabelFor(EscalationMethod m, {required bool pump, String? ppiName})
     'M4' => 'M4 — $ppi',
     'M6' => 'M6 — همان M4 ($ppi)؛ کف قیمت فقط برای پمپ',
     'M5' => 'M5 — PPI پمپ آمریکا به یورو (شاخص پمپ)',
+    'M7' => 'M7 — شاخص ترکیبی (سبد PPI همین رده)',
     _ => '${m.code} — ${m.nameFa}',
   };
 }
