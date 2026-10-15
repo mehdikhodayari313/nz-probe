@@ -2,7 +2,7 @@
 
 | نسخه | فایل | کد منبع |
 |---|---|---|
-| ۰٫۷ (۱۴۰۵/۰۷/۲۳) | [price_bank_v0.7_windows.zip](price_bank_v0.7_windows.zip) | [price-bank-v0.7](https://github.com/mehdikhodayari313/nz-probe/tree/price-bank-v0.7/price_bank) |
+| ۰٫۷ (۱۴۰۵/۰۷/۲۳) | [price_bank_v0.7_windows.zip](price_bank_v0.7_windows.zip) | [commit 4e72739](https://github.com/mehdikhodayari313/nz-probe/tree/4e727393748f0dfe0f13d6e13111ddb5543e6548/price_bank) |
 
 ## نصب
 1. فایل zip را دانلود کنید (دکمه‌ی «Download» یا «View raw»).
