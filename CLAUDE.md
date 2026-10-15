@@ -181,9 +181,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
    in `profiles.dart` (new fields of existing MTO items are filled once automatically on startup).
 2. Escalation per equipment type: each category has its own method (`methodFor`, default M4; DESALTER M7 composite).
    User may send exact methods/baskets per type → `defaultCategoryMethod` / `defaultCategoryMix` in profiles.dart.
-3. HEX (heat exchangers): draft in `docs/requirements/HEX.md` (در حال بررسی) — proposed C28.25 + optional M7 baskets
-   (C24.1 steel, C24.44 copper, C24.42 aluminium); fired heater → HEATER. Those series are only in the PPI CSV /
-   `tool/data/eurostat_ppi_20261015b.json`, NOT yet in the app (`eurostat_ppi.dart`) — add when the user approves.
+3. HEX (heat exchangers): Excel bank `HeatExchangers_Price_Bank_v8.1` built (docs/requirements/HEX.md, در حال بررسی): per-sub-category
+   PPI basket (C28.25; STE 70/15/15 with C24.10≡C24.1 & C24.20≡C24.2; ACH 85/15 Al; CIP C28.13), weights editable. C25.30≡C25.3
+   (DE chain-linked <2018). Series only in the PPI CSV / `tool/data/eurostat_ppi_20261015c.json`, NOT yet in the app — add when user says «اعمال کن».
 4. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
    basket weights are still Provisional. Finding to discuss: Pazanan 1393 estimate escalated ≈3.41 M€ vs 1404 quotes
    1.93 M€ (−43%). Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
