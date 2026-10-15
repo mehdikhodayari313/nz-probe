@@ -80,3 +80,7 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   reader must not need rewriting when parameters are added (design: reader → "label: value" specs; profiles map).
 - He is working on exact escalation methods per equipment type and will provide them.
 - He asked to keep real MTO files off GitHub; anonymized derivatives are used for tests (he may ask to remove).
+
+## Review: air compressor bank v8.2 (1405/07/23)
+- Reviewed user's `Air_Compressor_Price_Bank_v8_2.xlsx` (10 records, 4 peers, methods A/A2/B/C/E). No code change.
+  FX and C28.13 match the app; BLS PCU333912 missing. Findings and open questions in `docs/requirements/COMPRESSOR.md`.
