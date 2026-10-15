@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'price_bank/tool/fetch_eurostat.py'
+      - 'price_bank/tool/fetch_bls.py'
       - '.github/workflows/pb_indices.yml'
   workflow_dispatch:
 
@@ -21,6 +22,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Fetch Eurostat sts_inppd_a
         run: python3 price_bank/tool/fetch_eurostat.py /tmp/res
+      - name: Fetch US BLS PPI
+        if: always()
+        run: python3 price_bank/tool/fetch_bls.py /tmp/res
       - name: Publish
         if: always()
         run: |
