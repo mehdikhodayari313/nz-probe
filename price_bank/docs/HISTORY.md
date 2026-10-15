@@ -101,3 +101,12 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   (SC_DRY|Y = 1.53/1.071; Excel 1.10); BLS PCU333912 added (`catalog/us_ppi.dart`), M5 uses a per-category US series
   (`defaultCategoryUsPpi`, `MethodFactors.usPpiSeries`).
 - Golden test vs reduced fixture (270 Master values + TC1–TC3 at 1e-9 with Excel factors). Smoke test takes a 5th arg (compressor bank).
+
+## v0.9.1 (1405/07/23) — desalter cleanup
+- Estimator «سه روش تخمین» table broke in narrow windows (fixed columns ≈ 570 px left 0 px for the method name →
+  vertical text). Now: ≥ 720 px table, narrower = two-line rows; peers table scrolls horizontally below 760 px;
+  inputs/results side by side only from 1240 px. UI test at 980×720 and 1600×1000.
+- User: Scope (transformers, recycle pumps, piping, instruments, customs & transport) and project phase are not
+  equipment specs (absent from MTOs or identical for all, irrelevant to selection) → removed from the DESALTER
+  template and filters (field_defs cleanup; stored values untouched, all were base = factor 1, so results unchanged).
+  They remain estimator inputs («دامنه‌ی قیمت») and factors SC_*. Equipment filters curated like pumps (`filterKeys`).

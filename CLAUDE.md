@@ -173,6 +173,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   records, MTO desalter with same tag base + same amount = duplicate (archived/skipped). Params keys `des_n_a`,
   `des_fit_a`, `des_n_b`, `des_fit_b`, `des_kva_on`, `des_kva_m`, `des_kva_base`, `des_final`. Desalter keeps the
   empty-weight field but no WEIGHT/PRESS factor.
+  v0.9.1: Scope fields + project phase are NOT on desalter records (estimator inputs only; user rule: equipment section
+  holds only specs relevant to selection). Equipment filters per category via `EquipmentProfile.filterKeys`.
 - Price flow: unit price in source currency → EUR at source year (IRR via document source FX if set) → escalate
   EUR → convert with target-year FX table. CPI/rial inflation is NOT used (validation showed ~50% under-estimate).
 - Vessel-type empty weight (`empty_weight_kg`) is optional and neutral until ≥2 items of the category have it;
