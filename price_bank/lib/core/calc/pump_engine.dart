@@ -50,7 +50,11 @@ class PumpCalcSettings {
     this.method = defaultMethodCode,
     this.mix = const [],
     this.mixStrict = false,
+    this.usPpiSeries = defaultUsPpiSeries,
   });
+
+  /// سری PPI آمریکای روش M5 رده
+  final String usPpiSeries;
 
   /// سبد شاخص ترکیبی رده (روش M7)
   final List<MixPart> mix;
@@ -86,6 +90,7 @@ class PumpCalcSettings {
         method: method ?? this.method,
         mix: mix,
         mixStrict: mixStrict,
+        usPpiSeries: usPpiSeries,
       );
 
   String get fxEurCode => 'FX_EUR_$fxType';
@@ -334,7 +339,11 @@ class PumpEngine {
     MethodFactor? other;
     if (!ppiMethod && y != null) {
       other = MethodFactors(series,
-              ppiSeries: settings.ppiSeries, fxType: settings.fxType, mix: settings.mix, mixStrict: settings.mixStrict)
+              ppiSeries: settings.ppiSeries,
+              fxType: settings.fxType,
+              mix: settings.mix,
+              mixStrict: settings.mixStrict,
+              usPpiSeries: settings.usPpiSeries)
           .factor(method.code, y, ym, settings.targetYear, settings.targetMonth);
     }
     r.methodCode = method.code;

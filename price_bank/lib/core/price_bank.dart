@@ -4,14 +4,17 @@
 import 'dart:math' as math;
 
 import 'calc/backtest.dart';
+import 'calc/compressor.dart';
 import 'calc/desalter.dart';
 import 'calc/estimator.dart';
 import 'calc/generic_estimator.dart';
+import 'calc/methods.dart';
 import 'catalog/profiles.dart';
 import 'calc/generic_engine.dart';
 import 'calc/pump_engine.dart';
 import 'calc/series.dart';
 import 'db/db.dart';
+import 'import/compressor_importer.dart';
 import 'import/desalter_importer.dart';
 import 'import/mto_importer.dart';
 import 'import/v8_importer.dart';
@@ -33,12 +36,15 @@ class PumpRow {
 
 /// یک قلم غیرپمپ با نتیجه‌ی محاسبه‌ی قیمت اصلی و آمار استعلام‌ها (همه به یوروی سال هدف).
 class GenericRow {
-  GenericRow(this.item, this.result, this.quoteEurTargets, {this.size, this.allF = 1, this.coef, this.des});
+  GenericRow(this.item, this.result, this.quoteEurTargets, {this.size, this.allF = 1, this.coef, this.des, this.cmp});
   final ItemRecord item;
   final GenericCalcResult result;
 
   /// محاسبات بانک دیسالتر (فقط رده‌ی دیسالتر)
   final DesalterCalc? des;
+
+  /// محاسبات بانک کمپرسور هوا (فقط رده‌ی کمپرسور)
+  final CompressorCalc? cmp;
 
   /// پارامتر اندازه‌ی قالب رده (حجم، توان حرارتی، دبی، …)
   final double? size;
@@ -101,6 +107,8 @@ class PriceBank {
 
   DesalterImporter desalterImporter() => DesalterImporter(db, audit, catalog, items, docs);
 
+  CompressorImporter compressorImporter() => CompressorImporter(db, audit, catalog, items, docs);
+
   // ---------------------------------------------------------------------------
   // محاسبات
 
@@ -136,6 +144,7 @@ class PriceBank {
         ppiOverride: categoryCode == null ? null : st.catPpi(categoryCode),
         mixOverride: categoryCode == null ? null : st.catMix(categoryCode),
         mixStrict: categoryCode != null && st.catMixStrict(categoryCode),
+        usPpiOverride: categoryCode == null ? null : st.catUsPpi(categoryCode),
       ),
     );
   }
@@ -173,6 +182,53 @@ class PriceBank {
       params: desalterParams,
       eurRate: e.eurRateTarget,
       usdRate: e.usdRateTarget,
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // کمپرسور هوا (روش بانک Air_Compressor v8)
+
+  CompressorParams get compressorParams => settingsRepo.load().compressorParams;
+
+  /// محاسبه‌ی همه‌ی کمپرسورهای بانک (ضرایب، نرمال‌سازی هر کمپرسور، Coef A/B، n برازش‌شده).
+  CompressorBankResult computeCompressors(List<ItemRecord> all, {GenericEngine? engine}) => computeCompressorBank(
+        [
+          for (final it in all)
+            CompressorRecord(
+              id: it.id,
+              label: '${it.projectName ?? ''} | ${it.tag ?? ''}',
+              values: it.values,
+              price: genericInputFor(it.primary),
+              include: it.include,
+            ),
+        ],
+        engine: engine ?? genericEngine(categoryCode: 'COMPRESSOR'),
+        factors: indices.factorTable(factorSetOf('COMPRESSOR')),
+        params: compressorParams,
+      );
+
+  /// شاخص BLS 333912 سال شمسی (۰٫۷۹/۰٫۲۱) و سال پایه‌ی بنچمارک Seider (۲۰۱۳ میلادی)
+  (double?, double?) compressorBls(int targetYear) {
+    double? v(int y) => seriesSnapshot.resolve(CompressorParams.usPpiSeries, y)?.value;
+    final a = v(targetYear + 621), b = v(targetYear + 622);
+    final t = (a == null || b == null) ? null : jalaliBlendWeight * a + (1 - jalaliBlendWeight) * b;
+    return (t, v(CompressorParams.benchmarkYear));
+  }
+
+  /// تخمین کمپرسور / پکیج جدید از اقلام محاسبه‌شده‌ی بانک.
+  CompressorEstimate estimateCompressorPackage(CompressorEstimateInput input, CompressorBankResult bank,
+      {Map<String, double> overrides = const {}}) {
+    final e = genericEngine(categoryCode: 'COMPRESSOR');
+    final (bt, bb) = compressorBls(e.settings.targetYear);
+    return estimateCompressor(
+      input,
+      bank,
+      factors: indices.factorTable(factorSetOf('COMPRESSOR')).withOverrides(overrides),
+      params: compressorParams,
+      eurRate: e.eurRateTarget,
+      usdRate: e.usdRateTarget,
+      blsTarget: bt,
+      blsBase: bb,
     );
   }
 
@@ -259,6 +315,24 @@ class PriceBank {
             allF: c.factors.all,
             coef: c.coefB,
             des: c,
+          ),
+      ];
+    }
+    if (cat.code == 'COMPRESSOR') {
+      final bank = computeCompressors(all, engine: e);
+      return [
+        for (final c in bank.rows)
+          GenericRow(
+            all.firstWhere((it) => it.id == c.record.id),
+            c.price,
+            [
+              for (final o in all.firstWhere((it) => it.id == c.record.id).observations.where((o) => o.kind == 'quote'))
+                if (e.calculate(genericInputFor(o)).eurTarget.number case final v?) v,
+            ],
+            size: c.flow,
+            allF: c.factors.all,
+            coef: c.coefA,
+            cmp: c,
           ),
       ];
     }

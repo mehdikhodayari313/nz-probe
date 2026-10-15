@@ -1,3 +1,4 @@
+import '../calc/compressor.dart';
 import '../calc/desalter.dart';
 import '../calc/methods.dart';
 import '../calc/pump_engine.dart';
@@ -34,6 +35,9 @@ class AppSettings {
     return own.isNotEmpty ? own : defaultCategoryMix(code);
   }
 
+  /// سری PPI آمریکای روش M5 رده (پیش‌فرض قالب رده)
+  String catUsPpi(String code) => defaultCategoryUsPpi(code);
+
   bool catMixStrict(String code) => _m['cat_mixrule_$code'] == 'Strict';
   double? catExponent(String code) => numOrNull('cat_n_$code');
   double? catWeightExp(String code) => numOrNull('cat_wexp_$code');
@@ -61,13 +65,24 @@ class AppSettings {
         finalBasis: str('des_final', DesalterParams.weighted),
       );
 
+  // پارامترهای بانک کمپرسور هوا (Assumptions بانک Air_Compressor v8)
+  CompressorParams get compressorParams => CompressorParams(
+        n: numv('cmp_n', 0.4),
+        useFitted: str('cmp_fit', 'N') == 'Y',
+        specificPower: numv('cmp_kw', 0.12),
+        benchmarkFactor: numv('cmp_bench', 2.5),
+        finalBasis: str('cmp_final', CompressorParams.weighted),
+        minPeers: intv('cmp_min_peers', 5),
+      );
+
   PumpCalcSettings toPumpSettings(
           {String? fxTypeOverride,
           int? targetYearOverride,
           String? methodOverride,
           String? ppiOverride,
           List<MixPart>? mixOverride,
-          bool mixStrict = false}) =>
+          bool mixStrict = false,
+          String? usPpiOverride}) =>
       PumpCalcSettings(
         method: methodOverride ?? escalationMethod,
         targetYear: targetYearOverride ?? targetYear,
@@ -83,6 +98,7 @@ class AppSettings {
         usdTargetOverride: usdTargetOverride,
         mix: mixOverride ?? const [],
         mixStrict: mixStrict,
+        usPpiSeries: usPpiOverride ?? defaultUsPpiSeries,
       );
 }
 

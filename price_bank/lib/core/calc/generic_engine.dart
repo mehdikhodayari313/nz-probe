@@ -52,8 +52,13 @@ class GenericEngine {
   double? indexAt(int year) {
     final code = methodByCode(settings.method).code;
     final mf = MethodFactors(series,
-        ppiSeries: settings.ppiSeries, fxType: settings.fxType, mix: settings.mix, mixStrict: settings.mixStrict);
+        ppiSeries: settings.ppiSeries,
+        fxType: settings.fxType,
+        mix: settings.mix,
+        mixStrict: settings.mixStrict,
+        usPpiSeries: settings.usPpiSeries);
     if (code == compositeMethodCode) return mf.compositeIndex(year);
+    if (code == 'M5') return mf.usIndex(year);
     if (code == 'M4' || code == 'M6') {
       final v = series.resolve(settings.ppiSeries, year)?.value;
       return (v != null && v > 0) ? v : null;
@@ -117,7 +122,11 @@ class GenericEngine {
     final method = methodByCode(settings.method);
     r.methodCode = method.code;
     final mf = MethodFactors(series,
-            ppiSeries: settings.ppiSeries, fxType: settings.fxType, mix: settings.mix, mixStrict: settings.mixStrict)
+            ppiSeries: settings.ppiSeries,
+            fxType: settings.fxType,
+            mix: settings.mix,
+            mixStrict: settings.mixStrict,
+            usPpiSeries: settings.usPpiSeries)
         .factor(method.code, y, ym, settings.targetYear, settings.targetMonth);
     r.factor = mf.factor;
     r.indexBase = mf.base;

@@ -247,7 +247,8 @@ class PriceTransferCalculator {
       r.ppiFactor = r.ppiTarget! / r.ppiBase!;
       r.factorDetail = 'PPI(${s.targetYear}) ÷ PPI(${i.baseYear})';
     } else {
-      final mf = MethodFactors(engine.series, ppiSeries: s.ppiSeries, fxType: s.fxType, mix: s.mix, mixStrict: s.mixStrict)
+      final mf = MethodFactors(engine.series,
+              ppiSeries: s.ppiSeries, fxType: s.fxType, mix: s.mix, mixStrict: s.mixStrict, usPpiSeries: s.usPpiSeries)
           .factor(method.code, i.baseYear, i.baseMonth, s.targetYear, s.targetMonth);
       if (mf.factor == null) {
         r.warnings.add(mf.detail);

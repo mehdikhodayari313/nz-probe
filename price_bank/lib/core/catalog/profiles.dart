@@ -6,8 +6,9 @@
 
 import 'dart:math' as math;
 
-import '../calc/methods.dart' show MixPart;
+import '../calc/methods.dart' show MixPart, defaultUsPpiSeries;
 
+part 'compressor_profile.dart';
 part 'desalter_profile.dart';
 
 /// شرح چندخطی MTO: خط اول نام؛ «کلید: مقدار» مشخصات؛ خط بدون «:» ادامه‌ی مقدار قبلی یا دامنه‌ی کار.
@@ -662,11 +663,43 @@ final equipmentProfiles = <String, EquipmentProfile>{
   'COMPRESSOR': EquipmentProfile(
     code: 'COMPRESSOR',
     fields: const [
-      ProfileField('comp_type', 'نوع کمپرسور', 'key_specs', type: 'enum', list: 'G_COMP'),
-      ProfileField('lubrication', 'روغن‌کاری', 'key_specs', type: 'enum', list: 'G_LUBE'),
-      ProfileField('flow_m3h', 'دبی نرمال', 'key_specs', type: 'number', unit: 'm³/h'),
+      ProfileField('sub_category', 'زیرگروه', 'key_specs', type: 'enum', list: 'CMP_SUBCAT',
+          help: 'CMP-PKG = پکیج کمپرسور؛ CMP-IAP = پکیج کامل هوای ابزار دقیق (کمپرسورها + خشک‌کن + فیلتر + مخزن در یک قیمت)؛ '
+              'CMP-CMB = یکجا با پکیج دیگر (فقط مرجع).'),
+      ProfileField('compressor_type', 'نوع کمپرسور (ضریب)', 'key_specs', type: 'enum', list: 'CMP_TYPE',
+          help: 'برای ضریب نوع (TYPE)؛ روغن‌کاری در نوع ادغام شده است.'),
+      ProfileField('comp_type', 'نوع کمپرسور (متن MTO)', 'key_specs', type: 'enum', list: 'G_COMP'),
+      ProfileField('lubrication', 'روغن‌کاری (متن MTO)', 'key_specs', type: 'enum', list: 'G_LUBE'),
+      ProfileField('flow_m3h', 'دبی هر کمپرسور', 'key_specs', type: 'number', unit: 'Nm³/h',
+          help: 'ظرفیت هر کمپرسور، نه کل پکیج (m³/h، Nm³/h و Sm³/h هم‌ارز). مبنای روش A تخمین.'),
       ProfileField('discharge_pressure_barg', 'فشار رانش', 'key_specs', type: 'number', unit: 'barg'),
-      _fCode, _fScope,
+      ProfileField('flow_basis', 'مبنای دبی (متن منبع)', 'key_specs'),
+      ProfileField('configuration', 'آرایش', 'key_specs'),
+      ProfileField('driver', 'محرک', 'key_specs', type: 'enum', list: 'CMP_DRV'),
+      ProfileField('compressors_per_price_unit', 'تعداد کمپرسور در هر واحد قیمت', 'key_specs', type: 'number',
+          help: 'پکیج کمپرسور = ۱؛ پکیج کامل ۲×۱۰۰٪ = ۲. قیمت بر این عدد تقسیم می‌شود (قیمت هر کمپرسور).'),
+      ProfileField('unit_weight_kg', 'وزن هر کمپرسور', 'key_specs', type: 'number', unit: 'kg',
+          help: 'مبنای روش B تخمین (یورو بر کیلوگرم).'),
+      ProfileField('weight_basis', 'مبنای وزن (متن منبع)', 'key_specs'),
+      ProfileField('pressure_dew_point_c', 'نقطه‌ی شبنم', 'key_specs', type: 'number', unit: '°C'),
+      ProfileField('design_standard', 'استاندارد کمپرسور', 'material', type: 'enum', list: 'CMP_STD'),
+      ProfileField('ips_standard', 'استاندارد IPS', 'material', type: 'enum', list: 'CMP_IPS'),
+      _fCode,
+      _fScope,
+      ProfileField('scope_dryer', 'Scope: خشک‌کن هوا', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('scope_receiver', 'Scope: مخزن هوا', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('scope_filters', 'Scope: فیلترهای Pre/After', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('scope_coolers', 'Scope: کولر میانی و انتهایی', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
+      ProfileField('scope_control_panel', 'Scope: پنل کنترل محلی', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
+      ProfileField('scope_spares', 'Scope: قطعات یدکی', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('scope_vendor_services', 'Scope: خدمات سازنده در سایت', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('scope_transport', 'Scope: حمل تا سایت', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
+      ProfileField('supply_origin', 'مبدأ ساخت', 'source', type: 'enum', list: 'CMP_ORIGIN'),
+      ProfileField('project_phase', 'مرحله‌ی پروژه', 'source', type: 'enum', list: 'Phase'),
+      ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'source'),
+      ProfileField('use_as_peer', 'همتای تخمین', 'source', type: 'enum', list: 'YN',
+          help: 'N = در تخمین به کار نمی‌رود (مثلاً داده‌ی پرت)؛ قلم همچنان در بانک می‌ماند.'),
+      ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'source'),
     ],
     rules: [
       MtoRule(r'^type', (v, o) {
@@ -682,11 +715,13 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _numAt(r'discharge press', 'discharge_pressure_barg'),
       _code,
     ],
-    driver: SizeDriver('دبی نرمال', 'm³/h', 0.7, (v) => _num(v['flow_m3h'])),
-    typeKey: 'comp_type',
-    gridKeys: ['comp_type', 'lubrication', 'flow_m3h', 'discharge_pressure_barg'],
-    rangeKeys: ['discharge_pressure_barg'],
-    factorGroups: const ['LUBE'],
+    inferType: inferCompressor,
+    driver: SizeDriver('دبی هر کمپرسور', 'Nm³/h', 0.4, (v) => _num(v['flow_m3h'])),
+    typeKey: 'sub_category',
+    gridKeys: ['sub_category', 'compressor_type', 'flow_m3h', 'discharge_pressure_barg', 'compressors_per_price_unit'],
+    rangeKeys: ['flow_m3h', 'discharge_pressure_barg'],
+    factorGroups: compressorFactorGroups,
+    factorSeeds: compressorFactorSeeds,
   ),
   'AIR_DRYER': EquipmentProfile(
     code: 'AIR_DRYER',
@@ -772,6 +807,7 @@ const profileLists = <String, List<(String, String)>>{
   'G_LUBE': [('Oil-free', 'بدون روغن'), ('Lubricated', 'روغن‌کاری‌شده')],
   'G_CRANE': [('Top Running', 'روی ریل (Top Running)'), ('Under Hung', 'آویز (Under Hung)'), ('Gantry', 'دروازه‌ای'), ('Monorail', 'مونوریل'), ('Other', 'سایر')],
   ...desalterLists,
+  ...compressorLists,
 };
 
 /// ضرایب نرمال‌سازی اولیه (قضاوت مهندسی، نسبت به پایه = ۱): (گروه، گزینه، ضریب، شرح)
@@ -802,9 +838,13 @@ String defaultCategoryMethod(String code) => code == 'DESALTER' ? 'M7' : 'M4';
 /// سبد پیش‌فرض شاخص ترکیبی (M7) هر رده.
 List<MixPart> defaultCategoryMix(String code) => code == 'DESALTER' ? desalterDefaultMix : const [];
 
+/// سری PPI آمریکای روش M5 هر رده: کمپرسور هوا = BLS PCU333912 (Air & gas compressors)، بقیه = پمپ 333914.
+String defaultCategoryUsPpi(String code) => code == 'COMPRESSOR' ? 'PPI_US_333912_GREG' : defaultUsPpiSeries;
+
 /// گزینه‌ی گروه ضریب برای مقادیر یک قلم ([code] = رده، برای رده‌هایی که گروه‌های اختصاصی دارند).
 String? factorOption(String group, Map<String, Object?> v, {String? code}) {
   if (code == 'DESALTER') return desalterFactorOption(group, v);
+  if (code == 'COMPRESSOR') return compressorFactorOption(group, v);
   switch (group) {
     case 'MAT':
       return v['material_class']?.toString();

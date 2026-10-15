@@ -7,6 +7,7 @@
 import '../calc/series.dart';
 import '../catalog/eurostat_ppi.dart';
 import '../catalog/profiles.dart';
+import '../catalog/us_ppi.dart';
 import '../db/db.dart';
 import 'catalog_repo.dart';
 
@@ -90,6 +91,7 @@ void ensureGenericTemplates(Db db) {
       }
     }
     _cleanupDesalterFactors(db);
+    _cleanupCompressorFactors(db);
     _ensurePpiSeries(db);
   });
   _reparseExisting(db);
@@ -109,10 +111,36 @@ void _cleanupDesalterFactors(Db db) {
   );
 }
 
+/// ضرایب اولیه‌ی قدیمی کمپرسور (روغن‌کاری LUBE، جنس، NACE) که در روش بانک کمپرسور به کار نمی‌روند؛
+/// فقط ضرایب کالیبره‌نشده حذف می‌شوند.
+void _cleanupCompressorFactors(Db db) {
+  final groups = compressorFactorGroups.map((g) => "'$g'").join(',');
+  db.execute('DELETE FROM factors WHERE set_code = ? AND calibrated IS NULL AND grp NOT IN ($groups)',
+      [factorSetOf('COMPRESSOR')]);
+}
+
 /// سری‌های PPI یوروستات (C25.29، C27.11 و شاخص‌های اجزای پکیج‌ها) برای روش شاخص ترکیبی.
 /// مقادیر موجود (و ویرایش‌های کاربر) دست نمی‌خورند؛ فقط سال‌های ناموجود اضافه می‌شوند.
 void _ensurePpiSeries(Db db) {
   var sort = (db.scalar('SELECT COALESCE(MAX(sort), 0) FROM index_series') as int?) ?? 0;
+  for (final s in blsPpiSeeds) {
+    if (db.scalar('SELECT 1 FROM index_series WHERE code = ?', [s.code]) == null) {
+      db.execute(
+        'INSERT INTO index_series(code, name_fa, name_en, kind, grp, unit, base, source, calendar, sort) '
+        "VALUES (?,?,?,'level','ppi_world','Jun1984=100','Jun1984=100',?,'gregorian',?)",
+        [s.code, s.nameFa, s.nameEn, 'US BLS PCU333912333912 via FRED، میانگین سالانه (دریافت ۱۴۰۵/۰۷/۲۳)', ++sort],
+      );
+    }
+    for (final (y, v, st) in s.values) {
+      final p = Period.tryParse('$y')!;
+      db.execute(
+        'INSERT OR IGNORE INTO index_values(series_code, period_key, year, quarter, month, value, status, source) '
+        'VALUES (?,?,?,?,?,?,?,?)',
+        [s.code, p.key, p.year, p.quarter, p.month, v, st == 'partial' ? 'forecast' : st,
+          st == 'partial' ? 'BLS: میانگین ژانویه تا اوت ۲۰۲۶ (ناقص)' : 'BLS / FRED میانگین سالانه'],
+      );
+    }
+  }
   for (final s in eurostatPpiSeeds) {
     if (db.scalar('SELECT 1 FROM index_series WHERE code = ?', [s.code]) == null) {
       db.execute(

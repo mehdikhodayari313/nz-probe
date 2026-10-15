@@ -206,9 +206,16 @@ class MethodFactor {
 /// محاسبه‌ی ضریب تعدیل یورویی هر روش (بدون کف؛ کف در موتور اعمال می‌شود).
 class MethodFactors {
   const MethodFactors(this.series,
-      {required this.ppiSeries, required this.fxType, this.mix = const [], this.mixStrict = false});
+      {required this.ppiSeries,
+      required this.fxType,
+      this.mix = const [],
+      this.mixStrict = false,
+      this.usPpiSeries = defaultUsPpiSeries});
   final SeriesLookup series;
   final String ppiSeries;
+
+  /// سری PPI آمریکای روش M5 (پیش‌فرض پمپ 333914؛ کمپرسور هوا 333912)
+  final String usPpiSeries;
   final String fxType;
 
   /// سبد شاخص ترکیبی (روش M7)
@@ -241,6 +248,9 @@ class MethodFactors {
     if (a == null || b == null || a <= 0 || b <= 0) return null;
     return jalaliBlendWeight * a + (1 - jalaliBlendWeight) * b;
   }
+
+  /// شاخص آمریکای روش M5 در سال شمسی (۰٫۷۹/۰٫۲۱ سال‌های میلادی)
+  double? usIndex(int jYear) => _gregBlend(usPpiSeries, jYear);
 
   /// مقدار یک جزء سبد در سال شمسی
   double? mixPartValue(MixPart p, int jYear) {
@@ -309,12 +319,12 @@ class MethodFactors {
         final f = math.pow(m2PazananFactor, yrs / (m2TargetYear - m2BaseYear)).toDouble();
         return MethodFactor(f, '۱٫۵۵۲۰۷۶ ^ ($yrs ÷ ۱۱) — نرخ سالانه‌ی معادل');
       case 'M5':
-        final pb = _gregBlend('PPI_US_333914_GREG', baseYear), pt = _gregBlend('PPI_US_333914_GREG', targetYear);
+        final pb = _gregBlend(usPpiSeries, baseYear), pt = _gregBlend(usPpiSeries, targetYear);
         final eb = _eurUsd(baseYear, baseMonth), et = _eurUsd(targetYear, targetMonth);
-        if (pb == null || pt == null) return const MethodFactor(null, 'PPI پمپ آمریکا برای این سال‌ها موجود نیست');
+        if (pb == null || pt == null) return const MethodFactor(null, 'PPI آمریکا برای این سال‌ها موجود نیست');
         if (eb == null || et == null) return const MethodFactor(null, 'نسبت یورو/دلار از جدول نرخ ارز موجود نیست');
         return MethodFactor(pt / pb * eb / et,
-            'USPPI ${_s(pt)} ÷ ${_s(pb)} × یورو/دلار ${_s(eb)} ÷ ${_s(et)}');
+            'USPPI ${_s(pt)} ÷ ${_s(pb)} × یورو/دلار ${_s(eb)} ÷ ${_s(et)}', base: pb, target: pt);
       case compositeMethodCode:
         if (mix.isEmpty) return const MethodFactor(null, 'سبد شاخص ترکیبی برای این رده تعریف نشده است');
         final cb = compositeIndex(baseYear), ct = compositeIndex(targetYear);
@@ -355,14 +365,17 @@ const rialPackageResults = <RialPackageResult>[
 ];
 
 
+/// سری PPI آمریکای پیش‌فرض روش M5 (پمپ)
+const defaultUsPpiSeries = 'PPI_US_333914_GREG';
+
 /// برچسب روش برای یک رده‌ی تجهیز: در رده‌های غیرپمپ، M4/M6 با شاخص PPI همان رده و بدون کف قیمت است.
-String methodLabelFor(EscalationMethod m, {required bool pump, String? ppiName}) {
+String methodLabelFor(EscalationMethod m, {required bool pump, String? ppiName, String? usPpiName}) {
   if (pump) return '${m.code} — ${m.nameFa}';
   final ppi = ppiName == null ? 'PPI منتخب رده' : 'PPI: $ppiName';
   return switch (m.code) {
     'M4' => 'M4 — $ppi',
     'M6' => 'M6 — همان M4 ($ppi)؛ کف قیمت فقط برای پمپ',
-    'M5' => 'M5 — PPI پمپ آمریکا به یورو (شاخص پمپ)',
+    'M5' => 'M5 — PPI آمریکا به یورو (${usPpiName ?? 'شاخص پمپ'})',
     'M7' => 'M7 — شاخص ترکیبی (سبد PPI همین رده)',
     _ => '${m.code} — ${m.nameFa}',
   };
