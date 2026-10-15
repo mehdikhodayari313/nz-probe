@@ -92,7 +92,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   if it differs, `gh run rerun <run-id>` of the final commit before taking the zip.
 - Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx] [compressor bank xlsx]` (CI passes
   all three fixtures; expects 146 pumps, 9 desalters, 10 compressors / 3 quotes / 4 peers).
-- Current released version: **0.9** (1405/07/23, air compressor bank; zip on `price-bank-releases`).
+- Current released version: **0.9.1** (1405/07/23, desalter cleanup; zip on `price-bank-releases`).
 - Releases/tags cannot be created from Claude sessions (403). Published builds live on branch
   **`price-bank-releases`** (`price_bank_vX.Y_windows.zip` + README table) — add each new version there.
 - Commit trailer (always):
