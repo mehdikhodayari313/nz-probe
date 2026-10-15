@@ -1,3 +1,5 @@
+import 'dart:io';
+
 // آزمون رابط کاربری: برنامه با داده‌ی واقعی v8 ساخته می‌شود و همه‌ی صفحه‌ها باز می‌شوند.
 // هر خطای چیدمان (overflow) یا استثنا باعث شکست آزمون می‌شود.
 
@@ -8,6 +10,7 @@ import 'package:price_bank/core/price_bank.dart';
 import 'package:price_bank/core/xlsx/xlsx_reader.dart';
 import 'package:price_bank/core/import/mto_importer.dart';
 import 'package:price_bank/main.dart';
+import 'package:price_bank/ui/pages/desalter_estimator_tab.dart';
 import 'package:price_bank/ui/pages/equipment_page.dart';
 import 'package:price_bank/ui/pages/generic_item_page.dart';
 import 'package:price_bank/ui/widgets/mto_import_dialog.dart';
@@ -337,6 +340,29 @@ void main() {
     await tester.pumpAndSettle();
     expect(app.pb.items.count(app.pb.catalog.categoryByCode('VESSEL')!.id), 2);
     debugPrint('✓ ' 'ورود MTO قالب دیگر');
+  });
+
+  testWidgets('تخمین دیسالتر: جدول سه روش در پنجره‌ی باریک و پهن بدون شکستن متن', (tester) async {
+    const desPath = 'test/fixtures_private/Desalters_bank_test.xlsx';
+    if (!File(desPath).existsSync()) return;
+    for (final size in const [Size(980, 720), Size(1600, 1000)]) {
+      final state = await boot(tester, size: size);
+      state.pb.desalterImporter().run(XlsxWorkbook.openFile(desPath), fileName: 'Desalters_Price_Bank_v8.1.xlsx');
+      state.dataChanged(calcInputs: true);
+      Navigator.of(tester.element(find.byType(Scaffold).first)).push(MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: DesalterEstimatorTab(picker: SizedBox()))));
+      await tester.pumpAndSettle();
+      final methods = find.text('سه روش تخمین');
+      await tester.scrollUntilVisible(methods, 300,
+          scrollable: find.descendant(of: find.byType(DesalterEstimatorTab), matching: find.byType(Scrollable)).first);
+      await tester.pumpAndSettle();
+      expect(find.textContaining('ظرفیت‌محور (BPD^'), findsOneWidget);
+      // ستون نام روش باید پهنای کافی داشته باشد (پیش‌تر ۰ می‌شد و متن عمودی می‌شکست)
+      final w = tester.getSize(find.textContaining('ظرفیت‌محور (BPD^')).width;
+      expect(w, greaterThan(120), reason: 'پنجره‌ی $size');
+      expect(find.text('دامنه‌ی قیمت (Scope) — فقط برای محاسبه‌ی قیمت؛ پایه: همه بله، گمرک و حمل خیر'), findsOneWidget);
+      debugPrint('✓ تخمین دیسالتر $size');
+    }
   });
 
   testWidgets('جزئیات پمپ: همه‌ی زبانه‌ها و حالت ویرایش', (tester) async {

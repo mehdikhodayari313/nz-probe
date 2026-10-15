@@ -103,6 +103,7 @@ class EquipmentProfile {
     this.inferType,
     this.weightKey,
     this.factorSeeds,
+    this.filterKeys,
   });
   final String code;
   final List<ProfileField> fields;
@@ -126,8 +127,13 @@ class EquipmentProfile {
 
   ProfileField? field(String key) => fields.where((f) => f.key == key).firstOrNull;
 
+  /// فیلترهای صفحه‌ی تجهیزات (null = همه‌ی فیلدهای انتخابی)؛ مثل پمپ فقط مشخصاتی که در انتخاب تجهیز مؤثرند.
+  final List<String>? filterKeys;
+
   /// فیلدهای انتخابی (برای فیلتر)
-  List<ProfileField> get enumFields => fields.where((f) => f.type == 'enum').toList();
+  List<ProfileField> get enumFields => filterKeys == null
+      ? fields.where((f) => f.type == 'enum').toList()
+      : [for (final k in filterKeys!) if (field(k) case final f? when f.type == 'enum') f];
 
   /// برچسب MTO به یکی از قواعد این قالب می‌خورد؟
   bool maps(String label) => rules.any((r) => r.matches(label));
@@ -453,12 +459,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
       ProfileField('pump_material_class', 'کلاس متریال پمپ (API 610)', 'package'),
       ProfileField('pump_code', 'کد پمپ‌ها', 'package'),
       _fScope,
-      ProfileField('scope_transformers', 'Scope: ترانس‌ها', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
-      ProfileField('scope_recycle_pumps', 'Scope: پمپ‌های Recycle', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
-      ProfileField('scope_related_piping', 'Scope: لوله‌کشی مربوط', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
-      ProfileField('scope_instruments', 'Scope: ابزار دقیق و کنترل', 'scope', type: 'enum', list: 'YNS', help: 'پایه = بله'),
-      ProfileField('scope_customs_transport', 'Scope: گمرک و حمل', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
-      ProfileField('project_phase', 'مرحله‌ی پروژه', 'source', type: 'enum', list: 'Phase'),
+      // Scope (ترانس، پمپ Recycle، لوله‌کشی، ابزار دقیق، گمرک و حمل) و مرحله‌ی پروژه مشخصه‌ی تجهیز نیستند و
+      // در منابع یا نیامده‌اند یا برای همه یکسان‌اند؛ فقط در «تخمین تجهیزات» به عنوان ضریب قیمت انتخاب می‌شوند.
       ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'source'),
       ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'source'),
     ],
@@ -483,6 +485,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
     driver: SizeDriver('حجم کل پوسته‌ی وسل‌ها', 'm³', 0.6, desalterShellVolume),
     gridKeys: ['capacity_bpd', 'vessel_id_mm', 'vessel_tl_mm', 'vessels_per_package', 'desalting_technology', 'no_of_stages'],
     rangeKeys: ['capacity_bpd', 'design_pressure_barg'],
+    filterKeys: ['sub_category', 'desalting_technology', 'no_of_stages', 'des_material', 'nace'],
     factorGroups: desalterFactorGroups,
     factorSeeds: desalterFactorSeeds,
   ),

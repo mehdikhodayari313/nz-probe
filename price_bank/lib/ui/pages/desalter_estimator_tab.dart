@@ -29,11 +29,11 @@ const _enums = <(String, String, String, String?)>[
   ('des_material', 'متریال بدنه', 'DES_MAT', 'MAT'),
   ('nace', 'NACE MR0175', 'YNS', 'NACE'),
   ('no_of_stages', 'تعداد مرحله', 'DES_STAGE', 'STAGE'),
-  ('scope_transformers', 'Scope: ترانس‌ها', 'YNS', 'SC_TRF'),
-  ('scope_recycle_pumps', 'Scope: پمپ‌های Recycle', 'YNS', 'SC_PMP'),
-  ('scope_related_piping', 'Scope: لوله‌کشی مربوط', 'YNS', 'SC_PIP'),
-  ('scope_instruments', 'Scope: ابزار دقیق و کنترل', 'YNS', 'SC_INS'),
-  ('scope_customs_transport', 'Scope: گمرک و حمل', 'YNS', 'SC_CT'),
+  ('scope_transformers', 'ترانس‌ها در قیمت', 'YNS', 'SC_TRF'),
+  ('scope_recycle_pumps', 'پمپ‌های Recycle در قیمت', 'YNS', 'SC_PMP'),
+  ('scope_related_piping', 'لوله‌کشی مربوط در قیمت', 'YNS', 'SC_PIP'),
+  ('scope_instruments', 'ابزار دقیق و کنترل در قیمت', 'YNS', 'SC_INS'),
+  ('scope_customs_transport', 'گمرک و حمل در قیمت', 'YNS', 'SC_CT'),
 ];
 
 /// ورودی‌های عددی: (کلید، برچسب، واحد، مقدار پیش‌فرض)
@@ -93,6 +93,8 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
     _fromItem = r.item.id;
     for (final (k, _, _, _) in _enums) {
       final v = r.item.values[k]?.toString();
+      // Scope مشخصه‌ی قلم نیست (انتخاب کاربر برای قیمت)؛ اگر قلم مقدار ندارد، انتخاب فعلی می‌ماند
+      if (v == null && desalterScopeFields.containsValue(k)) continue;
       _enum[k] = v;
     }
     for (final (k, _, _, _) in _nums) {
@@ -174,7 +176,15 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
           ),
         ),
         const Divider(height: 20),
-        for (final (k, label, list, g) in _enums)
+        for (final (k, label, list, g) in _enums) ...[
+          if (k == desalterScopeFields.values.first) ...[
+            const Divider(height: 20),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text('دامنه‌ی قیمت (Scope) — فقط برای محاسبه‌ی قیمت؛ پایه: همه بله، گمرک و حمل خیر',
+                  style: t.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800, color: AppColors.strong)),
+            ),
+          ],
           _row(
             context,
             label,
@@ -187,15 +197,19 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
                 for (final o in app.pb.catalog.options(list))
                   DropdownMenuItem<String?>(
                     value: o.value,
-                    child: CountedLabel(
-                        o.labelFa == null || o.labelFa == o.value ? o.value : '${o.labelFa} (${o.value})', countOf(k, o.value),
-                        dimZero: false),
+                    child: desalterScopeFields.containsValue(k)
+                        ? DdText(o.labelFa == null || o.labelFa == o.value ? o.value : o.labelFa!)
+                        : CountedLabel(
+                            o.labelFa == null || o.labelFa == o.value ? o.value : '${o.labelFa} (${o.value})',
+                            countOf(k, o.value),
+                            dimZero: false),
                   ),
               ],
               onChanged: (v) => setState(() => _enum[k] = v),
             ),
             trailing: g == null || e == null ? null : _factorChip(context, g, label, setCode, e),
           ),
+        ],
         if (_enum['sub_category'] != null)
           SwitchListTile(
             value: _match,
@@ -343,7 +357,8 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
         ],
       ),
       LayoutBuilder(builder: (context, c) {
-        if (c.maxWidth < 1000) return Column(children: [inputs, const SizedBox(height: 14), results]);
+        // کنار هم فقط وقتی جدول نتایج جا می‌شود (۵۰۰ ورودی + ≥ ۷۲۰ نتایج)
+        if (c.maxWidth < 1240) return Column(children: [inputs, const SizedBox(height: 14), results]);
         return Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SizedBox(width: 500, child: inputs),
           const SizedBox(width: 16),
@@ -362,28 +377,56 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
       return '${s > 0 ? '+' : ''}${faNum(s * 100, decimals: 0)}٪';
     }
 
-    Widget line(String code, String name, int? peers, String coef, double? eurV, String range, {bool strong = false}) =>
-        Container(
+    // جدول پهن (≥ ۷۲۰ پیکسل): ستونی؛ باریک: هر روش دو سطر تا متن عمودی و شکسته نشود.
+    Widget line(bool narrow, String code, String name, int? peers, String coef, double? eurV, String range,
+        {bool strong = false}) {
+      final eurText = Text(eurV == null ? '—' : '${faNum(eurV)} €',
+          textAlign: narrow ? TextAlign.end : TextAlign.center,
+          style: TextStyle(fontSize: 12.5, fontWeight: strong ? FontWeight.w900 : FontWeight.w700, color: AppColors.eur));
+      final deco = BoxDecoration(color: strong ? AppColors.amberSoft : null, borderRadius: BorderRadius.circular(8));
+      final codeText = SizedBox(
+          width: 28, child: Text(code, style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.petrol)));
+      if (narrow) {
+        final details = [
+          if (peers != null) 'همتا ${fa(peers)}',
+          if (coef.isNotEmpty && coef != '—') 'ضریب ${fa(coef)}',
+          if (range.isNotEmpty) 'بازه ${fa(range)}',
+          if (!strong && pctOf(eurV) != '—') 'اختلاف ${pctOf(eurV)}',
+        ];
+        return Container(
           padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
-          decoration: BoxDecoration(
-            color: strong ? AppColors.amberSoft : null,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(children: [
-            SizedBox(width: 34, child: Text(code, style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.petrol))),
-            Expanded(child: Text(name, style: const TextStyle(fontSize: 12.5))),
-            SizedBox(width: 56, child: Text(peers == null ? '' : fa(peers), textAlign: TextAlign.center)),
-            SizedBox(width: 150, child: Text(fa(coef), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
-            SizedBox(
-              width: 120,
-              child: Text(eurV == null ? '—' : '${faNum(eurV)} €',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 12.5, fontWeight: strong ? FontWeight.w900 : FontWeight.w700, color: AppColors.eur)),
-            ),
-            SizedBox(width: 150, child: Text(fa(range), textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5))),
-            SizedBox(width: 56, child: Text(strong ? '' : pctOf(eurV), textAlign: TextAlign.end, style: const TextStyle(fontSize: 12))),
+          decoration: deco,
+          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              codeText,
+              Expanded(child: Text(name, style: const TextStyle(fontSize: 12.5))),
+              const SizedBox(width: 8),
+              eurText,
+            ]),
+            if (details.isNotEmpty)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 28, top: 3),
+                child: Text(details.join(' · '),
+                    style: TextStyle(fontSize: 11.5, color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              ),
           ]),
         );
+      }
+      return Container(
+        padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 8),
+        decoration: deco,
+        child: Row(children: [
+          codeText,
+          Expanded(child: Text(name, style: const TextStyle(fontSize: 12.5))),
+          SizedBox(width: 48, child: Text(peers == null ? '' : fa(peers), textAlign: TextAlign.center)),
+          SizedBox(width: 140, child: Text(fa(coef), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
+          SizedBox(width: 120, child: eurText),
+          SizedBox(width: 130, child: Text(fa(range), textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5))),
+          SizedBox(width: 56, child: Text(strong ? '' : pctOf(eurV), textAlign: TextAlign.end, style: const TextStyle(fontSize: 12))),
+        ]),
+      );
+    }
+
     String rng(double? lo, double? hi) => lo == null || hi == null ? '' : '${compactNum(lo)} تا ${compactNum(hi)}';
     String cf(DesalterMethodResult m) =>
         m.coefAvg == null ? '—' : '${faSmart(m.coefAvg)}${m.peers > 1 ? ' (${compactNum(m.coefMin!)}–${compactNum(m.coefMax!)})' : ''}';
@@ -392,23 +435,27 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
       subtitle: 'یورو هر دستگاه، سال هدف · اختلاف = نسبت به نتیجه‌ی نهایی',
       icon: Icons.alt_route_rounded,
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          color: AppColors.headerBg,
-          child: Row(children: [
-            const SizedBox(width: 34),
-            Expanded(child: Text('روش', style: head)),
-            SizedBox(width: 56, child: Text('همتا', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 150, child: Text('ضریب هزینه (کمینه–بیشینه)', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 120, child: Text('یورو', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 150, child: Text('بازه با ضریب همتاها', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 56, child: Text('اختلاف', textAlign: TextAlign.end, style: head)),
-          ]),
-        ),
-        line('A', 'ظرفیت‌محور (BPD^${faSmart(e.nA)})', e.a.peers, cf(e.a), e.a.eur, rng(e.a.low, e.a.high)),
-        line('B', 'حجم‌محور (m³^${faSmart(e.nB)})', e.b.peers, cf(e.b), e.b.eur, rng(e.b.low, e.b.high)),
+      child: LayoutBuilder(builder: (context, c) {
+        final narrow = c.maxWidth < 720;
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (!narrow)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            color: AppColors.headerBg,
+            child: Row(children: [
+              const SizedBox(width: 28),
+              Expanded(child: Text('روش', style: head)),
+              SizedBox(width: 48, child: Text('همتا', textAlign: TextAlign.center, style: head)),
+              SizedBox(width: 140, child: Text('ضریب هزینه (کمینه–بیشینه)', textAlign: TextAlign.center, style: head)),
+              SizedBox(width: 120, child: Text('یورو', textAlign: TextAlign.center, style: head)),
+              SizedBox(width: 130, child: Text('بازه با ضریب همتاها', textAlign: TextAlign.center, style: head)),
+              SizedBox(width: 56, child: Text('اختلاف', textAlign: TextAlign.end, style: head)),
+            ]),
+          ),
+        line(narrow, 'A', 'ظرفیت‌محور (BPD^${faSmart(e.nA)})', e.a.peers, cf(e.a), e.a.eur, rng(e.a.low, e.a.high)),
+        line(narrow, 'B', 'حجم‌محور (m³^${faSmart(e.nB)})', e.b.peers, cf(e.b), e.b.eur, rng(e.b.low, e.b.high)),
         line(
+          narrow,
           'C',
           e.reference == null
               ? 'نزدیک‌ترین مرجع (انتخاب نشده)'
@@ -419,15 +466,16 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
           '',
         ),
         const Divider(height: 14),
-        line('', 'میانگین ساده‌ی روش‌ها', null, '', e.simpleAvg, ''),
-        line('', 'میانگین وزنی (وزن = تعداد همتا)', null, '', e.weightedAvg, ''),
-        line('', 'نتیجه‌ی نهایی — ${DesalterParams.finalBasesFa[e.finalBasis]}', null, '', e.finalEur, '', strong: true),
+        line(narrow, '', 'میانگین ساده‌ی روش‌ها', null, '', e.simpleAvg, ''),
+        line(narrow, '', 'میانگین وزنی (وزن = تعداد همتا)', null, '', e.weightedAvg, ''),
+        line(narrow, '', 'نتیجه‌ی نهایی — ${DesalterParams.finalBasesFa[e.finalBasis]}', null, '', e.finalEur, '', strong: true),
         for (final w in e.warnings)
           Padding(
             padding: const EdgeInsets.only(top: 6),
             child: Text('⚠ ${desalterWarningFa[w] ?? w}', style: TextStyle(color: Tones.warn(context), fontSize: 12.5)),
           ),
-      ]),
+        ]);
+      }),
     );
   }
 
@@ -439,7 +487,7 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
       subtitle: 'یورو نرمال‌شده = یوروی تعدیل‌شده ÷ ALL_F · Coef A = NormEsc ÷ STAGE_F ÷ BPD^n · Coef B = NormEsc ÷ m³^n',
       icon: Icons.people_alt_outlined,
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-      child: Column(children: [
+      child: _minWidth(760, Column(children: [
         Container(
           padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
           color: AppColors.headerBg,
@@ -474,9 +522,16 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
               SizedBox(width: 80, child: Text(e.peers[i].coefB == null ? '—' : faSmart(e.peers[i].coefB), textAlign: TextAlign.end, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
             ]),
           ),
-      ]),
+      ])),
     );
   }
+
+  /// جدول با حداقل پهنا: در فضای باریک‌تر، اسکرول افقی به جای شکستن عمودی متن
+  static Widget _minWidth(double w, Widget child) => LayoutBuilder(
+        builder: (context, c) => c.maxWidth >= w
+            ? child
+            : SingleChildScrollView(scrollDirection: Axis.horizontal, child: SizedBox(width: w, child: child)),
+      );
 
   Widget _plainChip(BuildContext context, double v) => Container(
         height: 34,

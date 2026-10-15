@@ -91,11 +91,23 @@ void ensureGenericTemplates(Db db) {
       }
     }
     _cleanupDesalterFactors(db);
+    _cleanupDesalterFields(db);
     _cleanupCompressorFactors(db);
     _ensurePpiSeries(db);
   });
   _reparseExisting(db);
   _reparseMtoPumps(db);
+}
+
+/// فیلدهای Scope و مرحله‌ی پروژه از بخش تجهیزات دیسالتر برداشته شدند (فقط ورودی تخمین‌اند).
+/// تعریف فیلد حذف می‌شود؛ مقدارهای ذخیره‌شده (همه پایه = ضریب ۱) دست نمی‌خورند.
+void _cleanupDesalterFields(Db db) {
+  final keys = [...desalterScopeFields.values, 'project_phase'];
+  db.execute(
+    'DELETE FROM field_defs WHERE category_id = (SELECT id FROM categories WHERE code = ?) '
+    'AND key IN (${List.filled(keys.length, '?').join(',')})',
+    ['DESALTER', ...keys],
+  );
 }
 
 /// ضرایب اولیه‌ی قدیمی دیسالتر (فشار و کلاس‌های جنس عمومی) که در روش بانک دیسالتر به کار نمی‌روند؛

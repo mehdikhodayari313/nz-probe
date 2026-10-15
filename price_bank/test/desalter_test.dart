@@ -151,10 +151,10 @@ void main() {
     expect(v['no_of_stages'], '2-stage');
     expect(v['n_transformers'], 3);
     expect(v['transformer_sizing'], 0.5);
-    expect(v['scope_transformers'], 'Y');
-    expect(v['scope_recycle_pumps'], 'Y');
-    expect(v['scope_related_piping'], 'Y');
-    expect(v['scope_instruments'], 'Y');
+    // Scope مشخصه‌ی تجهیز نیست (فقط ورودی تخمین)؛ از شرح استخراج نمی‌شود
+    for (final k in desalterScopeFields.values) {
+      expect(v.containsKey(k), isFalse, reason: k);
+    }
     expect(v['des_material'], 'CS (SA-516 Gr.70)');
     expect(v['vessel_design_code'], 'ASME VIII Div.1');
     expect(v['ips_standard'], 'IPS-G-ME-150');
@@ -167,6 +167,22 @@ void main() {
     final one = <String, Object?>{'vessel_tag': 'DE-101/201/301 + DE-102/202/302'};
     inferDesalter('', one);
     expect(one['vessels_per_package'], 6);
+  });
+
+  test('بخش تجهیزات دیسالتر: بدون Scope و مرحله‌ی پروژه؛ فیلترها فقط مشخصات انتخاب', () {
+    final p = equipmentProfiles['DESALTER']!;
+    for (final k in [...desalterScopeFields.values, 'project_phase']) {
+      expect(p.field(k), isNull, reason: k);
+    }
+    expect(p.enumFields.map((f) => f.key).toList(),
+        ['sub_category', 'desalting_technology', 'no_of_stages', 'des_material', 'nace']);
+    final pb = PriceBank.memory(loadSeed());
+    final cat = pb.catalog.categoryByCode('DESALTER')!;
+    final keys = pb.catalog.fields(cat.id).map((f) => f.key).toSet();
+    expect(keys.intersection({...desalterScopeFields.values, 'project_phase'}), isEmpty);
+    // ضرایب Scope برای تخمین سر جای خود هستند
+    expect(pb.db.scalar("SELECT COUNT(*) FROM factors WHERE set_code = ? AND grp = 'SC_CT'", [factorSetOf('DESALTER')]),
+        greaterThan(0));
   });
 
   group('بانک دیسالتر v8.1', () {

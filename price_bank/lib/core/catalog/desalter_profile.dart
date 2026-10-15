@@ -149,10 +149,6 @@ void inferDesalter(String ctx, Map<String, Object?> o) {
     o['n_transformers'] ??= double.parse(trf.group(1)!);
     o['transformer_sizing'] ??= double.parse(trf.group(2)!) / 100;
   }
-  if (l.contains('transformer')) o['scope_transformers'] ??= 'Y';
-  if (l.contains('recycle pump') || l.contains('circulation pump')) o['scope_recycle_pumps'] ??= 'Y';
-  if (l.contains('piping')) o['scope_related_piping'] ??= 'Y';
-  if (l.contains('instrument')) o['scope_instruments'] ??= 'Y';
   // تعداد وسل: از تگ وسل‌ها («DE-111/112» = ۲، «DE-101/201/301 + DE-102/202/302» = ۶)، وگرنه تعداد مرحله
   if (o['vessels_per_package'] == null) {
     final vt = o['vessel_tag']?.toString().trim() ?? '';
