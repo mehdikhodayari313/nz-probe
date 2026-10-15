@@ -130,7 +130,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 
 ## Domain essentials
 - Default escalation **M6** = EU pump PPI (C28.13) + API 610 price floor (pumps S/D only). For non-pump
-  categories M6 ≡ M4 with the category's PPI. Per-category settings keys: `cat_method_<CODE>`, `cat_ppi_<CODE>`,
+  categories M6 ≡ M4 with the category's PPI. **User rule: each equipment has its own escalation method** (the
+  top-bar/pump method never applies to other categories); M7 = composite PPI basket per category (`cat_mix_<CODE>`).
+- Desalter = user's Desalters_Price_Bank v8.x method (docs/requirements/DESALTER.md); bank file is the reference. Per-category settings keys: `cat_method_<CODE>`, `cat_ppi_<CODE>`,
   `cat_n_<CODE>`, `cat_est_<CODE>`, `cat_wexp_<CODE>`. Factor sets `PUMP_ROT`, `GEN_<CODE>`.
 - Price flow: unit price in source currency → EUR at source year (IRR via document source FX if set) → escalate
   EUR → convert with target-year FX table. CPI/rial inflation is NOT used (validation showed ~50% under-estimate).
@@ -142,12 +144,11 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 
 ## Open items / next steps (keep this list current)
 1. User will send requirements for electrical, instrumentation and remaining mechanical templates. Add profiles
-   in `profiles.dart`, and change `_reparseExisting` so it also fills **new** fields of items that already have
-   some profile values (from stored `mto_description`), so no re-import is needed.
-2. User is preparing exact escalation methods per equipment type → plug into the methods page / per-category
-   method lists (`PriceBank.genericMethodCodes`, `methodLabelFor`).
-3. Ask the user to confirm: KPL price year (taken from cover revision R03 = JAN 2016 → 1394/10), Gachsaran PEP
-   year (from filename 1402/05), and whether Gachsaran pump "x bar" is discharge or differential pressure.
+   in `profiles.dart` (new fields of existing MTO items are filled once automatically on startup).
+2. Escalation per equipment type: each category has its own method (`methodFor`, default M4; DESALTER M7 composite).
+   User may send exact methods/baskets per type → `defaultCategoryMethod` / `defaultCategoryMix` in profiles.dart.
+3. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
+   basket weights are still Provisional. Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
 4. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens

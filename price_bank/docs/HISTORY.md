@@ -56,6 +56,22 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   into CI `test.txt` (KPL 120 items/16 categories; PEP 1209 items; M3 50 items).
 - Build published on branch `price-bank-releases`.
 
+## v0.8 (1405/07/23)
+- Desalter bank from user's `Desalters_Price_Bank_v8.1.xlsx` (Calc_Spec/Test_Cases): `core/calc/desalter.dart`
+  (factors TECH/MAT/NACE/STAGE/SC_*, KVA_F dormant, NormEsc, Coef A/B, ln-ln fit, estimator A/B/C + weighted final),
+  `import/desalter_importer.dart` (Master by header text, vendors, quotes), `ui/pages/desalter_estimator_tab.dart`.
+  Golden test vs reduced fixture `test/fixtures_private/Desalters_bank_test.xlsx` (261 values + 2 scenarios, 1e-9).
+- User decisions: KPL-476 cost year 1394/10 (bank file says 1393; corrected on import, audited); Pazanan 1404 and
+  1393 R02 stay separate records; desalter bank is the reference (MTO desalter with same tag base + same amount is
+  archived on bank import and skipped on later MTO import); **each category has its own escalation method**
+  (`AppSettings.methodFor`: cat_method_X else `defaultCategoryMethod` — DESALTER M7, others M4; pump method only pumps).
+- M7 composite PPI basket (`cat_mix_<CODE>` "SERIES:w;…", `cat_mixrule_<CODE>`=Strict) — Gregorian series blended
+  0.79/0.21, null if either year missing; renormalize missing. Eurostat series fetched by CI workflow `pb_indices`
+  (branch `ci-pb-indices`): C25.29/C27.11 identical to the workbook; also C27.12, C28.14, C26.51, C25.11 added
+  (`catalog/eurostat_ppi.dart`, inserted on startup with INSERT OR IGNORE).
+- `_reparseExisting` now fills new template fields once per template change (app_meta `profile_fields_<CODE>`).
+- Finding: Pazanan R02 1393 (2.5 M€) escalated to 1404 ≈ 3.41 M€ vs 1404 quotes avg 1.93 M€ (−43%).
+
 ## User statements worth remembering
 - Templates/parameters for electrical, instrumentation and remaining mechanical equipment will come later; the
   reader must not need rewriting when parameters are added (design: reader → "label: value" specs; profiles map).
