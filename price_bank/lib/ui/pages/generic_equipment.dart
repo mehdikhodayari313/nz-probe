@@ -157,7 +157,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
           lines: [
             'اقلام این رده از فایل‌های MTO وارد می‌شوند: شرح، تعداد، قیمت مبنای مشاور، استعلام‌های فروشندگان و قیمت بازنگری قبلی.',
             '«قیمت مبنا» قیمت اصلی هر قلم است (معمولاً قیمت GOING مشاور). در صفحه‌ی هر قلم می‌توانید یکی از استعلام‌ها را مبنا قرار دهید.',
-            'قیمت مبنا با روش ${s.escalationMethod} به سال ${fa(s.targetYear)} تعدیل می‌شود. در روش M6 کف قیمت فقط برای پمپ‌هاست؛ برای این رده M6 همان M4 است.',
+            'قیمت مبنا با روش ${s.methodFor(cat.code)} (روش همین رده) به سال ${fa(s.targetYear)} تعدیل می‌شود. در روش M6 کف قیمت فقط برای پمپ‌هاست؛ برای این رده M6 همان M4 است.',
             'ستون «استعلام‌ها» تعداد استعلام عددی را نشان می‌دهد؛ نشانگر ماوس را نگه دارید تا کمینه و بیشینه‌ی آن‌ها (تعدیل‌شده به یوروی سال هدف) دیده شود.',
           ],
         ),
@@ -625,7 +625,6 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
     final t = Theme.of(context);
     final cat = app.pb.catalog.categoryByCode(widget.code)!;
     final p = equipmentProfiles[widget.code];
-    final s = app.settings;
     final ppiSeries = app.pb.indices.series().where((x) => x.group.startsWith('ppi') && x.calendar == 'jalali').toList();
     Widget row(String label, Widget w, {String? help}) => Padding(
           padding: const EdgeInsets.only(bottom: 12),

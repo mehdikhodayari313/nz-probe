@@ -161,9 +161,12 @@ void main() {
     expect(v['vessel_id_mm'], 4267);
     expect(v['vessel_tl_mm'], 30480);
     expect(v['design_pressure_barg'], 20.3);
-    // حجم پوسته فقط با تعداد وسل
-    expect(desalterShellVolume(v), isNull);
-    expectRel(desalterShellVolume({...v, 'vessels_per_package': 2.0}), 871.726252950199, 'حجم کل');
+    // تعداد وسل از تعداد مرحله (تگ وسل در شرح نیست) ← حجم کل پوسته
+    expect(v['vessels_per_package'], 2);
+    expectRel(desalterShellVolume(v), 871.726252950199, 'حجم کل');
+    final one = <String, Object?>{'vessel_tag': 'DE-101/201/301 + DE-102/202/302'};
+    inferDesalter('', one);
+    expect(one['vessels_per_package'], 6);
   });
 
   group('بانک دیسالتر v8.1', () {

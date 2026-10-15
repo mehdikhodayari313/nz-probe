@@ -149,7 +149,11 @@ void main() {
   testWidgets('ورود نرخ تورم به درصد', (tester) async {
     final app = await boot(tester);
     await go(tester, nIndices);
-    await tester.ensureVisible(find.text('تورم ریالی سالانه (CPI)'));
+    // فهرست سری‌ها تنبل است (سری‌های PPI یوروستات بالای آن اضافه شده‌اند)
+    await tester.scrollUntilVisible(find.text('تورم ریالی سالانه (CPI)'), 200,
+        scrollable: find
+            .ancestor(of: find.text('PPI مخازن و ظروف فلزی منطقه‌ی یورو (میلادی)'), matching: find.byType(Scrollable))
+            .first);
     await tester.pumpAndSettle();
     await tester.tap(find.text('تورم ریالی سالانه (CPI)'));
     await tester.pumpAndSettle();

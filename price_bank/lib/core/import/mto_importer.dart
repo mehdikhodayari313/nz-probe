@@ -729,7 +729,8 @@ class MtoImporter {
                 if (profile.field(e.key) != null) values.putIfAbsent(e.key, () => e.value);
               }
               // وزن: از MTO (واحد Kg/Ton) یا شیت‌های نصب و اجرا (همان تگ)
-              final wk = profile.weightKey;
+              // وزن خالی (دیسالتر هم فیلد وزن دارد، هرچند در روش بانک دیسالتر ضریب وزن ندارد)
+              final wk = profile.weightKey ?? (profile.field(weightFieldKey) != null ? weightFieldKey : null);
               final w = it.weightKg ?? a.weights[normTag(it.tag)];
               if (wk != null && w != null && w > 0) {
                 values.putIfAbsent(wk, () => w);

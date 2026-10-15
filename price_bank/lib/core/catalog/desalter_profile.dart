@@ -153,6 +153,20 @@ void inferDesalter(String ctx, Map<String, Object?> o) {
   if (l.contains('recycle pump') || l.contains('circulation pump')) o['scope_recycle_pumps'] ??= 'Y';
   if (l.contains('piping')) o['scope_related_piping'] ??= 'Y';
   if (l.contains('instrument')) o['scope_instruments'] ??= 'Y';
+  // تعداد وسل: از تگ وسل‌ها («DE-111/112» = ۲، «DE-101/201/301 + DE-102/202/302» = ۶)، وگرنه تعداد مرحله
+  if (o['vessels_per_package'] == null) {
+    final vt = o['vessel_tag']?.toString().trim() ?? '';
+    if (vt.isNotEmpty) {
+      o['vessels_per_package'] = vt
+          .split(RegExp(r'[+,،&]'))
+          .where((p) => p.trim().isNotEmpty)
+          .fold<double>(0, (s, p) => s + p.split('/').where((x) => x.trim().isNotEmpty).length);
+    } else if (o['no_of_stages'] == '1-stage') {
+      o['vessels_per_package'] = 1.0;
+    } else if (o['no_of_stages'] == '2-stage') {
+      o['vessels_per_package'] = 2.0;
+    }
+  }
   final mat = o['shell_material']?.toString();
   if (mat != null && o['des_material'] == null) o['des_material'] = desalterMaterialOf(mat);
   final code = o['design_code']?.toString().toLowerCase() ?? '';
