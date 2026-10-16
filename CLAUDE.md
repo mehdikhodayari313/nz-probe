@@ -53,6 +53,9 @@
 - پکیجی که چند رده را یکجا قیمت داده (مثل پکیج کامل هوای ابزار دقیق) در همه‌ی رده‌های مربوط دیده شود (یک رکورد، بدون شمارش دوباره).
 - `spec/state.json` را دستی ویرایش نکن (فقط اسکریپت).
 - فایل‌های واقعی پروژه‌ها محرمانه‌اند؛ مخزن خصوصی است و نباید عمومی شود.
+- **مراجع پروژه در `refs/`** (تصمیم کاربر ۱۴۰۵/۰۷/۲۴): فایل‌های اصلی MTO/PEP، بانک پمپ v8.1، اعتبارسنجی تعدیل، شرح نیاز و اسناد کلیدی؛
+  فهرست و شیت‌های مهم هر فایل در `refs/README.md`. برای تصمیم‌های داده‌ای (شمار رکوردها، مبنای قیمت، سال، ضرایب پنهان) اول همین‌جا را ببین.
+  این فایل‌ها را به `price_bank/test/fixtures*` کپی نکن و در کد برنامه ارجاع نده؛ آزمون‌ها با فیکسچرهای ناشناس می‌مانند.
 
 ---
 
@@ -111,7 +114,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Tests: lazy ListViews need `scrollUntilVisible`/`dragUntilVisible`; scope `find.byType(Scrollable)` with
   `find.ancestor(...)` (the sidebar is also a Scrollable). `EquipmentPage.selectedCategory` is static and
   persists across UI tests.
-- Real client files (MTOs, PEPs) are **never** committed. `test/fixtures_private/` holds the user's v8 bank and
+- Real client files (MTOs, PEPs) are committed **only** under `refs/` (user decision 1405/07/24, see `refs/README.md`), never in `price_bank/`. `test/fixtures_private/` holds the user's v8 bank and
   validation workbook (repo is private). `test/fixtures/*` and `test/fixtures/full/*` are anonymized copies
   (project names replaced, numbers randomized) — regenerate the same way if needed.
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.
