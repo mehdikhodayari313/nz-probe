@@ -199,7 +199,12 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
    1.93 M€ (−43%). Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
 5. Air compressor bank (docs/requirements/COMPRESSOR.md): implemented in v0.9. Factors_CMP still Provisional (4 peers only;
    Domestic 0.6 is circular). Next: AIR_DRYER bank — price-less items CMP-00xx-DRY wait for manual prices (estimate in remarks).
-6. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
+6. Pump count (user 1405/07/24): app shows 101 = MTO KPL 40 + PEP G4 26 + MTO Pazanan 21 + catalog sample PUMPS 14
+   (user imported project files, never the v8.1 bank). Bank 146 adds 18 Pazanan R02 1393 duplicate-tag records,
+   13 KPL package pumps without price (P-113/123 desalter recycle, P-130–134/140–144 IGF, P-148 stripper) and 14 CSV
+   18061405 pumps (CSV not importable). Bugs: dashboard hides the pump-bank import once MTO pumps exist; v8 import has no
+   MTO dedupe (project names differ). Proposed fix (awaiting user OK): pump bank = reference like desalter.
+7. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens
 - Read only the files the task touches (use the code map). Prefer targeted `grep`/`sed -n` over whole files.
