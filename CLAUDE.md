@@ -80,9 +80,14 @@ previous-revision price), escalate prices to a target year (EUR-based methods M0
 search per equipment category, estimate new equipment from peers, multi-user with audit history. RTL Persian
 UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 
-## Build / test (no local Flutter — CI only)
-- pub.dev and storage.googleapis are blocked in the sandbox. **Every check runs in GitHub Actions**
-  (`.github/workflows/price_bank.yml`): Linux analyze + `flutter test`, then Windows build + exe smoke test.
+## Build / test
+- Since 1405/07/27 the cloud environment allows `storage.googleapis.com` and `pub.dev`, and the environment's
+  Setup script installs Flutter stable in `/opt/flutter` (+ `libsqlite3-dev`; log `/var/log/flutter-setup.log`).
+  **Run locally first:** `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`
+  (≈1.5 min for all tests). Afterwards `git checkout analysis_options.yaml` and delete `pubspec.lock` (pub get
+  rewrites/creates them; do not commit). If `flutter` is missing, the setup script failed — read its log.
+- Windows build + exe smoke test still run only in GitHub Actions (`.github/workflows/price_bank.yml`), which also
+  repeats Linux analyze + `flutter test`.
 - Push to `main` (paths `price_bank/**`) triggers CI. Results are pushed to branches (artifact download is blocked):
   - `ci-pb-test`: `commit.txt`, `analyze.txt`, `test.txt`
   - `ci-pb-windows`: `smoke.txt` (`RESULT: OK`)
