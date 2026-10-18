@@ -86,6 +86,12 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   **Run locally first:** `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`
   (≈1.5 min for all tests). Afterwards `git checkout analysis_options.yaml` and delete `pubspec.lock` (pub get
   rewrites/creates them; do not commit). If `flutter` is missing, the setup script failed — read its log.
+- Official Dart/Flutter MCP server is configured for the project (`.mcp.json` at repo root, enabled in
+  `.claude/settings.json`): tools `analyze_files` (analyzer errors per file/root), `lsp` (hover, definition,
+  symbols), `pub`, `pub_dev_search`, `read_package_uris`, `rip_grep_packages`. Runtime tools (hot reload, widget
+  inspector, VM service, driver) are disabled — the Windows app cannot run here. It uses the real Dart binary
+  `/opt/flutter/bin/cache/dart-sdk/bin/dart` (the `/opt/flutter/bin/dart` wrapper prints a root banner on stdout,
+  which breaks MCP stdio). If Flutter is not installed, the server simply fails to start; use Bash instead.
 - Windows build + exe smoke test still run only in GitHub Actions (`.github/workflows/price_bank.yml`), which also
   repeats Linux analyze + `flutter test`.
 - Push to `main` (paths `price_bank/**`) triggers CI. Results are pushed to branches (artifact download is blocked):

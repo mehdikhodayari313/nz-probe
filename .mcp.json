@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "dart": {
+      "command": "/opt/flutter/bin/cache/dart-sdk/bin/dart",
+      "args": [
+        "mcp-server",
+        "--disable", "dart_tooling_daemon",
+        "--disable", "flutter_app_lifecycle",
+        "--disable", "flutter_driver",
+        "--disable", "vm_service",
+        "--disable", "widget_inspector",
+        "--disable", "get_runtime_errors",
+        "--disable", "hot_reload",
+        "--disable", "hot_restart",
+        "--disable", "dtd"
+      ]
+    }
+  }
+}
