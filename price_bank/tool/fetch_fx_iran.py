@@ -3,8 +3,8 @@
 خروجی: out_dir/<id>.json (پاسخ خام API) و out_dir/<id>_profile.html و summary.txt
 """
 import json, os, sys, urllib.request, re, time
-IDS = ["price_dollar_rl", "price_eur", "nima_sell_usd", "nima_buy_usd", "nima_sell_eur", "nima_buy_eur",
-       "sana_sell_usd", "sana_buy_usd", "sana_sell_eur", "sana_buy_eur", "mex_usd_sell", "mex_eur_sell"]
+IDS = ["bank_usd", "bank_eur", "price_dollar", "price_dollar_dt", "price_dollar_rl", "price_eur", "nima_sell_usd", "nima_buy_usd", "nima_sell_eur", "nima_buy_eur",
+       "sana_sell_usd", "sana_buy_usd", "sana_sell_eur", "sana_buy_eur"]
 API = ("https://api.tgju.org/v1/market/indicator/summary-table-data/{i}?lang=fa&order_dir=asc&start=0&length=20000"
        "&from=&to=&convert_to_ad=1")
 UA = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124 Safari/537.36",
