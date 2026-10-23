@@ -28,7 +28,12 @@ def main():
             except Exception as e:
                 summ.append(f"{i}\t{kind}\tERR\t{e}")
             time.sleep(1)
-    for extra in ("https://www.tgju.org/currency", "https://www.tgju.org/nima"):
+    for name, u in (("cbir.csv", "https://huggingface.co/datasets/AllRatesToday/central-bank-exchange-rates/resolve/main/rates/cbir.csv"),
+                    ("hf_sources.json", "https://huggingface.co/datasets/AllRatesToday/central-bank-exchange-rates/resolve/main/sources.json")):
+        try:
+            b = get(u); open(os.path.join(od, name), "wb").write(b); summ.append(f"{name}\tOK\t{len(b)}")
+        except Exception as e: summ.append(f"{name}\tERR\t{e}")
+    for extra in ("https://www.tgju.org/currency",):
         try:
             b = get(extra); open(os.path.join(od, re.sub(r'\W', '_', extra[8:]) + ".html"), "wb").write(b); summ.append(f"{extra}\tOK\t{len(b)}")
         except Exception as e: summ.append(f"{extra}\tERR\t{e}")
