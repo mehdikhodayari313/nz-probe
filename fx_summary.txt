@@ -1,0 +1,31 @@
+bank_usd	api	OK	259396 bytes	records=1674
+bank_usd	profile	OK	694810 bytes	
+bank_eur	api	OK	562521 bytes	records=3428
+bank_eur	profile	OK	694887 bytes	
+price_dollar	api	ERR	HTTP Error 500: Internal Server Error
+price_dollar	profile	OK	968011 bytes	
+price_dollar_dt	api	OK	423681 bytes	records=2556
+price_dollar_dt	profile	OK	968011 bytes	
+price_dollar_rl	api	OK	650983 bytes	records=3984
+price_dollar_rl	profile	OK	694732 bytes	
+price_eur	api	OK	610761 bytes	records=3752
+price_eur	profile	OK	694444 bytes	
+nima_sell_usd	api	OK	309351 bytes	records=1870
+nima_sell_usd	profile	OK	695226 bytes	
+nima_buy_usd	api	OK	313323 bytes	records=1893
+nima_buy_usd	profile	OK	695101 bytes	
+nima_sell_eur	api	OK	352215 bytes	records=2107
+nima_sell_eur	profile	OK	695219 bytes	
+nima_buy_eur	api	OK	349547 bytes	records=2090
+nima_buy_eur	profile	OK	695177 bytes	
+sana_sell_usd	api	OK	443007 bytes	records=2740
+sana_sell_usd	profile	OK	695005 bytes	
+sana_buy_usd	api	OK	444550 bytes	records=2747
+sana_buy_usd	profile	OK	694971 bytes	
+sana_sell_eur	api	OK	480608 bytes	records=2936
+sana_sell_eur	profile	OK	694971 bytes	
+sana_buy_eur	api	OK	480416 bytes	records=2935
+sana_buy_eur	profile	OK	695022 bytes	
+cbir.csv	OK	3446
+hf_sources.json	OK	45131
+https://www.tgju.org/currency	OK	504641
