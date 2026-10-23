@@ -1,0 +1,10 @@
+2000-2009: REQUEST_SUCCEEDED ['No Data Available for Series PCU332410332410 Year: 2000', 'No Data Available for Series PCU332410332410 Year: 2001', 'No Data Available for Series PCU332410332410 Year: 2002', 'Series does not exist for Series PCU3324103324102']
+2010-2019: REQUEST_SUCCEEDED ['Series does not exist for Series PCU3324103324102']
+2020-2026: REQUEST_SUCCEEDED ['Series does not exist for Series PCU3324103324102']
+PCU332410332410	Power boiler and heat exchanger mfg (NAICS 332410) ~ C25.30	2003-12..2026-09	274 months
+PCU3324103324101	Power boilers and parts (product 332410-1)	2000-01..2026-09	320 months
+PCU3324103324102	Heat exchangers and steam condensers (product 332410-2)	-..-	0 months
+PCU331110331110	Iron and steel mills and ferroalloy mfg (NAICS 331110) ~ C24.10	2000-01..2026-09	321 months
+WPU1017	Steel mill products	2000-01..2026-09	321 months
+PCU331210331210	Iron and steel pipe and tube mfg from purchased steel (NAICS 331210) ~ C24.20	2000-01..2026-09	321 months
+WPU101706	Steel pipe and tube (commodity)	2000-01..2026-09	321 months

@@ -1,0 +1,53 @@
+C24	Manufacture of basic metals	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C24'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C241	Manufacture of basic iron and steel and of ferro-alloys	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C241'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C242	Manufacture of tubes, pipes, hollow profiles and related fittings, of steel	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C242'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C253	Manufacture of steam generators, except central heating hot water boilers	2018..2025	8 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C253'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2410	C2410	-..-	0 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': [], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2410_EU27	C2410	-..-	0 years
+C2420	C2420	-..-	0 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': [], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2420_EU27	C2420	-..-	0 years
+C2442	Aluminium production	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2442'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2444	Copper production	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2444'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2511	Manufacture of metal structures and parts of structures	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2511'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2529	Manufacture of other tanks, reservoirs and containers of metal	2002..2025	24 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2529'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2530	C2530	-..-	0 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': [], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2530_EU27	C2530	-..-	0 years
+C2651	Manufacture of instruments and appliances for measuring, testing and navigation	1995..2025	31 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2651'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2711	Manufacture of electric motors, generators and transformers	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2711'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2712	Manufacture of electricity distribution and control apparatus	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2712'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2813	Manufacture of other pumps and compressors	2005..2025	21 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2813'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2814	Manufacture of other taps and valves	1980..2025	46 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2814'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2825	Manufacture of non-domestic cooling and ventilation equipment	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2825'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2829	Manufacture of other general-purpose machinery n.e.c.	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2829'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C28	Manufacture of machinery and equipment n.e.c.	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C28'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2811	Manufacture of engines and turbines, except aircraft, vehicle and cycle engines	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2811'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2821	Manufacture of ovens, furnaces and furnace burners	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2821'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2822	Manufacture of lifting and handling equipment	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2822'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2790	C2790	-..-	0 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': [], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2790_EU27	C2790	-..-	0 years
+C2732	Manufacture of other electronic and electric wires and cables	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2732'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C27	Manufacture of electrical equipment	1995..2025	31 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C27'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C25	Manufacture of fabricated metal products, except machinery and equipment	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C25'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2599	Manufacture of other fabricated metal products n.e.c.	2002..2025	24 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2599'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2594	Manufacture of fasteners and screw machine products	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2594'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2550	C2550	-..-	0 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': [], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2550_EU27	C2550	-..-	0 years
+C255	Forging, pressing, stamping and roll-forming of metal; powder metallurgy	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C255'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2219	Manufacture of other rubber products	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2219'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2229	Manufacture of other plastic products	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2229'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C2399	Manufacture of other non-metallic mineral products n.e.c.	2000..2025	26 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C2399'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C222	Manufacture of plastics products	1995..2025	31 years	{'freq': ['A'], 'indic_bt': ['PRC_PRR_DOM'], 'nace_r2': ['C222'], 's_adj': ['NSA'], 'unit': ['I21'], 'geo': ['EA20']}
+C242_DE	1995..2025	31 years
+C242_FR	2007..2025	19 years
+C242_IT	2000..2025	26 years
+C242_ES	1992..2025	34 years
+C242_NL	2018..2025	8 years
+C242_FI	2010..2024	15 years
+C242_CZ	2000..2025	26 years
+C242_SE	1990..2024	35 years
+C253_DE	1976..2025	50 years
+C253_FR	2015..2025	11 years
+C253_IT	2021..2025	5 years
+C253_NL	2018..2024	7 years
+C253_PL	2020..2020	1 years
+C253_SE	2025..2025	1 years
