@@ -10,7 +10,9 @@ import sys
 import urllib.request
 
 NACE = ["C24", "C241", "C242", "C253", "C2410", "C2420", "C2442", "C2444", "C2511", "C2529", "C2530", "C2651", "C2711", "C2712", "C2813", "C2814",
-        "C2825", "C2829", "C28"]
+        "C2825", "C2829", "C28",
+        # 1405/08/01: price-bank consolidated Excel – cranes, burners/heaters, gas engines, other electrical, cables, electrical equipment total
+        "C2811", "C2821", "C2822", "C2790", "C2732", "C27", "C25", "C2599"]
 # اگر EA20 خالی بود (محرمانه)، همین سری برای EU27_2020 هم گرفته می‌شود (کلید <nace>_EU27)
 FALLBACK_GEO = "EU27_2020"
 # برای بازسازی سری‌های محرمانه از داده‌ی کشورها
