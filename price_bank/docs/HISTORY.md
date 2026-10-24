@@ -116,3 +116,10 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - 31 piping/valve price lists from Final_Piping.zip were merged into one workbook, delivered in two versions (365 and 2016): 2659 items with search, a calculator, an inquiry list and a market-price sheet.
 - Escalation uses PPI+FX (v8, free market or NIMA), with base year and base price editable per family and per calculation. The summary is in docs/requirements/PIPING.md.
 - Not yet in the app; open item: confirm the base year, since market comparison points to about 1394–95 rather than 1385.
+
+## 1405/08/02 — UI libraries
+- User asked to install the best modern UI libraries. Added fl_chart, data_table_2, flex_color_scheme,
+  flutter_animate, animations, lucide_icons_flutter (pub.dev 160/160 or 150/160 points, actively maintained;
+  rejected: fluent_ui / shadcn_ui = full redesign, syncfusion = commercial license, google_fonts = needs internet).
+  Pinned to pre-`material_ui` versions (see CLAUDE.md). No page uses them yet.
+

@@ -129,6 +129,13 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   validation workbook (repo is private). `test/fixtures/*` and `test/fixtures/full/*` are anonymized copies
   (project names replaced, numbers randomized) — regenerate the same way if needed.
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.
+- **UI libraries (added 1405/08/02, not yet used in pages):** `fl_chart` (charts), `data_table_2` (tables with fixed
+  header/columns, sorting), `flex_color_scheme` (themes), `flutter_animate` + `animations` (effects, page/container
+  transitions), `lucide_icons_flutter` (icons). Verified in `test/ui_libs_test.dart` (RTL). **Version pins matter:**
+  newer flex_color_scheme 9.x, data_table_2 3.x and animations 3.x depend on the new standalone `material_ui`
+  package whose `ThemeData`/`DataRow` types differ from `package:flutter/material.dart` → compile errors. Keep
+  ^8.4.0 / ^2.8.0 / ^2.2.0 until the whole app migrates to `material_ui`. Using them in pages = UI redesign → show
+  the user a mockup/screenshot and get approval first; the no-gradient rule applies to chart/theme options too.
 - Bank importers must read **cached values** of input columns: some inputs are formulas (e.g. desalter capacity
   `=ROUND(536*BPD_per_m3h,0)`); skipping formula cells silently lost them.
 - The indices page series list is lazy; adding series pushes others off-screen → UI tests must `scrollUntilVisible`.
