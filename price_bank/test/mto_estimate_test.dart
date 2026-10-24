@@ -87,6 +87,25 @@ void main() {
         expect(rep.perCategory['SERVICES'], greaterThanOrEqualTo(30));
         final notes = pb.db.scalar("SELECT notes FROM documents WHERE doc_type = 'mto'") as String;
         expect(notes, contains('ضرایب شیت «Insurance»'));
+        // مشخصات فنی تجمیعی با واحد ← فیلدهای قالب هر رده
+        Map<String, Object?> v(String tag) =>
+            pb.items.get(pb.db.scalar('SELECT id FROM items WHERE tag = ?', [tag]) as int)!.values;
+        expect([v('V-120')['id_mm'], v('V-120')['tl_mm']], [800, 2350]); // «ID x T/T: 800mm x 2350 mm»
+        expect(v('V-120')['design_pressure_barg'], 5); // «PRESS. / DESIGN (BARG)»
+        expect(v('V-120')['design_temp_max_c'], 85); // «TEMP. / DESIGN (MAX)»
+        expect([v('TK-110')['diameter_mm'], v('TK-110')['height_mm']], [8000, 10000]);
+        expect(v('TK-110')['full_vacuum'], isNull); // −0.005 bar خلأ کامل نیست
+        expect([v('D-100')['vessel_id_mm'], v('D-100')['vessel_tl_mm']], [3658, 13717]);
+        expect([v('H-100 A')['design_pressure_coil_barg'], v('H-100 A')['design_pressure_shell_barg']], [16, 3.5]);
+        expect([v('H-100 A')['shell_id_mm'], v('H-100 A')['duty_kw']], [3558, 3900]);
+        expect([v('E-100')['duty_kw'], v('E-100')['hex_type']], [5784, 'Plate & Frame']);
+        expect([v('PK-140 A/B')['flow_m3h'], v('PK-140 A/B')['discharge_pressure_barg']], [200, 8]); // «200 SM3/HR»
+        expect([v('FL-160')['stack_diameter_in'], v('FL-160')['stack_height_m']], [16, 10]); // «16" & 8"»، «10000 mm»
+        expect([v('PK-176')['injection_rate_lph'], v('PK-176')['discharge_pressure_barg']], [25, 42]);
+        final p = v('P-110 A/B');
+        expect([p['capacity_m3h'], p['material_class'], p['diff_head_m']], [20.5, 'I-1', null]); // «Overhead» هد نیست
+        expect(v('E-100')['scope'], isNull); // عدد ستون REMARKS دامنه‌ی تأمین نیست
+        expect(v('V-120')['mto_section'], isNot(contains('#NAME?')));
         final svc = pb.catalog.categoryByCode('SERVICES')!;
         expect(svc.enabled, isTrue);
         expect(pb.computeCategory(svc.id).length, rep.perCategory['SERVICES']);

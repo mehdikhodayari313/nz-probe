@@ -146,6 +146,10 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - Tests: `mto_estimate_test.dart` (anonymized estimate, formula and values-only copies: 120 items, prices, categories,
   totals), `bank_flex_test.dart` (messy compressor/desalter banks = reference). Tools: `make_estimate_fixture.py`,
   `make_messy_bank_fixture.py`.
+- Spec extraction (user asked: aggregated specs with units): «ID x T/T: 800mm x 2350 mm» / «ID x HEIGHT» pairs, two-level
+  headers («TEMP./DESIGN (MAX)», «PRESS./DESIGN (BARG)») → design temp/pressure, «DIMENSION» → ID/TL, «TUBE/BATH: 16/3.5»
+  → coil/shell, «200 SM3/HR», stack «16" & 8"» / «10000 mm», HEX type; fixed «Overhead» read as pump head, −0.005 bar as full
+  vacuum, numeric REMARKS as scope, «#NAME?» and «_» placeholders.
 - User decisions recorded (CLAUDE.md): domestic/foreign manufacture option with suitable methods; only important methods;
   multi-PPI category settings in the estimator and methods pages; Persian only for now; Iranian industry indices to be extracted
   by Claude; expert classification of electrical/instrument/piping.

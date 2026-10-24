@@ -196,7 +196,7 @@ MtoRule _pressure(String p, {String key = 'design_pressure_barg', String? vacKey
       final kpa = l.contains('kpa');
       n = [for (final x in n) kpa ? x / 100 : x];
       o[key] ??= n.reduce(math.max);
-      if (vacKey != null && (l.contains('f.v') || l.contains('full vac') || n.any((x) => x < 0))) o[vacKey] ??= 'Y';
+      if (vacKey != null && (l.contains('f.v') || l.contains('full vac') || n.any((x) => x <= -0.9))) o[vacKey] ??= 'Y';
       o['${key}_text'] ??= v.trim();
     });
 
@@ -293,13 +293,13 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _fMat, _fNace, _fCode, _fScope,
     ],
     rules: [
-      _dims(r'^size', 'id_mm', 'tl_mm'),
+      _dims(r'^size|^dimension|^dim\b', 'id_mm', 'tl_mm'),
       MtoRule(r'installation|position|orientation', (v, o) {
         final l = v.toLowerCase();
         o['orientation'] ??= l.startsWith('h') ? 'Horizontal' : (l.startsWith('v') ? 'Vertical' : null);
       }),
-      _pressure(r'design press'),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design'),
+      _temps(r'design temp|temp\w*\.? design'),
       _material(r'^mat', 'shell_material'),
       _weight,
       ..._common,
@@ -323,15 +323,15 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _fMat, _fNace, _fCode, _fScope,
     ],
     rules: [
-      _dims(r'^size', 'diameter_mm', 'height_mm'),
+      _dims(r'^size|^dimension|^dim\b', 'diameter_mm', 'height_mm'),
       MtoRule(r'^roof', (v, o) {
         final l = v.toLowerCase();
         o['roof_type'] ??= l.contains('dome')
             ? 'Dome'
             : (l.contains('cone') ? 'Cone' : (l.contains('float') ? 'Floating' : 'Other'));
       }),
-      _pressure(r'design press'),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design'),
+      _temps(r'design temp|temp\w*\.? design'),
       _material(r'^mat', 'shell_material'),
       _weight,
       ..._common,
@@ -360,8 +360,14 @@ final equipmentProfiles = <String, EquipmentProfile>{
         final c = RegExp(r'\(([^)]*)\)').firstMatch(v);
         if (c != null) o['duty_case'] ??= c.group(1);
       }),
-      _pressure(r'design press', vacKey: null),
-      _temps(r'design temp'),
+      MtoRule(r'^type', (v, o) {
+        final l = v.toLowerCase();
+        o['hex_type'] ??= l.contains('plate')
+            ? 'Plate & Frame'
+            : (l.contains('air') ? 'Air Cooler' : (l.contains('shell') || l.contains('tube') ? 'Shell & Tube' : null));
+      }),
+      _pressure(r'design press|press\w*\.? design', vacKey: null),
+      _temps(r'design temp|temp\w*\.? design'),
       MtoRule(r'^mat', (v, o) {
         final parts = v.split('/').map((e) => e.trim()).toList();
         o['plate_material'] ??= parts.first;
@@ -399,17 +405,19 @@ final equipmentProfiles = <String, EquipmentProfile>{
         final n = _nums(v);
         if (n.isNotEmpty) o['duty_kw'] ??= n.first * (v.toLowerCase().contains('mw') ? 1000 : 1);
       }),
-      _dims(r'shell dim|^size', 'shell_id_mm', 'shell_tl_mm'),
-      MtoRule(r'design press', (v, o) {
+      _dims(r'shell dim|^size|^dimension|^dim\b', 'shell_id_mm', 'shell_tl_mm'),
+      MtoRule(r'design press|press\w*\.? design', (v, o) {
         final n = _nums(v);
         if (n.isEmpty) return;
         if (n.length >= 2) {
-          o['design_pressure_shell_barg'] ??= n[0];
-          o['design_pressure_coil_barg'] ??= n[1];
+          final l = v.toLowerCase();
+          final coilFirst = RegExp(r'^\W*(tube|coil)').hasMatch(l);
+          o['design_pressure_shell_barg'] ??= coilFirst ? n[1] : n[0];
+          o['design_pressure_coil_barg'] ??= coilFirst ? n[0] : n[1];
         }
         o['design_pressure_barg'] ??= n.reduce(math.max);
       }),
-      _temps(r'design temp'),
+      _temps(r'design temp|temp\w*\.? design'),
       _material(r'mat.*coil', 'coil_material', classKey: '_coil_class'),
       _material(r'^mat', 'shell_material'),
       ..._common,
@@ -468,8 +476,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _text(r'^type', 'desalter_type'),
       _text(r'vessel tag', 'vessel_tag'),
       _dims(r'dim|size', 'vessel_id_mm', 'vessel_tl_mm'),
-      _pressure(r'design press', vacKey: null),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design', vacKey: null),
+      _temps(r'design temp|temp\w*\.? design'),
       _text(r'pumps? tag', 'pumps_tag'),
       _text(r'pumps? type', 'pump_type'),
       _numAt(r'pumps? rated flow', 'pump_flow_m3h'),
@@ -513,7 +521,7 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _text(r'pumps? design code', 'pump_standard'),
       _numAt(r'tank capacity', 'tank_capacity_m3'),
       _numAt(r'tank design press', 'tank_design_pressure_barg'),
-      _temps(r'tank design temp|design temp'),
+      _temps(r'tank design temp|design temp|temp\w*\.? design'),
       _text(r'tank mat', 'tank_material'),
       _yn(r'agitator', 'agitator'),
       ..._common,
@@ -544,8 +552,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _numAt(r'flow', 'flow_m3h'),
       _text(r'tower tag', 'tower_tag'),
       _text(r'^internals$', 'internals'),
-      _pressure(r'design press'),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design'),
+      _temps(r'design temp|temp\w*\.? design'),
       _text(r'remov', 'internals_material'),
       _material(r'^mat', 'shell_material'),
       _weight,
@@ -569,8 +577,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
     ],
     rules: [
       _numAt(r'design flow|flow rate', 'flow_m3h'),
-      _pressure(r'design press'),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design'),
+      _temps(r'design temp|temp\w*\.? design'),
       _text(r'remov', 'internals_material'),
       _material(r'^vessel mat|^mat', 'shell_material'),
       MtoRule(r'vessel design codes?', _codeApply),
@@ -613,8 +621,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
         }
       }),
       _numAt(r'oil content', 'outlet_oil_ppm'),
-      _pressure(r'design press', vacKey: null),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design', vacKey: null),
+      _temps(r'design temp|temp\w*\.? design'),
       _text(r'internal', 'internals_material'),
       _yn(r'agitator', 'agitator'),
       _material(r'^mat', 'shell_material'),
@@ -649,6 +657,14 @@ final equipmentProfiles = <String, EquipmentProfile>{
         final n = _nums(v);
         if (n.isNotEmpty) o['stack_diameter_in'] ??= n[0];
         if (n.length > 1) o['stack_height_m'] ??= n[1];
+      }),
+      MtoRule(r'(stack|tip).*diam', (v, o) {
+        final n = _nums(v);
+        if (n.isNotEmpty) o['stack_diameter_in'] ??= n.first * (v.toLowerCase().contains('mm') ? 1 / 25.4 : 1);
+      }),
+      MtoRule(r'(stack|flare).*height', (v, o) {
+        final n = _nums(v);
+        if (n.isNotEmpty) o['stack_height_m'] ??= n.first / (v.toLowerCase().contains('mm') ? 1000 : 1);
       }),
       _text(r'support', 'stack_support'),
       _numAt(r'burn pit diam', 'burn_pit_diameter_m'),
@@ -714,8 +730,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
             ? 'Oil-free'
             : (l.contains('lub') ? 'Lubricated' : null);
       }),
-      _numAt(r'flow', 'flow_m3h'),
-      _numAt(r'discharge press', 'discharge_pressure_barg'),
+      _numAt(r'flow|capacity', 'flow_m3h'),
+      _numAt(r'discharge press|diff\w*\.? press', 'discharge_pressure_barg'),
       _code,
     ],
     inferType: inferCompressor,
@@ -746,8 +762,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _numAt(r'tower', 'towers_qty'),
       _numAt(r'pre-?filter', 'prefilters_qty'),
       _numAt(r'after-?filter', 'afterfilters_qty'),
-      _pressure(r'design press', vacKey: null),
-      _temps(r'design temp'),
+      _pressure(r'design press|press\w*\.? design', vacKey: null),
+      _temps(r'design temp|temp\w*\.? design'),
       _material(r'^mat', 'shell_material'),
       _code,
     ],
@@ -872,7 +888,7 @@ const _pumpMat = ['I-1', 'I-2', 'S-1', 'S-3', 'S-4', 'S-5', 'S-6', 'S-8', 'S-9',
 
 /// آیا برچسب مشخصه‌ی MTO در قالب پمپ جا دارد؟ (بقیه در «ملاحظات» می‌مانند)
 bool pumpMaps(String label) => RegExp(
-        r'^type|flow|capacity|head|discharge press|power|motor|material|nace|design code|standard|driver|speed|rpm',
+        r'^type|flow|capacity|(?<!over)head|discharge press|power|motor|material|nace|design code|standard|driver|speed|rpm',
         caseSensitive: false)
     .hasMatch(label);
 
@@ -917,7 +933,7 @@ Map<String, Object?> extractPumpSpecs(Map<String, String> specs, String name) {
       if (unit.contains('l/h') || unit.contains('lph') || unit.contains('lit')) q = q / 1000;
       if (unit.contains('gpm')) q = q * 0.2271;
       o['capacity_m3h'] ??= q;
-    } else if (k.contains('head') && n.isNotEmpty) {
+    } else if (k.contains('head') && !k.contains('overhead') && n.isNotEmpty) {
       o['diff_head_m'] ??= n.first;
     } else if (k.contains('discharge press') && n.isNotEmpty) {
       o['discharge_pressure_barg'] ??= ('$k $l').contains('kpa') ? n.first / 100 : n.first;
@@ -932,6 +948,8 @@ Map<String, Object?> extractPumpSpecs(Map<String, String> specs, String name) {
         if (_pumpMat.contains(c)) o['material_class'] ??= c;
       } else if (l.contains('316')) {
         o['material_class'] ??= 'SS316L (non-API)';
+      } else if (RegExp(r'casing\s*:?\s*cast iron').hasMatch(l)) {
+        o['material_class'] ??= 'I-1'; // پوسته و پروانه چدنی (API 610)
       }
     } else if (k.contains('nace')) {
       o['nace'] ??= l.startsWith('y') ? 'Y' : (l.startsWith('n') ? 'N' : null);
@@ -1104,12 +1122,25 @@ Map<String, Object?> extractFreeSpecs(String text, String code) {
   final t = text.replaceAll('\n', ' ').replaceAll('³', '3').replaceAll('٫', '.');
   final o = <String, Object?>{};
   const n = r'(\d+(?:[.,]\d+)?)';
-  final id = _mm(RegExp('\\bI\\.?D\\.?\\s*[=:]?\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  // «ID x T/T: 800mm x 2350 mm»، «ID x HEIGHT: 8000 x 10000 mm»، «D x H = …»: دو عدد به ترتیب عنوان
+  final pair = RegExp(
+          '\\b(I\\.?D|D(?:IA\\.?|iameter)?)\\.?\\s*[x×*]\\s*(T/T|TL(?:-TL)?|T\\.L\\.|H(?:eight|ight)?|L(?:ength)?)\\.?\\s*[=:]?\\s*'
+          '$n\\s*(mm|m)?\\s*[x×*]\\s*$n\\s*(mm|m)?',
+          caseSensitive: false)
+      .firstMatch(t);
+  double? pv(int g, int u) {
+    final x = double.tryParse(pair!.group(g)!.replaceAll(',', '.'));
+    final unit = (pair.group(u) ?? pair.group(6) ?? '').toLowerCase();
+    return x == null ? null : (unit == 'm' ? x * 1000 : x);
+  }
+  final pairA = pair == null ? null : pv(3, 4), pairB = pair == null ? null : pv(5, 6);
+  final id = pairA ??
+      _mm(RegExp('\\bI\\.?D\\.?\\s*[=:]?\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
   final d = _mm(RegExp('(?<![A-Za-z/])D(?:IA\\.?|iameter)?\\s*=\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
-  final tt = _mm(RegExp('(?:T/T|TL(?:-TL)?|T\\.L\\.)\\s*[=:]\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
+  final tt = pairB ?? _mm(RegExp('(?:T/T|TL(?:-TL)?|T\\.L\\.)\\s*[=:]\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
   final l = _mm(RegExp('(?<![A-Za-z/])L(?:ength)?\\s*=\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
   final h = _mm(RegExp('(?<![A-Za-z/])H(?:eight)?\\s*=\\s*$n\\s*(mm|m)?\\b', caseSensitive: false), t);
-  final flow = _firstNum(RegExp('$n\\s*(?:n\\s*)?m3\\s*/\\s*h', caseSensitive: false), t);
+  final flow = _firstNum(RegExp('$n\\s*(?:[ns]\\s*)?m3\\s*/\\s*h', caseSensitive: false), t);
   final kw = _firstNum(RegExp('$n\\s*kw\\b', caseSensitive: false), t);
   final dp = _firstNum(RegExp('D\\.?P\\.?\\s*[=:]?\\s*$n', caseSensitive: false), t) ??
       _firstNum(RegExp('$n\\s*bar\\s*(?:g\\b)?\\s*D\\.?P', caseSensitive: false), t) ??

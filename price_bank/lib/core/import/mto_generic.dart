@@ -68,7 +68,18 @@ class MtoColumn {
   String sample = '';
 
   List<int> get cols => [col, ...extra];
-  String get label => own.isNotEmpty ? own : header;
+  String get label {
+    if (own.isEmpty) return header;
+    // عنوان دوطبقه: «TEMP. / DESIGN (MAX)»، «PRESS. / DESIGN (BARG)» ← کمیت بالایی جزء نام است
+    if (header != own && header.endsWith(own)) {
+      final top = header.substring(0, header.length - own.length).trim();
+      if (RegExp(r'^(temp|press|dimension|dim|duty|flow|capacity|size|weight|power|head|level)\w*\.?$', caseSensitive: false)
+          .hasMatch(top)) {
+        return '$top $own';
+      }
+    }
+    return own;
+  }
 }
 
 class MtoLayout {
@@ -116,6 +127,9 @@ String _norm(String s) => s
     .trim();
 
 bool _has(String h, String p) => RegExp(p, caseSensitive: false).hasMatch(h);
+
+/// خطای اکسل («#NAME?»، «#REF!»، …) مقدار نیست
+bool _isXlError(String t) => RegExp(r'^#(NAME\?|REF!|VALUE!|DIV/0!|N/A|NULL!|NUM!|SPILL!|CALC!)').hasMatch(t.trim());
 
 const _pPrice = r'price|cost|قیمت|بها|هزینه|fee|amount|estimat|برآورد|مبلغ|salary|wage|rental|حقوق|دستمزد|اجاره';
 const _pTotal = r'total|جمع|مبلغ کل|(^|\s)کل(\s|$)|sum\b|aggregate|تمام شده';
@@ -314,7 +328,7 @@ class MtoGeneric {
     for (var r = hdr - 1; r >= 1 && r >= hdr - 4; r--) {
       final texts = [
         for (var c = 1; c <= sh.maxCol && c <= 120; c++)
-          if (!sh.isMergedTail(r, c) && sh.text(r, c).isNotEmpty) _norm(sh.text(r, c)),
+          if (!sh.isMergedTail(r, c) && sh.text(r, c).isNotEmpty && !_isXlError(sh.text(r, c))) _norm(sh.text(r, c)),
       ];
       if (texts.length == 1 && texts.first.length < 45 && !texts.first.contains(':')) context.insert(0, texts.first);
     }
@@ -727,7 +741,7 @@ class MtoGeneric {
 
   /// متن یک ستون (با ستون‌های ادغام‌شده‌ی همراهش)
   static String textOf(XlsxSheet sh, int r, MtoColumn c, {bool tag = false}) {
-    final parts = [for (final k in c.cols) if (sh.text(r, k).isNotEmpty) sh.text(r, k)];
+    final parts = [for (final k in c.cols) if (sh.text(r, k).isNotEmpty && !_isXlError(sh.text(r, k))) sh.text(r, k)];
     if (parts.isEmpty) return '';
     if (!tag) return parts.join(' ');
     // تگ دوتکه: «DE» + «-001-A/B» ← «DE-001-A/B»؛ «CR» + «001» ← «CR-001»
@@ -987,7 +1001,7 @@ class MtoGeneric {
       for (final s in [...nameParts, ...specs]) {
         if (identical(s, desc)) continue;
         final v = textOf(sh, r, s);
-        if (v.isEmpty || v == '-' || v == '—') continue;
+        if (v.isEmpty || RegExp(r'^[-—_.\s]+$').hasMatch(v)) continue; // «_» و «-» یعنی خالی
         lines.add('${s.label.replaceAll(':', ' ')}: ${v.replaceAll('\n', ' ')}');
       }
       for (final c in contextSpecs) {
@@ -997,7 +1011,14 @@ class MtoGeneric {
       final rowCur = curCol == null ? null : currencyOf(textOf(sh, r, curCol));
       it.refCurrency = rowCur;
       final rem = remarks == null ? '' : textOf(sh, r, remarks);
-      if (rem.isNotEmpty) it.scopeLines.add(rem.replaceAll('\n', ' '));
+      // ملاحظات عددی (مثل قیمت دیگر در ستون REMARKS) دامنه‌ی تأمین نیست؛ به‌عنوان مشخصه نگه داشته می‌شود
+      if (rem.isNotEmpty) {
+        if (RegExp(r'^-?[\d,]+(\.\d+)?$').hasMatch(rem.trim())) {
+          lines.add('${remarks!.label}: ${rem.trim()}');
+        } else {
+          it.scopeLines.add(rem.replaceAll('\n', ' '));
+        }
+      }
 
       for (final p in prices) {
         final v0 = numOf(sh, r, p);
