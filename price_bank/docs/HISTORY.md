@@ -123,3 +123,7 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   rejected: fluent_ui / shadcn_ui = full redesign, syncfusion = commercial license, google_fonts = needs internet).
   Pinned to pre-`material_ui` versions (see CLAUDE.md). No page uses them yet.
 
+
+## 1405/08/02 — Piping Excel bank: calibration (outside the app)
+- Base year, FX table and quantity factor were calibrated against three sources: 15 user project quotes (1405/06/28), Gachsaran-4 PEP (209 matched items) and market prices (842). The chosen setup is the one with the lowest error vs the user quotes (17%): NIMA FX; base year 1388 for all families except GLB 1387, TEE/TRD/CRD 1391, CAP 1396 and FLG 1385; quantity factor off by default.
+- New sheets: my quotes, project prices (Gachsaran 4) and base-year calibration. The calculator gained an evidence panel and item selection is now cascading. Details in docs/requirements/PIPING.md; scripts in tool/piping/.

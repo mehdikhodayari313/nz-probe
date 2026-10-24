@@ -223,7 +223,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
    18061405 pumps (CSV not importable). Bugs: dashboard hides the pump-bank import once MTO pumps exist; v8 import has no
    MTO dedupe (project names differ). Proposed fix (awaiting user OK): pump bank = reference like desalter.
 7. PIPING (docs/requirements/PIPING.md): consolidated Excel bank delivered 1405/08/02 (2659 items, 31 families, PPI+FX, market sheet).
-   Not in app. Base year default 1385 per user; market comparison suggests ~1394–95 — awaiting user decision.
+   Not in app. Calibrated 1405/08/02 (user: lowest error vs his project quotes): NIMA FX, base year 1388 (GLB 1387, TEE/TRD/CRD 1391,
+   CAP 1396, FLG 1385), qty factor off. Sheets: my quotes, Gachsaran-4 project prices, calibration. Open: F52 ×1.3, TEE WPHY60 2.5 vs 2.2.
 8. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens
