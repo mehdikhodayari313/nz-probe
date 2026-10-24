@@ -17,6 +17,7 @@ const genericCategoryCodes = [
   'AIR_DRYER', 'CRANE',
   // رده‌های عمومی (بدون قالب تخصصی): برای ورود کامل MTO و PEP (برق، ابزار دقیق، پایپینگ، آزمایشگاه، …)
   'WATER_TREAT', 'HVAC', 'FIRE_SAFETY', 'MISC_PKG', 'LAB', 'VALVE', 'PIPE_BULK', 'ELEC_EQ', 'INST_EQ',
+  'SERVICES',
 ];
 
 /// رده‌های افزوده (برای دیتابیس‌های قدیمی که این رده‌ها را ندارند): (کد، رشته، والد، نام فارسی، نام انگلیسی)
@@ -25,6 +26,8 @@ const _extraCategories = [
   ('HVAC', 'MECH', 'MECH_PKG', 'تهویه مطبوع (HVAC)', 'HVAC'),
   ('FIRE_SAFETY', 'MECH', 'MECH_PKG', 'تجهیزات ایمنی و آتش‌نشانی', 'Fire Fighting & Safety'),
   ('MISC_PKG', 'MECH', 'MECH_PKG', 'سایر پکیج‌ها و تجهیزات', 'Other Packages & Equipment'),
+  // اقلام غیرتجهیز فایل‌های برآورد (نصب، ساختمان، سازه، تجهیز کارگاه، ماشین‌آلات، حقوق): جدا از بانک تجهیزات
+  ('SERVICES', 'MECH', null, 'ساختمان، سازه، نصب و خدمات', 'Civil, Structure, Installation & Services'),
 ];
 
 // (کلید، برچسب، گروه، نام گروه، ذخیره، نوع، فهرست، واحد، ترتیب)

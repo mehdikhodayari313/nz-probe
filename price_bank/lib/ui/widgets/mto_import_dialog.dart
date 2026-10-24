@@ -403,6 +403,21 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                 ),
             ]),
           ),
+          if (a.notes.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            SectionCard(
+              title: 'گزارش کنترل فایل (جمع‌ها، ضرایب، موارد قابل بررسی)',
+              icon: Icons.fact_check_outlined,
+              padding: const EdgeInsets.all(12),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                for (final n in a.notes)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text('• $n', style: t.textTheme.bodySmall?.copyWith(height: 1.7)),
+                  ),
+              ]),
+            ),
+          ],
           if (a.skippedSheets.isNotEmpty) ...[
             const SizedBox(height: 14),
             SectionCard(

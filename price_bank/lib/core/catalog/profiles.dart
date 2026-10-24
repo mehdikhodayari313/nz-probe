@@ -1012,11 +1012,13 @@ const _categoryWords = <(String, String)>[
   (r'filter|strainer|فیلتر|صافی', 'FILTER'),
   (r'flare|burn\s*pit|stack|فلر|مشعل', 'FLARE'),
   (r'crane|hoist|monorail|جرثقیل|بالابر', 'CRANE'),
-  (r'\bfire\b|safety|hydrant|extinguish|deluge|eye ?wash|breathing|first ?aid|آتش|ایمنی', 'FIRE_SAFETY'),
+  (r'\bfire\b|safety|hydrant|extinguish|deluge|eye ?wash|breathing|first ?aid|\bhse\b|آتش|ایمنی', 'FIRE_SAFETY'),
   (r'valve|شیرآلات|شیر ', 'VALVE'),
   (r'\bpipe|piping|fitting|flange|elbow|stud ?bolt|gasket|لوله|اتصالات', 'PIPE_BULK'),
-  (r'transformer|switchgear|\bcable|\bpanel|\bups\b|lighting|generator|capacitor|ترانس|تابلو|کابل|ژنراتور', 'ELEC_EQ'),
-  (r'transmitter|analy[sz]er|gauge|instrument|\bplc\b|\bdcs\b|corrosion (probe|coupon)|logger|ابزار ?دقیق', 'INST_EQ'),
+  (r'transformer|switchgear|\bcable|\bpanel|\bups\b|lighting|generator|capacitor|\bpower\b|\bmcc\b|motor control|\bvfd\b|'
+      r'earthing|grounding|cathodic|electrical|ترانس|تابلو|کابل|ژنراتور|برق', 'ELEC_EQ'),
+  (r'transmitter|analy[sz]er|gauge|instrument|\bplc\b|\bdcs\b|\besd\b|\bscada\b|corrosion (probe|coupon)|logger|'
+      r'metering|sampling|control room|\bccr\b|ابزار ?دقیق|اندازه.?گیری', 'INST_EQ'),
   (r'\blab\b|laborator|آزمایشگاه', 'LAB'),
 ];
 
@@ -1025,7 +1027,22 @@ const _priorityWords = <(String, String)>[
   (r'pig\s*(launcher|receiver)|stripp', 'MISC_PKG'),
   (r'iwwtp|water ?treatment|reverse ?osmosis|\br\.\s?o\.\s*(package|unit|system)|پکیج تصفیه|تصفیه‌خانه', 'WATER_TREAT'),
   (r'hvac|air ?condition|fan ?coil|تهویه', 'HVAC'),
+  (r'f\s*&\s*g\b|fire\s*(&|and)\s*gas|burner management|\bbms\b|metering\s*(system|skid|package|unit)|sampling system',
+      'INST_EQ'),
 ];
+
+/// خدمات و کارهای غیرتجهیز (نصب، اجرا، ساختمان، تجهیز کارگاه، ماشین‌آلات، حقوق) — بر رده‌ی شیت مقدم‌اند،
+/// تا مثلاً «Desalter Installation» یا «Power Installation» در بانک تجهیز شمرده نشود.
+const _serviceWords =
+    r'(^|\s)(installation|erection|construction|pre.?commission\w*|commission\w*|contractors?|welding|mobili[sz]ation|'
+    r'demobili[sz]ation|engineering|supervision|excavat\w*|civil works?|dormitor\w*|accommodation|accomodation|'
+    r'salary|salaries|furnish\w*|نصب|اجرا|عملیات ساختمانی|تجهیز کارگاه|برچیدن کارگاه|حقوق|دستمزد)(\s|$|[,(&])';
+
+String? serviceCategoryFromText(String text) {
+  // فقط اسم اصلی: «HVAC for Accommodation» خدمات نیست، «Installation of Pumps» هست
+  final t = text.split('\n').first.toLowerCase().split(RegExp(r'\s(for|of|in|at|to|برای)\s')).first;
+  return RegExp(_serviceWords, caseSensitive: false).hasMatch(t) ? 'SERVICES' : null;
+}
 
 /// رده از کلیدواژه‌های خاص (پکیج تصفیه، HVAC، Pig Launcher) که بر عنوان بخش هم مقدم‌اند
 String? priorityCategoryFromText(String text) {

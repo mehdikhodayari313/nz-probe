@@ -9,6 +9,9 @@
   مقادیر ستون‌های فرمولی در شیت Expected؛ بدون فرمول) — ساخته‌شده با `tool/make_compressor_fixture.py`
 - `Desalters_bank_test.xlsx` — نسخه‌ی کوچک بانک دیسالتر v8.1 (فقط سلول‌های ورودی Master، فروشندگان، استعلام‌ها و
   شیت Test_Cases؛ بدون فرمول) — ساخته‌شده با `tool/make_desalter_fixture.py` از فایل کامل کاربر
+- `Compressors_bank_test_messy.xlsx` و `Desalters_bank_test_messy.xlsx` — همان دو فایل بالا «به‌هم‌ریخته» (نام شیت و
+  چند سرستون عوض، ردیف عنوان پایین‌تر، یک ستون حذف، بدون App_Meta) برای آزمون انعطاف خواننده‌ی بانک —
+  ساخته‌شده با `tool/make_messy_bank_fixture.py`
 
 مخزن خصوصی است. اگر نمی‌خواهید این فایل‌ها در GitHub باشند، این پوشه را حذف کنید؛
 آزمون‌های وابسته به آن‌ها خودکار رد (skip) می‌شوند.

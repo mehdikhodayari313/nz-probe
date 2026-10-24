@@ -50,6 +50,9 @@ class MtoItem {
   /// وزن (کیلوگرم): از واحد Kg/Ton یا ستون وزن
   double? weightKg;
 
+  /// ضریب بالاسری ردیف در فایل (۰٫۳ = ۳۰٪)؛ قیمت ثبت‌شده خام (بدون بالاسری) است
+  double? overhead;
+
   /// رده خودکار حدس زده شده (نه انتخاب کاربر)
   bool autoCategory = true;
   final Map<String, String> specs = {}; // برچسب ← مقدار (به ترتیب شرح)
@@ -118,6 +121,12 @@ class MtoAnalysis {
   final List<MtoSheet> sheets = [];
   final List<String> skippedSheets = [];
   final List<String> warnings = [];
+
+  /// گزارش کنترل: جمع‌های شیت/جلد در برابر جمع اقلام خوانده‌شده، ضرایب (بیمه، بالاسری، …)، تاریخ فرض‌شده
+  final List<String> notes = [];
+
+  /// ضرایب یافته‌شده در شیت‌های ضریب (شیت، عنوان، مقدار)
+  final List<(String, String, double)> coefficients = [];
   bool get supported => sheets.isNotEmpty;
   int get itemCount => sheets.fold(0, (s, x) => s + x.items.length);
   int get quoteCount => sheets.fold(0, (s, x) => s + x.quoteCount);
@@ -158,6 +167,16 @@ const mtoSheetCategory = <String, String>{
   'STRIPP': 'MISC_PKG',
   'HVAC': 'HVAC',
   'LAB': 'LAB',
+  'MACHINER': 'SERVICES',
+  'MOBILIZ': 'SERVICES',
+  'MOB-DEMOB': 'SERVICES',
+  'SALARY': 'SERVICES',
+  'ACCOMOD': 'SERVICES',
+  'ACCOMMOD': 'SERVICES',
+  'CIVIL': 'SERVICES',
+  'STRUCTURE': 'SERVICES',
+  'تجهیز کارگاه': 'SERVICES',
+  'ساختمان': 'SERVICES',
 };
 
 /// نام کوتاه شیت‌های PEP (مثل «P.EL»، «P.IN»): بخش نام ← رده
@@ -173,7 +192,48 @@ const _sheetTokens = <String, String>{
   'HVAC': 'HVAC',
   'VALVE': 'VALVE',
   'VALVES': 'VALVE',
+  'PIPE': 'PIPE_BULK',
+  'FITTING': 'PIPE_BULK',
+  'FITTINGS': 'PIPE_BULK',
+  'EX': 'HEX',
+  'HEX': 'HEX',
+  'E': 'ELEC_EQ',
+  'I': 'INST_EQ',
+  'POWER': 'ELEC_EQ',
+  'INSTRUMENT': 'INST_EQ',
+  'INSTRUMENTS': 'INST_EQ',
+  'CCR': 'INST_EQ',
 };
+
+/// همه‌ی رده‌هایی که نام شیت به آن‌ها اشاره دارد، به ترتیب جای واژه («H-EX & HEATER» ← HEX، HEATER)
+List<String> sheetCategoryCandidates(String sheetName) {
+  var u = sheetName.toUpperCase().trim();
+  final found = <(int, String)>[];
+  final keys = mtoSheetCategory.keys.toList()..sort((a, b) => b.length.compareTo(a.length));
+  for (final k in keys) {
+    final i = u.indexOf(k);
+    if (i < 0) continue;
+    found.add((i, mtoSheetCategory[k]!));
+    u = u.replaceRange(i, i + k.length, ' ' * k.length); // «AIR DRYER» یک بار، نه دوباره «DRYER»
+  }
+  // واژه‌های کوتاه فقط وقتی نام شیت چندتکه است («E&I&C»، «P.EL»)؛ «E» تنها در نام‌های دیگر نیست
+  var pos = 0;
+  for (final t in u.split(RegExp(r'[.\-\s_()&,/]+'))) {
+    final i = u.indexOf(t, pos);
+    if (i >= 0) pos = i + t.length;
+    final c = _sheetTokens[t];
+    if (c == null || (t.length == 1 && !RegExp(r'^[A-Z](\s*&\s*[A-Z])+$').hasMatch(sheetName.toUpperCase().trim().split(RegExp(r'\s')).first))) {
+      continue;
+    }
+    found.add((i < 0 ? 999 : i, c));
+  }
+  found.sort((a, b) => a.$1.compareTo(b.$1));
+  final out = <String>[];
+  for (final (_, c) in found) {
+    if (!out.contains(c)) out.add(c);
+  }
+  return out;
+}
 
 String? suggestCategory(String sheetName) {
   final u = sheetName.toUpperCase().trim();
@@ -267,6 +327,7 @@ class MtoImporter {
     if (a.sheets.isNotEmpty) a.format = a.layouts.isEmpty ? 'mto_quote_blocks' : 'generic';
     a.suggestedProject = suggestProjectName(a.projectTitle);
     _fileInfo(a, wb);
+    _controlReport(a, wb);
     // سال پیش‌فرض قیمت‌های بدون سال (تاریخ سند) برای گروه‌هایی که پیش از یافتن تاریخ خوانده شدند
     for (final s in a.sheets) {
       if (s.layout != null && s.goingYear == null) s.goingYear = s.layout!.sheetYear ?? a.issueYear;
@@ -277,6 +338,137 @@ class MtoImporter {
       }
     }
     return a;
+  }
+
+  static String _fmt(double v) {
+    final s = v.round().toString();
+    final b = StringBuffer();
+    for (var i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0 && s[i - 1] != '-') b.write(',');
+      b.write(s[i]);
+    }
+    return b.toString();
+  }
+
+  /// گزارش کنترل «هیچ قلمی جا نیفتاده»: جمع اقلام هر شیت در برابر جمع‌های خود شیت و ارجاع‌های جلد،
+  /// و ضرایب شیت‌هایی مثل «Insurance» (ضریب بیمه/بالاسری/مالیات).
+  static void _controlReport(MtoAnalysis a, XlsxWorkbook wb) {
+    final sums = <String, double>{};
+    final sumsNoQty = <String, double>{};
+    final counts = <String, int>{};
+    for (final s in a.sheets) {
+      final src = s.source ?? s.name;
+      for (final it in s.items) {
+        final u = it.goingEur ?? it.goingUsd ?? it.goingIrr;
+        if (u == null) continue;
+        sums[src] = (sums[src] ?? 0) + u * (it.quantity ?? 1);
+        sumsNoQty[src] = (sumsNoQty[src] ?? 0) + u;
+        counts[src] = (counts[src] ?? 0) + 1;
+      }
+    }
+    // ارجاع جلد/خلاصه به شیت‌ها: «='VESSELS(SEPARATOR)'!W18»
+    final refRe = RegExp(r"^=\s*'?([^'!]+?)'?!\$?[A-Z]{1,3}\$?\d+\s*$");
+    final covered = <String>{};
+    for (final info in wb.sheets) {
+      if (!a.skippedSheets.contains(info.name)) continue;
+      final sh = wb.sheet(info.name);
+      if (sh == null) continue;
+      for (var r = 1; r <= sh.maxRow && r <= 200; r++) {
+        for (final c in sh.rowCells(r)) {
+          final f = c.formula;
+          if (f == null) continue;
+          final m = refRe.firstMatch(f.startsWith('=') ? f : '=$f');
+          if (m == null) continue;
+          final target = m.group(1)!;
+          final key = sums.keys.where((k) => k.trim().toLowerCase() == target.trim().toLowerCase()).firstOrNull;
+          final v = c.number;
+          if (v == null) continue;
+          final label = [
+            for (final x in sh.rowCells(r))
+              if (x.col < c.col && x.value is! double && x.text.trim().isNotEmpty) x.text.trim(),
+          ].lastOrNull;
+          final got = key == null ? null : sums[key]!;
+          if (key != null) covered.add(key);
+          final diff = got == null || v == 0 ? '' : ' (اختلاف ${((got - v) / v * 100).toStringAsFixed(0)}٪)';
+          a.notes.add('«${info.name}»: ${label ?? target} = ${_fmt(v)} ← شیت «$target»؛ '
+              '${got == null ? 'اقلامی از این شیت خوانده نشد' : 'جمع اقلام خوانده‌شده ${_fmt(got)} (${counts[key]} قلم)$diff'}');
+        }
+      }
+    }
+    // جمع‌های داخل خود شیت (سطر SUM/NOTES) برای شیت‌هایی که جلد ارجاع نداده
+    for (final e in a.layouts.entries) {
+      final got = sums[e.key];
+      if (got == null || covered.contains(e.key) || e.value.sheetTotals.isEmpty) continue;
+      final tots = e.value.sheetTotals.map((t) => t.$2).where((v) => v >= 0.01 * got).toSet().toList()..sort();
+      if (tots.isEmpty) continue;
+      final orphan = e.value.orphans.values.fold(0.0, (x, y) => x + y);
+      final match = tots.any((v) => (v - got).abs() <= 0.01 * v || (orphan > 0 && (v - (got - orphan)).abs() <= 0.01 * v));
+      // جمع × ضریب گرد (مثل «SUM × 1.2» یا «× 1.3»): ضریب شیت
+      final factors = <String>{
+        for (final v in tots)
+          if (v / got >= 1.01 && v / got <= 3 && ((v / got) - ((v / got) * 100).round() / 100).abs() < 0.0005)
+            ((v / got) * 100).round() / 100 == ((v / got) * 10).round() / 10
+                ? ((v / got)).toStringAsFixed(1)
+                : ((v / got)).toStringAsFixed(2),
+      };
+      a.notes.add('شیت «${e.key}»: جمع اقلام خوانده‌شده ${_fmt(got)} (${counts[e.key]} قلم)؛ '
+          'جمع‌های درج‌شده در شیت: ${tots.map(_fmt).join('، ')}${match || factors.isNotEmpty ? ' ✓' : ' — بررسی شود'}'
+          '${factors.isEmpty ? '' : ' (جمع × ضریب ${factors.join('، ')} هم در شیت آمده است)'}');
+    }
+    // جمع خود شیت قیمت‌ها را بدون ضرب در تعداد جمع زده (ستون قیمت شاید مبلغ کل ردیف باشد)
+    for (final e in a.layouts.entries) {
+      final g = sums[e.key], n = sumsNoQty[e.key];
+      if (g == null || n == null || (g - n).abs() <= 0.01 * g) continue;
+      final hit = e.value.sheetTotals.any((t) => (t.$2 - n).abs() <= 0.01 * n);
+      if (hit) {
+        a.notes.add('شیت «${e.key}»: جمع خود شیت (${_fmt(n)}) قیمت‌ها را بدون ضرب در تعداد جمع زده است؛ '
+            'اگر قیمت این شیت مبلغ کل ردیف است (نه قیمت واحد)، تعداد اقلام چندتایی را در پیش‌نمایش ۱ کنید.');
+      }
+    }
+    for (final e in a.layouts.entries) {
+      for (final n in e.value.notes.where((n) => n.contains('بیرون از ستون شرح'))) {
+        a.notes.add('شیت «${e.key}»: $n');
+      }
+    }
+    // شیت ضرایب: ستونی با عنوان ضریب/بیمه/بالاسری/مالیات و مقادیر کوچک
+    final coefRe = RegExp(r'coef|ضریب|factor|insurance|بیمه|overhead|بالاسری|سربار|contingenc|tax|مالیات|vat',
+        caseSensitive: false);
+    for (final info in wb.sheets) {
+      if (!a.skippedSheets.contains(info.name)) continue;
+      final sh = wb.sheet(info.name);
+      if (sh == null) continue;
+      for (var r = 1; r <= sh.maxRow && r <= 40; r++) {
+        for (final h in sh.rowCells(r)) {
+          if (h.value is double || !coefRe.hasMatch(h.text)) continue;
+          final found = <String>[];
+          for (var rr = r + 1; rr <= sh.maxRow && rr <= r + 80; rr++) {
+            final v = sh.cell(rr, h.col)?.number;
+            if (v == null || v < 0 || v > 5) continue;
+            final labels = [
+              for (final x in sh.rowCells(rr))
+                if (x.col < h.col && x.value is! double && x.text.trim().isNotEmpty) x.text.trim(),
+            ];
+            if (labels.isEmpty) continue;
+            final label = labels.length > 1 ? '${labels.first} (${labels.sublist(1).join('، ')})' : labels.first;
+            a.coefficients.add((info.name, label, v));
+            found.add('$label: ${v.toStringAsFixed(4).replaceFirst(RegExp(r'\.?0+$'), '')}');
+          }
+          if (found.isNotEmpty) a.notes.add('ضرایب شیت «${info.name}» (${h.text.trim()}): ${found.join('؛ ')}');
+        }
+      }
+    }
+    // ضریب بالاسری ردیف‌ها
+    final ovs = <String, Set<String>>{};
+    for (final s in a.sheets) {
+      for (final it in s.items) {
+        if (it.overhead == null) continue;
+        (ovs[s.source ?? s.name] ??= {}).add('${(it.overhead! * 100).toStringAsFixed(0)}٪');
+      }
+    }
+    if (ovs.isNotEmpty) {
+      a.notes.add('ضریب بالاسری ردیف‌ها (جدا ثبت شد و به قیمت ثبت‌شده اضافه نشده است): '
+          '${ovs.entries.map((e) => '${e.key.trim()} ${e.value.join('/')}').join('؛ ')}');
+    }
   }
 
   /// شماره‌ی سند و عنوان پروژه از سطرهای بالای جدول (هر ستونی از ۱ تا ۶)
@@ -370,14 +562,24 @@ class MtoImporter {
   /// تاریخ بازنگری سند از جدول «REV. / DATE» برگه‌ی جلد (مثل R03 · JAN. 2016 ← ۱۳۹۴/۱۰)
   static void _revisionDate(MtoAnalysis a, XlsxWorkbook wb) {
     const months = {'JAN': 1, 'FEB': 2, 'MAR': 3, 'APR': 4, 'MAY': 5, 'JUN': 6, 'JUL': 7, 'AUG': 8, 'SEP': 9, 'OCT': 10, 'NOV': 11, 'DEC': 12};
-    DateTime? best;
+    DateTime? best, exact;
+    String? bestRev;
     for (final info in wb.sheets.take(3)) {
       final sh = wb.sheet(info.name);
       if (sh == null) continue;
       for (var r = 1; r <= sh.maxRow && r <= 120; r++) {
         final cells = sh.rowCells(r);
-        if (cells.isEmpty || !RegExp(r'^R(ev)?\.?\s*\d{1,2}$', caseSensitive: false).hasMatch(cells.first.text.trim())) continue;
-        final rev = cells.first.text.trim().toUpperCase();
+        if (a.revision == null) {
+          for (final c in cells) {
+            final m = RegExp(r'^REV(?:ISION)?\.?\s*[:：]?\s*([A-Z]|\d{1,2})$', caseSensitive: false).firstMatch(c.text.trim());
+            if (m != null) a.revision = m.group(1)!.toUpperCase();
+          }
+        }
+        if (cells.isEmpty ||
+            !RegExp(r'^(R(ev)?\.?\s*\d{1,2}|(R(ev)?\.?\s*)?[A-Z])$', caseSensitive: false).hasMatch(cells.first.text.trim())) {
+          continue;
+        }
+        final rev = cells.first.text.trim().toUpperCase().replaceFirst(RegExp(r'^REV\.?\s*'), '');
         for (final c in cells.skip(1)) {
           DateTime? d;
           final m = RegExp(r'\b(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)[A-Z]*\.?\s*,?\s*(\d{4})', caseSensitive: false).firstMatch(c.text);
@@ -385,15 +587,23 @@ class MtoImporter {
           final v = c.value;
           if (d == null && v is double && v > 30000 && v < 80000) d = DateTime(1899, 12, 30).add(Duration(days: v.floor()));
           if (d == null) continue;
-          if (a.revision != null && rev == a.revision) {
-            best = d;
+          if (a.revision != null && (rev == a.revision || rev == 'R${a.revision}' || 'R$rev' == a.revision)) {
+            exact = d;
             break;
           }
-          if (a.revision == null && (best == null || d.isAfter(best))) best = d;
+          if (best == null || d.isAfter(best)) {
+            best = d;
+            bestRev = rev;
+          }
         }
       }
     }
+    if (exact != null) best = exact;
     if (best == null) return;
+    if (exact == null && a.revision != null && bestRev != null) {
+      a.notes.add('تاریخ بازنگری ${a.revision} در جلد نیامده؛ تاریخ آخرین بازنگری دارای تاریخ ($bestRev) '
+          'مبنای سال قیمت گرفته شد — بررسی شود.');
+    }
     final j = Gregorian(best.year, best.month, best.day).toJalali();
     a.issueYear = j.year;
     a.issueMonth = j.month;
@@ -653,7 +863,7 @@ class MtoImporter {
         'doc_ref': a.docRef,
         'issue_year': a.issueYear,
         'issue_month': a.issueMonth,
-        'notes': 'ورود از فایل ${a.fileName}',
+        'notes': ['ورود از فایل ${a.fileName}', ...a.notes].join('\n'),
       });
       int? oldDocId;
       int oldDoc() => oldDocId ??= () {

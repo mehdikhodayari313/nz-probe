@@ -16,6 +16,7 @@ import '../repo/catalog_repo.dart';
 import '../repo/docs_repo.dart';
 import '../repo/items_repo.dart';
 import '../xlsx/xlsx_reader.dart';
+import 'bank_headers.dart';
 
 class V8ImportReport {
   int items = 0;
@@ -43,11 +44,22 @@ class V8Importer {
   static const _blue = 'FFDDEBF7';
 
   /// بررسی سریع اینکه فایل واقعاً بانک قیمت v8 است.
+  /// عنوان‌های اصلی شیت Master بانک پمپ (برای یافتن شیت و ردیف عنوان)
+  static const _keyHeaders = [
+    'Row', 'Equipment Name', 'Project Name', 'Tag No.', 'Quantity', 'Cost Year (Jalali)', 'Reference Currency',
+    'Unit Price (Reference)', 'Source Document', 'Pump Type', 'Rated Flow (m³/h)', 'Differential Head (m)',
+  ];
+
+  static HeaderMap? masterHeaders(XlsxWorkbook wb, [List<String> extra = const []]) =>
+      findSheetHeaders(wb, const [masterSheet, 'Master', 'Database', 'Price Bank'], {..._keyHeaders, ...extra}.toList(),
+          minMatches: 3);
+
+  /// بررسی سریع اینکه فایل واقعاً بانک قیمت v8 است.
   static String? validate(XlsxWorkbook wb) {
-    final sh = wb.sheet(masterSheet);
-    if (sh == null) return 'شیت «Master Database» در این فایل نیست. فایل Pumps_Price_Bank_v8.xlsx را انتخاب کنید.';
-    if (sh.text(4, 2) != 'Equipment Name' || sh.text(4, 4) != 'Tag No.') {
-      return 'ساختار ستون‌های شیت Master Database با نسخه‌ی v8 یکی نیست.';
+    final h = masterHeaders(wb);
+    if (h == null) return 'جدول رکوردهای بانک (Master Database) در این فایل پیدا نشد. فایل Pumps_Price_Bank_v8.xlsx را انتخاب کنید.';
+    if (!h.has('Equipment Name') && !h.has('Tag No.')) {
+      return 'ستون نام تجهیز یا شماره‌ی تگ در شیت «${h.sheet.name}» پیدا نشد.';
     }
     return null;
   }
@@ -63,22 +75,52 @@ class V8Importer {
       report.alreadyImported = true;
       return report;
     }
-    final sh = wb.sheet(masterSheet)!;
     final fields = catalog.fields(cat.id);
+    // ستون هر فیلد از عنوان سرستون (label_en)؛ اگر عنوان نبود و خانه‌ی عنوانِ ستون نسخه‌ی مرجع خالی است، همان ستون
+    final labels = [
+      for (final f in fields)
+        if (f.storage != FieldStorage.calc && f.sourceRef != null && (f.labelEn ?? '').isNotEmpty) f.labelEn!,
+    ];
+    final h = masterHeaders(wb, labels)!;
+    final sh = h.sheet;
+    int colOf(FieldDef f) {
+      final byHeader = f.labelEn == null ? null : h[f.labelEn!];
+      if (byHeader != null) return byHeader;
+      final legacy = columnIndex(f.sourceRef!.replaceFirst('v8 ستون ', ''));
+      return sh.text(h.row, legacy).trim().isEmpty || sh.text(h.row, legacy).trim() == f.labelEn ? legacy : 0;
+    }
+    final fieldCols = {
+      for (final f in fields)
+        if (f.storage != FieldStorage.calc && f.sourceRef != null) f.key: colOf(f),
+    };
+    final lost = [
+      for (final f in fields)
+        if (fieldCols[f.key] == 0) f.labelEn ?? f.key,
+    ];
+    if (lost.isNotEmpty) {
+      report.warnings.add('ستون‌های ${lost.map((m) => '«$m»').join('، ')} در شیت «${sh.name}» نبود؛ '
+          'مقدار این فیلدها «در منبع وجود نداشت» ثبت شد.');
+    }
+    if (h.fuzzy.isNotEmpty) {
+      report.warnings.add('عنوان‌های متفاوت با نسخه‌ی مرجع شناخته شد: '
+          '${h.fuzzy.entries.map((e) => '«${e.value}» ← ${e.key}').join('، ')}');
+    }
+    final rowCol = h['Row'] ?? 1;
     final batch = Audit.newBatch();
     final projectsBefore = docs.projects().length;
     final docsBefore = docs.documents().length;
     final rowToItem = <int, int>{};
 
     db.transaction(() {
-      for (var r = 5; r <= sh.maxRow; r++) {
-        final rowNo = sh.cell(r, 1)?.number;
+      for (var r = h.dataStart; r <= sh.maxRow; r++) {
+        final rowNo = sh.cell(r, rowCol)?.number;
         if (rowNo == null) continue;
         final values = <String, Object?>{};
         final meta = <String, FieldMeta>{};
         for (final f in fields) {
           if (f.storage == FieldStorage.calc || f.sourceRef == null) continue;
-          final col = columnIndex(f.sourceRef!.replaceFirst('v8 ستون ', ''));
+          final col = fieldCols[f.key] ?? 0;
+          if (col == 0) continue;
           final c = sh.cell(r, col);
           if (c != null && !c.hasFormula) {
             final v = c.value;
@@ -137,62 +179,50 @@ class V8Importer {
   }
 
   void _importVendors(XlsxWorkbook wb, V8ImportReport report) {
-    final sh = wb.sheet('Vendor_Register');
-    if (sh == null) return;
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final code = sh.text(r, 1);
-      final name = sh.text(r, 2);
-      if (code.isEmpty || name.isEmpty || code.startsWith('V-EX')) continue;
-      final exists = db.scalar('SELECT id FROM vendors WHERE code = ? OR name = ?', [code, name]);
-      if (exists != null) continue;
-      db.insert(
-        'INSERT INTO vendors(code, name, country, origin, avl_status, rank, types_supplied, licensor, notes, '
-        'created_by, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-        [
-          code, name, _n(sh.text(r, 3)), _n(sh.text(r, 4)), _n(sh.text(r, 5)), _n(sh.text(r, 6)), _n(sh.text(r, 7)),
-          _n(sh.text(r, 8)), _n(sh.text(r, 9)), audit.userId, audit.userId,
-        ],
-      );
-      report.vendors++;
-    }
+    report.vendors += importVendorRegister(db, audit, wb);
   }
 
   void _importQuotes(XlsxWorkbook wb, V8ImportReport report, Map<int, int> rowToItem) {
-    final sh = wb.sheet('Vendor_Quotes');
-    if (sh == null) return;
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final qid = sh.text(r, 1);
+    final t = BankTable.open(wb, const ['Vendor_Quotes', 'Vendor Quotes', 'Quotes'], const {
+      'Quote_ID': 1, 'Master Row': 2, 'Vendor_ID': 5, 'Quote Year (Jalali)': 8, 'Quote Ref / Date': 9,
+      'Validity (days)': 10, 'Incoterm': 11, 'Currency': 12, 'Quoted Unit Price': 13, 'TBE OK': 14,
+      'Delivery (weeks)': 16, 'Sc: Driver': 17, 'Sc: Baseplate': 18, 'Sc: Seal System': 19, 'Sc: Spares': 20,
+      'Sc: TPI': 21, 'Remarks': 22,
+    });
+    if (t == null) return;
+    for (var r = t.start; r <= t.sh.maxRow; r++) {
+      final qid = t.text(r, 'Quote_ID');
       if (qid.isEmpty || qid.startsWith('Q-EX')) continue;
-      final masterRow = sh.cell(r, 2)?.number;
+      final masterRow = t.cell(r, 'Master Row')?.number;
       final itemId = masterRow == null ? null : rowToItem[masterRow.toInt()];
       if (itemId == null) {
-        report.warnings.add('استعلام $qid: ردیف Master «${sh.text(r, 2)}» پیدا نشد');
+        report.warnings.add('استعلام $qid: ردیف Master «${t.text(r, 'Master Row')}» پیدا نشد');
         continue;
       }
-      final vcode = sh.text(r, 5);
+      final vcode = t.text(r, 'Vendor_ID');
       final vendorId = vcode.isEmpty ? null : db.scalar('SELECT id FROM vendors WHERE code = ?', [vcode]) as int?;
-      final amount = sh.cell(r, 13)?.value;
-      final year = sh.cell(r, 8)?.value;
+      final amount = t.cell(r, 'Quoted Unit Price')?.value;
+      final year = t.cell(r, 'Quote Year (Jalali)')?.value;
       final extra = <String, Object?>{
         'quote_id': qid,
-        'quote_ref': _n(sh.text(r, 9)),
-        'validity_days': sh.cell(r, 10)?.number,
-        'tbe': _n(sh.text(r, 14)),
-        'delivery_weeks': sh.cell(r, 16)?.number,
-        'scope_driver': _n(sh.text(r, 17)),
-        'scope_baseplate': _n(sh.text(r, 18)),
-        'scope_seal_system': _n(sh.text(r, 19)),
-        'scope_spares': _n(sh.text(r, 20)),
-        'scope_tpi': _n(sh.text(r, 21)),
+        'quote_ref': _n(t.text(r, 'Quote Ref / Date')),
+        'validity_days': t.cell(r, 'Validity (days)')?.number,
+        'tbe': _n(t.text(r, 'TBE OK')),
+        'delivery_weeks': t.cell(r, 'Delivery (weeks)')?.number,
+        'scope_driver': _n(t.text(r, 'Sc: Driver')),
+        'scope_baseplate': _n(t.text(r, 'Sc: Baseplate')),
+        'scope_seal_system': _n(t.text(r, 'Sc: Seal System')),
+        'scope_spares': _n(t.text(r, 'Sc: Spares')),
+        'scope_tpi': _n(t.text(r, 'Sc: TPI')),
       }..removeWhere((k, v) => v == null);
       db.insert(
         'INSERT INTO price_obs(item_id, vendor_id, kind, is_primary, currency, amount, amount_text, cost_year, '
         'cost_year_text, incoterm, extra_json, notes, created_by, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
-          itemId, vendorId, 'quote', 0, _n(sh.text(r, 12)),
+          itemId, vendorId, 'quote', 0, _n(t.text(r, 'Currency')),
           amount is double ? amount : null, amount is double ? null : _n(asText(amount)),
           year is double ? year.toInt() : null, year is double ? null : _n(asText(year)),
-          _n(sh.text(r, 11)), _jsonish(extra), _n(sh.text(r, 22)), audit.userId, audit.userId,
+          _n(t.text(r, 'Incoterm')), _jsonish(extra), _n(t.text(r, 'Remarks')), audit.userId, audit.userId,
         ],
       );
       report.quotes++;

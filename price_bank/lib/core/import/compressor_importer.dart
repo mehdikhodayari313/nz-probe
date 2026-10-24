@@ -18,6 +18,7 @@ import '../repo/catalog_repo.dart';
 import '../repo/docs_repo.dart';
 import '../repo/items_repo.dart';
 import '../xlsx/xlsx_reader.dart';
+import 'bank_headers.dart';
 import 'desalter_importer.dart' show isKplRecord, kplCostYear, kplCostMonth, kplCorrectionNote;
 import 'v8_importer.dart';
 
@@ -101,31 +102,48 @@ class CompressorImporter {
         if (meta.text(r, 1) == 'equipment_code') return meta.text(r, 2) == 'CMP';
       }
     }
-    return wb.sheet(masterSheet)?.text(1, 1).toUpperCase().contains('AIR COMPRESSOR') ?? false;
+    final h = masterHeaders(wb);
+    if (h == null) return false;
+    // عنوان شیت («MASTER AIR COMPRESSOR PRICE DATABASE») یا ستون‌های خاص کمپرسور
+    for (var r = 1; r < h.row && r <= 4; r++) {
+      if (h.sheet.rowCells(r).any((c) => c.text.toUpperCase().contains('COMPRESSOR'))) return true;
+    }
+    return h.exact('Compressor Type') || h.exact('Compressors per Price Unit') || h.exact('Capacity per Compressor (Nm³/h)');
   }
 
+  /// شیت Master و ستون‌هایش (نام شیت یا ردیف عنوان عوض شده باشد هم پیدا می‌شود)
+  static HeaderMap? masterHeaders(XlsxWorkbook wb) =>
+      findSheetHeaders(wb, const [masterSheet, 'Master', 'Database', 'Price Bank'], compressorBankColumns.keys.toList(),
+          minMatches: 4);
+
   static String? validate(XlsxWorkbook wb) {
-    final sh = wb.sheet(masterSheet);
-    if (sh == null || !isCompressorBank(wb)) return 'این فایل بانک قیمت کمپرسور هوا (Air_Compressor_Price_Bank) نیست.';
-    final cols = headerColumns(sh);
-    for (final h in ['Row', 'Equipment Name', 'Tag No.', 'Unit Price (Reference)', 'Cost Year (Jalali)', 'Compressors per Price Unit']) {
-      if (!cols.containsKey(h)) return 'ستون «$h» در شیت Master Database پیدا نشد.';
-    }
+    final h = masterHeaders(wb);
+    if (h == null || !isCompressorBank(wb)) return 'این فایل بانک قیمت کمپرسور هوا (Air_Compressor_Price_Bank) نیست.';
+    if (!h.has('Equipment Name') && !h.has('Tag No.')) return 'ستون نام تجهیز یا شماره‌ی تگ در شیت «${h.sheet.name}» پیدا نشد.';
+    if (!h.has('Unit Price (Reference)')) return 'ستون قیمت واحد در شیت «${h.sheet.name}» پیدا نشد.';
     return null;
   }
 
-  static Map<String, int> headerColumns(XlsxSheet sh) => {
-        for (var c = 1; c <= sh.maxCol; c++)
-          if (sh.text(4, c).isNotEmpty) sh.text(4, c): c,
-      };
+  /// ستون‌هایی که پیدا نشدند یا با عنوان دیگری پیدا شدند (برای گزارش ورود)
+  static List<String> headerNotes(XlsxWorkbook wb) {
+    final h = masterHeaders(wb);
+    return h == null ? const [] : headerReport(h, what: 'بانک کمپرسور v8');
+  }
 
   /// خواندن رکوردهای Master (فقط سلول‌های ورودی؛ بدون اصلاح‌ها) — برای ورود و آزمون طلایی.
   static List<({int row, Map<String, Object?> values, Map<String, FieldMeta> meta})> readMaster(XlsxWorkbook wb) {
-    final sh = wb.sheet(masterSheet)!;
-    final cols = headerColumns(sh);
+    final h = masterHeaders(wb)!;
+    final sh = h.sheet;
+    final cols = h.cols;
     final out = <({int row, Map<String, Object?> values, Map<String, FieldMeta> meta})>[];
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final rowNo = sh.cell(r, cols['Row']!)?.number;
+    for (var r = h.dataStart; r <= sh.maxRow; r++) {
+      // بدون ستون Row: شماره‌ی ردیف از جای سطر؛ سطر بی‌نام و بی‌قیمت قلم نیست
+      final rowNo = cols['Row'] == null
+          ? ([for (final k in ['Equipment Name', 'Tag No.', 'Unit Price (Reference)']) if (cols[k] != null) sh.text(r, cols[k]!)]
+                  .any((t) => t.trim().isNotEmpty)
+              ? (r - h.row).toDouble()
+              : null)
+          : sh.cell(r, cols['Row']!)?.number;
       if (rowNo == null) continue;
       final values = <String, Object?>{};
       final meta = <String, FieldMeta>{};
@@ -152,6 +170,8 @@ class CompressorImporter {
     final report = CompressorImportReport();
     final err = validate(wb);
     if (err != null) throw FormatException(err);
+    report.warnings.addAll(headerNotes(wb));
+    final missing = masterHeaders(wb)!.missing;
     final cat = catalog.categoryByCode('COMPRESSOR')!;
     final existing = db.scalar(
         "SELECT COUNT(*) FROM items WHERE category_id = ? AND legacy_ref LIKE 'CMP-%'", [cat.id]) as int;
@@ -175,6 +195,7 @@ class CompressorImporter {
           if (m.note != null && m.note!.isNotEmpty) report.notes++;
         }
         final recordId = 'CMP-${rec.row.toString().padLeft(4, '0')}';
+        markMissingFields(values, missing);
         values.remove('row_no');
         values['v8_row'] = recordId;
 
@@ -268,32 +289,20 @@ class CompressorImporter {
       };
 
   void _importVendors(XlsxWorkbook wb, CompressorImportReport report) {
-    final sh = wb.sheet('Vendor_Register');
-    if (sh == null) return;
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final code = sh.text(r, 1);
-      final name = sh.text(r, 2);
-      if (code.isEmpty || name.isEmpty || code.startsWith('V-EX')) continue;
-      if (db.scalar('SELECT id FROM vendors WHERE code = ? OR name = ?', [code, name]) != null) continue;
-      db.insert(
-        'INSERT INTO vendors(code, name, country, origin, avl_status, rank, types_supplied, notes, '
-        'created_by, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?)',
-        [
-          code, name, _n(sh.text(r, 3)), _n(sh.text(r, 4)), _n(sh.text(r, 5)), _n(sh.text(r, 6)), _n(sh.text(r, 7)),
-          _n(sh.text(r, 8)), audit.userId, audit.userId,
-        ],
-      );
-      report.vendors++;
-    }
+    report.vendors += importVendorRegister(db, audit, wb, licensorCol: 0, notesCol: 8);
   }
 
   /// همه‌ی استعلام‌ها، حتی بی‌پاسخ و انصراف (مبلغ خالی، وضعیت در یادداشت).
   void _importQuotes(XlsxWorkbook wb, CompressorImportReport report, Map<int, int> rowToItem) {
-    final sh = wb.sheet('Vendor_Quotes');
-    if (sh == null) return;
-    final cols = headerColumns(sh);
-    int c(String h) => cols[h] ?? 0;
-    for (var r = 5; r <= sh.maxRow; r++) {
+    final t = BankTable.open(wb, const ['Vendor_Quotes', 'Vendor Quotes', 'Quotes'], const {
+      'Quote_ID': 1, 'Master Row': 2, 'Vendor_ID': 5, 'Quote Status': 8, 'Quote Year (Jalali)': 9, 'Quote Ref / Date': 10,
+      'Validity (days)': 11, 'Incoterm': 12, 'Currency': 13, 'Quoted Unit Price': 14, 'Quoted Total': 15,
+      'Units Quoted': 16, 'TBE OK': 17, 'Delivery (weeks)': 19, 'Sc: Dryer': 20, 'Sc: Spares': 21, 'Remarks': 22,
+    });
+    if (t == null) return;
+    final sh = t.sh;
+    int c(String h) => t.col(h);
+    for (var r = t.start; r <= sh.maxRow; r++) {
       final qid = sh.text(r, c('Quote_ID'));
       if (qid.isEmpty || qid.startsWith('Q-EX')) continue;
       final masterRow = sh.cell(r, c('Master Row'))?.number;

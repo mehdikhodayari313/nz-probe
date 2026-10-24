@@ -127,3 +127,26 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 ## 1405/08/02 — Piping Excel bank: calibration (outside the app)
 - Base year, FX table and quantity factor were calibrated against three sources: 15 user project quotes (1405/06/28), Gachsaran-4 PEP (209 matched items) and market prices (842). The chosen setup is the one with the lowest error vs the user quotes (17%): NIMA FX; base year 1388 for all families except GLB 1387, TEE/TRD/CRD 1391, CAP 1396 and FLG 1385; quantity factor off by default.
 - New sheets: my quotes, project prices (Gachsaran 4) and base-year calibration. The calculator gained an evidence panel and item selection is now cascading. Details in docs/requirements/PIPING.md; scripts in tool/piping/.
+
+## v0.9.2 (1405/08/02) — flexible file readers (Karanj estimate failed in front of the user's boss)
+- MTO/estimate reader (`mto_generic.dart`, `mto_importer.dart`): new column roles rate (€/kg, €/m) and overhead; length/
+  total-weight/duration headers are not prices; header merge no longer swallows item rows; desc column = densest text column;
+  price fallback/reconcile (`_reconcile`): unit price → row total ÷ qty → rate × weight/length; unit×qty vs total mismatch
+  (unit ≤ 1 or far off) → lump sum from row total with warning; length qty → one lot; SUM rows, NOTES rows, serial-only rows and
+  formula-less total rows (= running sum) are totals; orphan text+amount outside the desc column → item + note; unheaded unit
+  column beside qty; outlier check price vs rate × weight. Control report `MtoAnalysis.notes` (dialog card + document notes):
+  cover cross-references, in-sheet totals (✓, × factor), coefficient sheets (Insurance), row overheads, letter revisions (REV. C;
+  latest dated revision used with a note).
+- Categories: per-item choice in multi-category sheets (`sheetCategoryCandidates`), new category SERVICES
+  («ساختمان، سازه، نصب و خدمات») + `serviceCategoryFromText` (head noun only: «HVAC for Accommodation» stays HVAC);
+  packages in vessel/tank sheets keep their own category; INST words (F&G, BMS, metering, sampling, CCR), ELEC (power, MCC, …).
+- Banks: `bank_headers.dart` (normalized/unit-less/synonym/token header matching, header row and sheet found automatically,
+  missing columns reported, «در منبع وجود نداشت» in remarks for key fields, shared Vendor_Register import, `BankTable` for
+  quotes); compressor, desalter and v8 importers use it (v8 maps fields by label_en, letter fallback only if that header is empty).
+- Tests: `mto_estimate_test.dart` (anonymized estimate, formula and values-only copies: 120 items, prices, categories,
+  totals), `bank_flex_test.dart` (messy compressor/desalter banks = reference). Tools: `make_estimate_fixture.py`,
+  `make_messy_bank_fixture.py`.
+- User decisions recorded (CLAUDE.md): domestic/foreign manufacture option with suitable methods; only important methods;
+  multi-PPI category settings in the estimator and methods pages; Persian only for now; Iranian industry indices to be extracted
+  by Claude; expert classification of electrical/instrument/piping.
+

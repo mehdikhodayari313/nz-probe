@@ -106,7 +106,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   if it differs, `gh run rerun <run-id>` of the final commit before taking the zip.
 - Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx] [compressor bank xlsx]` (CI passes
   all three fixtures; expects 146 pumps, 9 desalters, 10 compressors / 3 quotes / 4 peers).
-- Current released version: **0.9.1** (1405/07/23, desalter cleanup; zip on `price-bank-releases`).
+- Current released version: **0.9.2** (1405/08/02, flexible MTO/estimate and bank readers; zip on `price-bank-releases`).
 - Releases/tags cannot be created from Claude sessions (403). Published builds live on branch
   **`price-bank-releases`** (`price_bank_vX.Y_windows.zip` + README table) — add each new version there.
 - Commit trailer (always):
@@ -204,6 +204,27 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   previous import is skipped; duplicates inside one file get " (2)" suffix. Unknown category → MISC_PKG;
   summary tables (no tag & no qty) are unticked by default.
 
+## File readers (user 1405/08/02: «very important», a file failed in front of his boss)
+- Every MTO/estimate/bank file must load without errors and without dropping any item: raw prices, overhead and other
+  coefficients extracted; anything assumed or unmatched goes to the control report (`MtoAnalysis.notes`, bank `report.warnings`),
+  never silently skipped. Missing source values = «در منبع وجود نداشت».
+- MTO: `mto_generic.dart` `_reconcile` (unit / rate×weight / length / row total), total rows (SUM, NOTES, serial-only,
+  formula-less running sum), orphans, overhead column; categories per item in multi-category sheets; SERVICES category for
+  installation/civil/mobilization/machinery/salary (not equipment). Reference test: `test/mto_estimate_test.dart`
+  (anonymized estimate, formula + values-only copies). New odd file → make an anonymized fixture with
+  `tool/make_estimate_fixture.py` and add assertions there.
+- Banks: always map columns through `bank_headers.dart` (`findSheetHeaders`, `BankTable`), never fixed header rows/columns.
+  Messy-bank test: `test/bank_flex_test.dart`.
+
+## User decisions 1405/08/02 (Word file of 33 points + answers)
+1. Some equipment is domestic, some imported → the pricing method needs a manufacture-location option that offers the
+   suitable methods for that choice.
+2. Only the important methods; do not clutter.
+3. Category settings for multi-PPI equipment must be reachable from that equipment's estimator page and from the methods page.
+4. Languages last; Persian only for now.
+5. Claude must extract the Iranian industry indices (by any means).
+6. Classify/optimize electrical, instrumentation and piping like an expert engineer of that discipline.
+
 ## Open items / next steps (keep this list current)
 1. User will send requirements for electrical, instrumentation and remaining mechanical templates. Add profiles
    in `profiles.dart` (new fields of existing MTO items are filled once automatically on startup).
@@ -226,6 +247,10 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
    Not in app. Calibrated 1405/08/02 (user: lowest error vs his project quotes): NIMA FX, base year 1388 (GLB 1387, TEE/TRD/CRD 1391,
    CAP 1396, FLG 1385), qty factor off. Sheets: my quotes, Gachsaran-4 project prices, calibration. Open: F52 ×1.3, TEE WPHY60 2.5 vs 2.2.
 8. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
+9. SERVICES category (v0.9.2) escalates with the default PPI; a construction/labour index (Iranian or Eurostat construction
+   cost) should be chosen with the user. Desalter «Internals & Transformators» rows of an estimate stay separate DESALTER items
+   (user may move/merge in preview).
+10. Decisions 1–6 above (domestic/foreign methods, methods page, Iranian indices, E/I/P classification) are not implemented yet.
 
 ## Working method that saves tokens
 - Read only the files the task touches (use the code map). Prefer targeted `grep`/`sed -n` over whole files.

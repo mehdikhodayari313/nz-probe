@@ -17,6 +17,7 @@ import '../repo/catalog_repo.dart';
 import '../repo/docs_repo.dart';
 import '../repo/items_repo.dart';
 import '../xlsx/xlsx_reader.dart';
+import 'bank_headers.dart';
 import 'v8_importer.dart';
 
 class DesalterImportReport {
@@ -134,32 +135,45 @@ class DesalterImporter {
         if (meta.text(r, 1) == 'equipment_code') return meta.text(r, 2) == 'DES';
       }
     }
-    return wb.sheet(masterSheet)?.text(1, 1).toUpperCase().contains('DESALTER') ?? false;
+    final h = masterHeaders(wb);
+    if (h == null) return false;
+    for (var r = 1; r < h.row && r <= 4; r++) {
+      if (h.sheet.rowCells(r).any((c) => c.text.toUpperCase().contains('DESALTER'))) return true;
+    }
+    return h.exact('Desalting Technology') || (h.exact('No. of Stages') && h.exact('Vessels per Package'));
   }
 
+  /// شیت Master و ستون‌هایش (نام شیت یا ردیف عنوان عوض شده باشد هم پیدا می‌شود)
+  static HeaderMap? masterHeaders(XlsxWorkbook wb) =>
+      findSheetHeaders(wb, const [masterSheet, 'Master', 'Database', 'Price Bank'], desalterBankColumns.keys.toList(),
+          minMatches: 4);
+
   static String? validate(XlsxWorkbook wb) {
-    final sh = wb.sheet(masterSheet);
-    if (sh == null || !isDesalterBank(wb)) return 'این فایل بانک قیمت دیسالتر (Desalters_Price_Bank) نیست.';
-    final cols = headerColumns(sh);
-    for (final h in ['Row', 'Equipment Name', 'Tag No.', 'Unit Price (Reference)', 'Cost Year (Jalali)']) {
-      if (!cols.containsKey(h)) return 'ستون «$h» در شیت Master Database پیدا نشد.';
-    }
+    final h = masterHeaders(wb);
+    if (h == null || !isDesalterBank(wb)) return 'این فایل بانک قیمت دیسالتر (Desalters_Price_Bank) نیست.';
+    if (!h.has('Equipment Name') && !h.has('Tag No.')) return 'ستون نام تجهیز یا شماره‌ی تگ در شیت «${h.sheet.name}» پیدا نشد.';
+    if (!h.has('Unit Price (Reference)')) return 'ستون قیمت واحد در شیت «${h.sheet.name}» پیدا نشد.';
     return null;
   }
 
-  /// عنوان سرستون ← شماره‌ی ستون (ردیف ۴)
-  static Map<String, int> headerColumns(XlsxSheet sh) => {
-        for (var c = 1; c <= sh.maxCol; c++)
-          if (sh.text(4, c).isNotEmpty) sh.text(4, c): c,
-      };
+  static List<String> headerNotes(XlsxWorkbook wb) {
+    final h = masterHeaders(wb);
+    return h == null ? const [] : headerReport(h, what: 'بانک دیسالتر v8');
+  }
 
   /// خواندن رکوردهای Master (فقط سلول‌های ورودی؛ بدون اصلاح‌ها) — برای ورود و آزمون طلایی.
   static List<({int row, Map<String, Object?> values, Map<String, FieldMeta> meta})> readMaster(XlsxWorkbook wb) {
-    final sh = wb.sheet(masterSheet)!;
-    final cols = headerColumns(sh);
+    final h = masterHeaders(wb)!;
+    final sh = h.sheet;
+    final cols = h.cols;
     final out = <({int row, Map<String, Object?> values, Map<String, FieldMeta> meta})>[];
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final rowNo = sh.cell(r, cols['Row']!)?.number;
+    for (var r = h.dataStart; r <= sh.maxRow; r++) {
+      final rowNo = cols['Row'] == null
+          ? ([for (final k in ['Equipment Name', 'Tag No.', 'Unit Price (Reference)']) if (cols[k] != null) sh.text(r, cols[k]!)]
+                  .any((t) => t.trim().isNotEmpty)
+              ? (r - h.row).toDouble()
+              : null)
+          : sh.cell(r, cols['Row']!)?.number;
       if (rowNo == null) continue;
       final values = <String, Object?>{};
       final meta = <String, FieldMeta>{};
@@ -187,6 +201,8 @@ class DesalterImporter {
     final report = DesalterImportReport();
     final err = validate(wb);
     if (err != null) throw FormatException(err);
+    report.warnings.addAll(headerNotes(wb));
+    final missing = masterHeaders(wb)!.missing;
     final cat = catalog.categoryByCode('DESALTER')!;
     final existing = db.scalar(
         "SELECT COUNT(*) FROM items WHERE category_id = ? AND legacy_ref LIKE 'DES-%'", [cat.id]) as int;
@@ -212,6 +228,7 @@ class DesalterImporter {
         final recordId = (values.remove('record_id') as String?) ?? 'DES-${rec.row.toString().padLeft(4, '0')}';
         values.remove('row_no');
         values['v8_row'] = recordId;
+        markMissingFields(values, missing);
 
         // اصلاح تأییدشده: سال قیمت KPL
         final kpl = isKplRecord(values) && values['cost_year'] is double && (values['cost_year'] as double) != kplCostYear;
@@ -287,60 +304,49 @@ class DesalterImporter {
   }
 
   void _importVendors(XlsxWorkbook wb, DesalterImportReport report) {
-    final sh = wb.sheet('Vendor_Register');
-    if (sh == null) return;
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final code = sh.text(r, 1);
-      final name = sh.text(r, 2);
-      if (code.isEmpty || name.isEmpty || code.startsWith('V-EX')) continue;
-      if (db.scalar('SELECT id FROM vendors WHERE code = ? OR name = ?', [code, name]) != null) continue;
-      db.insert(
-        'INSERT INTO vendors(code, name, country, origin, avl_status, rank, types_supplied, licensor, notes, '
-        'created_by, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-        [
-          code, name, _n(sh.text(r, 3)), _n(sh.text(r, 4)), _n(sh.text(r, 5)), _n(sh.text(r, 6)), _n(sh.text(r, 7)),
-          _n(sh.text(r, 8)), _n(sh.text(r, 9)), audit.userId, audit.userId,
-        ],
-      );
-      report.vendors++;
-    }
+    report.vendors += importVendorRegister(db, audit, wb);
   }
 
   void _importQuotes(XlsxWorkbook wb, DesalterImportReport report, Map<int, int> rowToItem) {
-    final sh = wb.sheet('Vendor_Quotes');
-    if (sh == null) return;
-    for (var r = 5; r <= sh.maxRow; r++) {
-      final qid = sh.text(r, 1);
+    final t = BankTable.open(wb, const ['Vendor_Quotes', 'Vendor Quotes', 'Quotes'], const {
+      'Quote_ID': 1, 'Master Row': 2, 'Vendor_ID': 5, 'Quote Year (Jalali)': 8, 'Quote Ref / Date': 9,
+      'Validity (days)': 10, 'Incoterm': 11, 'Currency': 12, 'Quoted Unit Price': 13, 'TBE OK': 14,
+      'Delivery (weeks)': 16, 'Sc: Transformers': 17, 'Sc: Recycle Pumps': 18, 'Sc: Piping': 19, 'Sc: Instruments': 20,
+      'Remarks': 21,
+    });
+    if (t == null) return;
+    for (var r = t.start; r <= t.sh.maxRow; r++) {
+      final qid = t.text(r, 'Quote_ID');
       if (qid.isEmpty || qid.startsWith('Q-EX')) continue;
-      final masterRow = sh.cell(r, 2)?.number;
+      final masterRow = t.cell(r, 'Master Row')?.number;
       final itemId = masterRow == null ? null : rowToItem[masterRow.toInt()];
       if (itemId == null) {
-        report.warnings.add('استعلام $qid: ردیف Master «${sh.text(r, 2)}» پیدا نشد');
+        report.warnings.add('استعلام $qid: ردیف Master «${t.text(r, 'Master Row')}» پیدا نشد');
         continue;
       }
-      final vcode = sh.text(r, 5);
+      final vcode = t.text(r, 'Vendor_ID');
       final vendorId = vcode.isEmpty ? null : db.scalar('SELECT id FROM vendors WHERE code = ?', [vcode]) as int?;
-      final amount = sh.cell(r, 13)?.value;
-      final year = sh.cell(r, 8)?.value;
+      final amount = t.cell(r, 'Quoted Unit Price')?.value;
+      final year = t.cell(r, 'Quote Year (Jalali)')?.value;
       final extra = <String, Object?>{
         'quote_id': qid,
-        'quote_ref': _n(sh.text(r, 9)),
-        'validity_days': sh.cell(r, 10)?.number,
-        'tbe': _n(sh.text(r, 14)),
-        'delivery_weeks': sh.cell(r, 16)?.number,
-        'scope_transformers': _n(sh.text(r, 17)),
-        'scope_recycle_pumps': _n(sh.text(r, 18)),
-        'scope_piping': _n(sh.text(r, 19)),
-        'scope_instruments': _n(sh.text(r, 20)),
+        'quote_ref': _n(t.text(r, 'Quote Ref / Date')),
+        'validity_days': t.cell(r, 'Validity (days)')?.number,
+        'tbe': _n(t.text(r, 'TBE OK')),
+        'delivery_weeks': t.cell(r, 'Delivery (weeks)')?.number,
+        'scope_transformers': _n(t.text(r, 'Sc: Transformers')),
+        'scope_recycle_pumps': _n(t.text(r, 'Sc: Recycle Pumps')),
+        'scope_piping': _n(t.text(r, 'Sc: Piping')),
+        'scope_instruments': _n(t.text(r, 'Sc: Instruments')),
       }..removeWhere((k, v) => v == null);
       db.insert(
         'INSERT INTO price_obs(item_id, vendor_id, kind, is_primary, currency, amount, amount_text, cost_year, '
         'cost_year_text, incoterm, extra_json, notes, created_by, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
-          itemId, vendorId, 'quote', 0, _n(sh.text(r, 12)),
+          itemId, vendorId, 'quote', 0, _n(t.text(r, 'Currency')),
           amount is double ? amount : null, amount is double ? null : _n(asText(amount)),
           year is double ? year.toInt() : null, year is double ? null : _n(asText(year)),
-          _n(sh.text(r, 11)), jsonEncode(extra), _n(sh.text(r, 21)), audit.userId, audit.userId,
+          _n(t.text(r, 'Incoterm')), jsonEncode(extra), _n(t.text(r, 'Remarks')), audit.userId, audit.userId,
         ],
       );
       report.quotes++;
