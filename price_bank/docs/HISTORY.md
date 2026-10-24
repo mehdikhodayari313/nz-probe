@@ -110,3 +110,9 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   equipment specs (absent from MTOs or identical for all, irrelevant to selection) → removed from the DESALTER
   template and filters (field_defs cleanup; stored values untouched, all were base = factor 1, so results unchanged).
   They remain estimator inputs («دامنه‌ی قیمت») and factors SC_*. Equipment filters curated like pumps (`filterKeys`).
+
+
+## 1405/08/02 — Piping/valves consolidated Excel bank (outside the app)
+- 31 piping/valve price lists from Final_Piping.zip were merged into one workbook, delivered in two versions (365 and 2016): 2659 items with search, a calculator, an inquiry list and a market-price sheet.
+- Escalation uses PPI+FX (v8, free market or NIMA), with base year and base price editable per family and per calculation. The summary is in docs/requirements/PIPING.md.
+- Not yet in the app; open item: confirm the base year, since market comparison points to about 1394–95 rather than 1385.

@@ -215,7 +215,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
    13 KPL package pumps without price (P-113/123 desalter recycle, P-130–134/140–144 IGF, P-148 stripper) and 14 CSV
    18061405 pumps (CSV not importable). Bugs: dashboard hides the pump-bank import once MTO pumps exist; v8 import has no
    MTO dedupe (project names differ). Proposed fix (awaiting user OK): pump bank = reference like desalter.
-7. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
+7. PIPING (docs/requirements/PIPING.md): consolidated Excel bank delivered 1405/08/02 (2659 items, 31 families, PPI+FX, market sheet).
+   Not in app. Base year default 1385 per user; market comparison suggests ~1394–95 — awaiting user decision.
+8. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 
 ## Working method that saves tokens
 - Read only the files the task touches (use the code map). Prefer targeted `grep`/`sed -n` over whole files.
