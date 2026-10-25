@@ -2,6 +2,7 @@
 
 | نسخه | فایل | کد منبع |
 |---|---|---|
+| ۰٫۹٫۴ (۱۴۰۵/۰۸/۰۳) — جلسه‌ی ۱: شمارش درست فیلترها، ورود بانک قیمت تجمیعی، حذف و یکی‌سازی اسناد منبع | [price_bank_v0.9.4_windows.zip](price_bank_v0.9.4_windows.zip) | [commit 7fdaaff](https://github.com/mehdikhodayari313/nz-probe/tree/7fdaaff02e5385c4af7add8e7961e9cd150ea0ec/price_bank) |
 | ۰٫۹٫۳ (۱۴۰۵/۰۸/۰۳) — هیچ ستونی از فایل گم نمی‌شود: اختلاف فشار پمپ و هد استنباطی، مشخصه‌های بی‌فیلد، ستون‌های بی‌عنوان و ستون‌های تازه‌ی بانک‌ها | [price_bank_v0.9.3_windows.zip](price_bank_v0.9.3_windows.zip) | [commit 47ca7bd](https://github.com/mehdikhodayari313/nz-probe/tree/47ca7bd17f362d2230d72ae970bd11379737beb5/price_bank) |
 | ۰٫۹٫۲ (۱۴۰۵/۰۸/۰۲) — خواننده‌ی منعطف فایل‌های برآورد/MTO و بانک‌ها (هیچ قلمی جا نمی‌افتد، گزارش کنترل جمع‌ها و ضرایب)، استخراج مشخصات تجمیعی با واحد، رده‌ی خدمات و نصب | [price_bank_v0.9.2_windows.zip](price_bank_v0.9.2_windows.zip) | [commit 042cba1](https://github.com/mehdikhodayari313/nz-probe/tree/042cba18b08225f239779d2f669505d28a46c69c/price_bank) |
 | ۰٫۹٫۱ (۱۴۰۵/۰۷/۲۳) — دیسالتر: جدول سه روش در پنجره‌ی باریک، Scope و مرحله‌ی پروژه فقط در تخمین، فیلترهای مؤثر | [price_bank_v0.9.1_windows.zip](price_bank_v0.9.1_windows.zip) | [commit e547e92](https://github.com/mehdikhodayari313/nz-probe/tree/e547e926f9e93743bf3acd2a88140bcd5c6d6e6b/price_bank) |
