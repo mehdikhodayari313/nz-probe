@@ -195,3 +195,8 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - User: add the ΔP column; head = differential head → column renamed «هد اختلافی (m)»; ΔP (bar) is a separate quantity,
   so it sits on the other side of «دبی» to avoid confusion (`equipment_page` column 'dp', CSV export too).
 
+## v0.9.7 (1405/08/03) — pump head in the search table
+- User: search table keeps only «هد اختلافی (m)» (unit in the title); other units converted (ft × 0.3048, head in bar × 10.2);
+  pumps with only ΔP show the equivalent head ΔP × 10.2 (`_headM`, also used by the head range filter and CSV). ΔP stays
+  on the pump detail page next to the head (field `diff_pressure_bar`). The 0.9.6 ΔP table column was removed.
+

@@ -961,7 +961,13 @@ Map<String, Object?> extractPumpSpecs(Map<String, String> specs, String name) {
       if (unit.contains('gpm')) q = q * 0.2271;
       o['capacity_m3h'] ??= q;
     } else if (k.contains('head') && !k.contains('overhead') && n.isNotEmpty) {
-      o['diff_head_m'] ??= n.first;
+      // هد به متر: ft ← × ۰٫۳۰۴۸؛ هدی که با bar آمده ← × ۱۰٫۲ (SG = ۱)
+      final u = '$k $l';
+      o['diff_head_m'] ??= RegExp(r'\b(ft|feet|foot)\b').hasMatch(u)
+          ? double.parse((n.first * 0.3048).toStringAsFixed(1))
+          : (RegExp(r'\bbar').hasMatch(u) && !RegExp(r'\bm\b').hasMatch(u)
+              ? double.parse((n.first * 10.2).toStringAsFixed(1))
+              : n.first);
     } else if (RegExp(r'diff\w*\.?\s*press|differential press|d\.?p\.?\b|ΔP').hasMatch(k) && n.isNotEmpty) {
       // اختلاف فشار (bar)؛ kPa ← bar. هد معادل جدا با فرض SG = 1 (قاعده‌ی بانک v8: ΔP × 10.2)
       o['diff_pressure_bar'] ??= ('$k $l').contains('kpa') ? n.first / 100 : n.first;

@@ -71,6 +71,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
     super.dispose();
   }
 
+  /// هد اختلافی به متر؛ بدون هد ولی با اختلاف فشار ← معادل ΔP × ۱۰٫۲ (SG = ۱)
+  static double? _headM(PumpRow r) {
+    final h = asNumber(r.item.values['diff_head_m']);
+    if (h != null) return h;
+    final dp = asNumber(r.item.values['diff_pressure_bar']);
+    return dp == null ? null : double.parse((dp * 10.2).toStringAsFixed(1));
+  }
+
   String _val(PumpRow r, String key) {
     if (key == 'size_kw') return r.result.sizeKw.number?.toString() ?? '';
     return asText(r.item.valueOf(key));
@@ -100,7 +108,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
     for (final e in _ranges.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
       if (lo == null && hi == null) continue;
-      final v = e.key == 'size_kw' ? r.result.sizeKw.number : asNumber(r.item.values[e.key]);
+      final v = e.key == 'size_kw' ? r.result.sizeKw.number : (e.key == 'diff_head_m' ? _headM(r) : asNumber(r.item.values[e.key]));
       if (v == null) return false;
       if (lo != null && v < lo) return false;
       if (hi != null && v > hi) return false;
@@ -311,14 +319,6 @@ class _EquipmentPageState extends State<EquipmentPage> {
         ('type', GridColumn(label: 'نوع', width: 58, ltr: true, text: (r) => _val(r, 'api610_type'), sortKey: (r) => _val(r, 'api610_type'))),
         ('mat', GridColumn(label: 'متریال', width: 62, ltr: true, text: (r) => _val(r, 'material_class'), sortKey: (r) => _val(r, 'material_class'))),
         (
-          'dp',
-          GridColumn(
-              label: 'اختلاف فشار\nbar', width: 72, numeric: true,
-              tooltip: 'اختلاف فشار پمپ طبق منبع (Differential Pressure)؛ کمیتی جدا از هد اختلافی',
-              text: (r) => _num(asNumber(r.item.values['diff_pressure_bar'])),
-              sortKey: (r) => asNumber(r.item.values['diff_pressure_bar']))
-        ),
-        (
           'q',
           GridColumn(
               label: 'دبی\nm³/h', width: 64, numeric: true,
@@ -328,10 +328,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
         (
           'h',
           GridColumn(
-              label: 'هد اختلافی\nm', width: 72, numeric: true,
-              tooltip: 'هد اختلافی (Differential Head). اگر منبع فقط اختلاف فشار داده، هد = اختلاف فشار × ۱۰٫۲ با فرض SG = ۱ (استنباطی)',
-              text: (r) => _num(asNumber(r.item.values['diff_head_m'])),
-              sortKey: (r) => asNumber(r.item.values['diff_head_m']))
+              label: 'هد اختلافی\n(m)', width: 72, numeric: true,
+              tooltip: 'هد اختلافی (Differential Head) به متر. واحدهای دیگر معادل‌سازی شده‌اند (ft × ۰٫۳۰۴۸)؛ اگر منبع فقط اختلاف فشار '
+                  'داده، هد = اختلاف فشار (bar) × ۱۰٫۲ با فرض SG = ۱. اختلاف فشار در صفحه‌ی مشخصات پمپ آمده است.',
+              text: (r) => _num(_headM(r)),
+              sortKey: (r) => _headM(r))
         ),
         (
           'kw',
@@ -603,9 +604,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
         esc(_val(r, 'sub_category')),
         esc(_val(r, 'api610_type')),
         esc(_val(r, 'material_class')),
-        asText(r.item.values['diff_pressure_bar']),
         asText(r.item.values['capacity_m3h']),
-        asText(r.item.values['diff_head_m']),
+        _headM(r)?.toString() ?? '',
         r.result.sizeKw.number?.toStringAsFixed(2) ?? '',
         asText(r.item.quantity),
         esc(_val(r, 'cost_year')),

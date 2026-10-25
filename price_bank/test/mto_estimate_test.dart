@@ -4,6 +4,7 @@
 // هیچ قلمی نباید جا بیفتد و جمع هر شیت باید با جمع‌های خود فایل بخواند؛ نسخه‌ی «فقط مقدار» (بدون فرمول) هم همین‌طور.
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:price_bank/core/catalog/profiles.dart';
 import 'package:price_bank/core/import/mto_importer.dart';
 import 'package:price_bank/core/price_bank.dart';
 import 'package:price_bank/core/xlsx/xlsx_reader.dart';
@@ -137,4 +138,11 @@ void main() {
       });
     });
   }
+
+  test('هد پمپ به متر: ft و bar معادل‌سازی می‌شود', () {
+    expect(extractPumpSpecs({'Differential Head (ft)': '100'}, '')['diff_head_m'], 30.5);
+    expect(extractPumpSpecs({'Head (bar)': '5'}, '')['diff_head_m'], 51);
+    expect(extractPumpSpecs({'Diff. Head (m)': '42'}, '')['diff_head_m'], 42);
+    expect(extractPumpSpecs({'DIFF PRESS.': '11.6'}, '')['diff_pressure_bar'], 11.6);
+  });
 }
