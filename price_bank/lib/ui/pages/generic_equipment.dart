@@ -309,13 +309,15 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
           ltr: true,
           text: (r) => r.item.tag ?? '',
           sortKey: (r) => r.item.tag ?? '',
-          cell: (c, r) => Text(r.item.tag ?? '—',
-              textDirection: TextDirection.ltr,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.strong)),
+          cell: (c, r) => isNotStated(r.item.tag)
+              ? notStatedCell(c, r.item.tag)
+              : Text(r.item.tag!,
+                  textDirection: TextDirection.ltr,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.strong)),
         ),
         GridColumn(label: 'نام / سرویس', width: 200, fitMax: 330, align: TextAlign.start, ltr: true, text: (r) => r.item.name, sortKey: (r) => r.item.name),
-        GridColumn(label: 'پروژه', width: 110, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
+        GridColumn(label: 'پروژه', width: 110, notStated: true, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
         for (final f in keySpecs)
           GridColumn(
             label: '${f.labelFa}${f.unit == null ? '' : '\n${f.unit}'}',

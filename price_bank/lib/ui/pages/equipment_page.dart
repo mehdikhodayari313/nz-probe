@@ -301,7 +301,9 @@ class _EquipmentPageState extends State<EquipmentPage> {
             ltr: true,
             text: (r) => r.item.tag ?? '',
             sortKey: (r) => r.item.tag ?? '',
-            cell: (c, r) => _txt(c, r.item.tag, ltr: true, bold: true, color: AppColors.petrolDark),
+            cell: (c, r) => isNotStated(r.item.tag)
+                ? notStatedCell(c, r.item.tag)
+                : _txt(c, r.item.tag, ltr: true, bold: true, color: AppColors.petrolDark),
           )
         ),
         (
@@ -315,7 +317,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
             sortKey: (r) => r.item.name,
           )
         ),
-        ('project', GridColumn(label: 'پروژه', width: 120, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? '')),
+        ('project', GridColumn(label: 'پروژه', width: 120, notStated: true, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? '')),
         ('sub', GridColumn(label: 'زیرگروه', width: 84, ltr: true, text: (r) => _val(r, 'sub_category'), sortKey: (r) => _val(r, 'sub_category'))),
         ('type', GridColumn(label: 'نوع', width: 58, ltr: true, text: (r) => _val(r, 'api610_type'), sortKey: (r) => _val(r, 'api610_type'))),
         ('mat', GridColumn(label: 'متریال', width: 62, ltr: true, text: (r) => _val(r, 'material_class'), sortKey: (r) => _val(r, 'material_class'))),

@@ -17,6 +17,23 @@ String cleanCell(String? s) {
   return empties.contains(v) ? gridEmpty : v;
 }
 
+/// برچسب کوتاه تگ/پروژه‌ای که در منبع نیامده (به‌جای متن بلند منبع که در خانه جا نمی‌شود).
+const gridNotStated = '(قید نشده)';
+
+final _notStatedRe = RegExp(r'^\(?\s*(not stated( in (source( document)?|any source))?|نام پروژه در فایل قید نشده( است)?)\s*\)?',
+    caseSensitive: false);
+
+/// خالی، «Not stated…» یا «(نام پروژه در فایل قید نشده است) – …»
+bool isNotStated(String? s) => cleanCell(s) == gridEmpty || _notStatedRe.hasMatch(s!.trim());
+
+/// خانه‌ی «(قید نشده)» کم‌رنگ؛ متن کامل منبع (اگر بود) در راهنمای شناور.
+Widget notStatedCell(BuildContext context, String? raw) {
+  final t = Theme.of(context);
+  final w = Text(gridNotStated, maxLines: 1, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.outline));
+  final v = raw?.trim() ?? '';
+  return v.isEmpty ? w : Tooltip(message: v, child: w);
+}
+
 class GridColumn<T> {
   const GridColumn({
     required this.label,
@@ -31,6 +48,7 @@ class GridColumn<T> {
     this.ltr = false,
     this.clean = true,
     this.fitMax,
+    this.notStated = false,
   });
   final String label;
 
@@ -54,6 +72,9 @@ class GridColumn<T> {
 
   /// اگر مقدار دارد: عرض ستون به اندازه‌ی بلندترین متن (حداکثر همین مقدار) و متن بلندتر در دو خط.
   final double? fitMax;
+
+  /// مقدار خالی/«قید نشده»ی منبع به شکل «(قید نشده)» (تگ و پروژه)
+  final bool notStated;
 }
 
 class DataGrid<T> extends StatefulWidget {
@@ -283,6 +304,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     if (c.cell != null) return c.cell!(context, r);
     final t = Theme.of(context);
     final raw = c.text(r);
+    if (c.notStated && isNotStated(raw)) return notStatedCell(context, raw);
     final s = c.clean ? cleanCell(raw) : (raw.isEmpty ? gridEmpty : raw);
     final empty = s == gridEmpty;
     return Text(
