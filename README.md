@@ -2,6 +2,7 @@
 
 | نسخه | فایل | کد منبع |
 |---|---|---|
+| ۰٫۹٫۷ (۱۴۰۵/۰۸/۰۳) — جدول پمپ‌ها فقط «هد اختلافی (m)» با معادل‌سازی واحد؛ اختلاف فشار در صفحه‌ی مشخصات | [price_bank_v0.9.7_windows.zip](price_bank_v0.9.7_windows.zip) | [commit 08a7601](https://github.com/mehdikhodayari313/nz-probe/tree/08a76017e3e77f1584dc80a4fa0caf4d6b62df4a/price_bank) |
 | ۰٫۹٫۶ (۱۴۰۵/۰۸/۰۳) — «نامشخص» یک‌پارچه در فیلترها، حذف نمودار مقایسه‌ی پروژه‌ها، ستون اختلاف فشار پمپ | [price_bank_v0.9.6_windows.zip](price_bank_v0.9.6_windows.zip) | [commit 52f85da](https://github.com/mehdikhodayari313/nz-probe/tree/52f85da0f425898e377bb68faccf181066b62566/price_bank) |
 | ۰٫۹٫۴ (۱۴۰۵/۰۸/۰۳) — جلسه‌ی ۱: شمارش درست فیلترها، ورود بانک قیمت تجمیعی، حذف و یکی‌سازی اسناد منبع | [price_bank_v0.9.4_windows.zip](price_bank_v0.9.4_windows.zip) | [commit 7fdaaff](https://github.com/mehdikhodayari313/nz-probe/tree/7fdaaff02e5385c4af7add8e7961e9cd150ea0ec/price_bank) |
 | ۰٫۹٫۳ (۱۴۰۵/۰۸/۰۳) — هیچ ستونی از فایل گم نمی‌شود: اختلاف فشار پمپ و هد استنباطی، مشخصه‌های بی‌فیلد، ستون‌های بی‌عنوان و ستون‌های تازه‌ی بانک‌ها | [price_bank_v0.9.3_windows.zip](price_bank_v0.9.3_windows.zip) | [commit 47ca7bd](https://github.com/mehdikhodayari313/nz-probe/tree/47ca7bd17f362d2230d72ae970bd11379737beb5/price_bank) |
