@@ -259,3 +259,38 @@ int importVendorRegister(Db db, Audit audit, XlsxWorkbook wb, {int licensorCol =
   }
   return count;
 }
+
+/// ستون‌های ورودیِ عنوان‌دار که در نگاشت برنامه نیستند (ستون تازه‌ی کاربر در بانک): ستون‌های فرمولی (محاسباتی) کنار
+/// گذاشته می‌شوند؛ بقیه به‌صورت «مشخصات فنی (از منبع)» ثبت می‌شوند تا هیچ داده‌ای گم نشود.
+List<(int, String)> extraInputColumns(HeaderMap h, {Set<int> alsoUsed = const {}}) {
+  final used = {...h.cols.values, ...alsoUsed};
+  final out = <(int, String)>[];
+  for (var c = 1; c <= h.sheet.maxCol && c <= 250; c++) {
+    if (used.contains(c)) continue;
+    final head = h.sheet.text(h.row, c).replaceAll('\n', ' ').trim();
+    if (head.isEmpty) continue;
+    var values = 0, formulas = 0;
+    for (var r = h.dataStart; r <= h.sheet.maxRow && r < h.dataStart + 300; r++) {
+      final cell = h.sheet.cell(r, c);
+      if (cell == null || cell.text.trim().isEmpty) continue;
+      values++;
+      if (cell.formula != null) formulas++;
+    }
+    if (values > 0 && formulas == 0) out.add((c, head));
+  }
+  return out;
+}
+
+/// مقدارهای «x:عنوان» (ستون اضافه) را به فیلد مشخصات رده تبدیل می‌کند؛ برمی‌گرداند: عنوان‌های ثبت‌شده
+Set<String> storeExtraColumns(
+    Map<String, Object?> values, (String, bool) Function(String label) ensureField) {
+  final added = <String>{};
+  for (final k in values.keys.where((k) => k.startsWith('x:')).toList()) {
+    final v = values.remove(k);
+    if (v == null) continue;
+    final label = k.substring(2);
+    values[ensureField(label).$1] = v is double ? (v == v.roundToDouble() ? v.toStringAsFixed(0) : '$v') : '$v';
+    added.add(label);
+  }
+  return added;
+}

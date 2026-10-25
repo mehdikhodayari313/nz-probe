@@ -13,7 +13,7 @@ void main() {
   test('دیتابیس تازه: ساختار و داده‌های پایه', () {
     final pb = PriceBank.memory(loadSeed());
     expect(pb.db.schemaVersion, greaterThanOrEqualTo(1));
-    expect(pb.catalog.fields(pb.pumpCategory.id).length, 59);
+    expect(pb.catalog.fields(pb.pumpCategory.id).length, 60); // ۵۹ فیلد v8 + اختلاف فشار (MTO)
     expect(pb.catalog.options('MAT').map((o) => o.value), contains('D-2'));
     expect(pb.users.all().single.role, 'admin');
     expect(pb.catalog.disciplines().map((d) => d.code).toList(), ['MECH', 'PIPE', 'ELEC', 'INST']);

@@ -138,6 +138,24 @@ class EquipmentProfile {
   /// برچسب MTO به یکی از قواعد این قالب می‌خورد؟
   bool maps(String label) => rules.any((r) => r.matches(label));
 
+  /// مشخصه‌هایی که قاعده‌ای ندارند یا قاعده‌شان هیچ فیلدی پر نکرد (مثل «DIMENSION: B.V» یا «CAPACITY: 200 SM3/HR» در
+  /// قالبی که دبی ندارد): به‌صورت «مشخصات فنی از MTO» ثبت می‌شوند تا هیچ ستونی از منبع گم نشود.
+  List<MapEntry<String, String>> leftovers(Map<String, String> specs) => [
+        for (final e in specs.entries)
+          if (() {
+            for (final r in rules) {
+              if (r.matches(e.key)) {
+                final t = <String, Object?>{};
+                r.apply(e.value, t);
+                t.removeWhere((k, v) => v == null || (v is String && v.trim().isEmpty));
+                return t.isEmpty;
+              }
+            }
+            return true;
+          }())
+            e,
+      ];
+
   /// استخراج فیلدهای ساختاریافته از مشخصات «کلید: مقدار».
   Map<String, Object?> extract(Map<String, String> specs, {String context = '', List<String> scope = const []}) {
     final out = <String, Object?>{};
@@ -888,9 +906,18 @@ const _pumpMat = ['I-1', 'I-2', 'S-1', 'S-3', 'S-4', 'S-5', 'S-6', 'S-8', 'S-9',
 
 /// آیا برچسب مشخصه‌ی MTO در قالب پمپ جا دارد؟ (بقیه در «ملاحظات» می‌مانند)
 bool pumpMaps(String label) => RegExp(
-        r'^type|flow|capacity|(?<!over)head|discharge press|power|motor|material|nace|design code|standard|driver|speed|rpm',
+        r'^type|flow|capacity|(?<!over)head|discharge press|diff\w*\.?\s*press|differential press|power|motor|material|nace|design code|standard|driver|speed|rpm',
         caseSensitive: false)
     .hasMatch(label);
+
+/// مشخصه‌هایی که هیچ فیلد قالب پمپ را پر نکردند (باید به‌صورت «مشخصات فنی از MTO» ثبت شوند، نه فقط در متن شرح)
+List<MapEntry<String, String>> pumpSpecLeftovers(Map<String, String> specs) {
+  final base = extractPumpSpecs(const {}, '').keys.toSet();
+  return [
+    for (final e in specs.entries)
+      if (extractPumpSpecs({e.key: e.value}, '').keys.where((k) => !base.contains(k)).isEmpty) e,
+  ];
+}
 
 Map<String, Object?> extractPumpSpecs(Map<String, String> specs, String name) {
   final o = <String, Object?>{};
@@ -935,6 +962,9 @@ Map<String, Object?> extractPumpSpecs(Map<String, String> specs, String name) {
       o['capacity_m3h'] ??= q;
     } else if (k.contains('head') && !k.contains('overhead') && n.isNotEmpty) {
       o['diff_head_m'] ??= n.first;
+    } else if (RegExp(r'diff\w*\.?\s*press|differential press|d\.?p\.?\b|ΔP').hasMatch(k) && n.isNotEmpty) {
+      // اختلاف فشار (bar)؛ kPa ← bar. هد معادل جدا با فرض SG = 1 (قاعده‌ی بانک v8: ΔP × 10.2)
+      o['diff_pressure_bar'] ??= ('$k $l').contains('kpa') ? n.first / 100 : n.first;
     } else if (k.contains('discharge press') && n.isNotEmpty) {
       o['discharge_pressure_barg'] ??= ('$k $l').contains('kpa') ? n.first / 100 : n.first;
     } else if ((k.contains('power') || k.contains('motor')) && n.isNotEmpty) {

@@ -55,6 +55,16 @@ void ensureGenericTemplates(Db db) {
         [code, disc, pid, fa, en, sort],
       );
     }
+    // پمپ: اختلاف فشار (ستون «DIFF PRESS.» فایل‌های MTO/برآورد)؛ هد معادل جدا و استنباطی ثبت می‌شود
+    final pumpId = db.scalar("SELECT id FROM categories WHERE code = 'PUMP'") as int?;
+    if (pumpId != null) {
+      db.execute(
+        'INSERT OR IGNORE INTO field_defs(category_id, key, label_fa, label_en, group_key, group_fa, storage, data_type, '
+        "unit, help_fa, sort) VALUES (?,'diff_pressure_bar','اختلاف فشار','Diff. Pressure (bar)','key_specs','مشخصات کلیدی',"
+        "'spec','number','bar',?,8)",
+        [pumpId, 'اختلاف فشار پمپ طبق منبع (Differential Pressure). اگر منبع هد ندارد، هد = ΔP × ۱۰٫۲ با فرض SG = ۱ (زرد، استنباطی).'],
+      );
+    }
     for (final code in genericCategoryCodes) {
       final id = db.scalar('SELECT id FROM categories WHERE code = ?', [code]) as int?;
       if (id == null) continue;
@@ -100,6 +110,7 @@ void ensureGenericTemplates(Db db) {
   });
   _reparseExisting(db);
   _reparseMtoPumps(db);
+  _backfillPumpDiffPressure(db);
 }
 
 /// فیلدهای Scope و مرحله‌ی پروژه از بخش تجهیزات دیسالتر برداشته شدند (فقط ورودی تخمین‌اند).
@@ -213,6 +224,38 @@ void _reparseMtoPumps(Db db) {
   });
 }
 
+/// یک بار: اختلاف فشار پمپ‌های MTO قبلی از شرح (و هد استنباطی ΔP × 10.2 اگر هد خالی است)
+void _backfillPumpDiffPressure(Db db) {
+  const flag = 'pump_diff_pressure_v1';
+  if (db.scalar('SELECT value FROM app_meta WHERE key = ?', [flag]) != null) return;
+  final catId = db.scalar("SELECT id FROM categories WHERE code = 'PUMP'") as int?;
+  db.transaction(() {
+    if (catId != null) {
+      for (final r in db.query(
+          "SELECT id, name, remarks FROM items WHERE category_id = ? AND remarks LIKE '%:%' "
+          "AND NOT EXISTS (SELECT 1 FROM item_values v WHERE v.item_id = items.id AND v.field_key = 'diff_pressure_bar')",
+          [catId])) {
+        final id = r['id'] as int;
+        final dp = extractPumpSpecs(parseMtoDescription(r['remarks'] as String? ?? '').specs, '')['diff_pressure_bar'];
+        if (dp is! double) continue;
+        db.execute('INSERT OR IGNORE INTO item_values(item_id, field_key, value_num) VALUES (?,?,?)', [id, 'diff_pressure_bar', dp]);
+        final hasHead = db.scalar("SELECT 1 FROM item_values WHERE item_id = ? AND field_key = 'diff_head_m'", [id]) != null;
+        if (!hasHead) {
+          db.execute('INSERT OR IGNORE INTO item_values(item_id, field_key, value_num) VALUES (?,?,?)',
+              [id, 'diff_head_m', double.parse((dp * 10.2).toStringAsFixed(1))]);
+          db.execute('INSERT OR REPLACE INTO field_meta(item_id, field_key, flag, note) VALUES (?,?,?,?)',
+              [id, 'diff_head_m', 'inferred', 'INFERRED – Differential Pressure $dp bar → head ≈ $dp×10.2 m (SG 1.0 assumed)']);
+        }
+        db.execute(
+          'INSERT INTO audit_log(ts, entity, entity_id, field, new_value, reason) VALUES (?,?,?,?,?,?)',
+          [nowIso(), 'item', '$id', 'diff_pressure_bar', '$dp', 'استخراج اختلاف فشار پمپ از شرح MTO'],
+        );
+      }
+    }
+    db.execute('INSERT OR REPLACE INTO app_meta(key, value) VALUES (?, ?)', [flag, nowIso()]);
+  });
+}
+
 /// اقلامی که پیش از تعریف قالب‌ها وارد شده‌اند: استخراج فیلدهای ساختاریافته از «شرح کامل MTO»
 /// و پاک کردن فیلدهای خام تکراری.
 void _reparseExisting(Db db) {
@@ -263,7 +306,9 @@ void _reparseExisting(Db db) {
           );
         }
         // فیلدهای خام MTO که حالا در قالب رده هستند، تکراری‌اند
-        for (final label in d.specs.keys.where(p.maps)) {
+        // (مشخصه‌ای که قاعده دارد ولی هیچ فیلدی پر نکرد، مثل «DIMENSION: B.V»، می‌ماند)
+        final left = p.leftovers(d.specs).map((e) => e.key).toSet();
+        for (final label in d.specs.keys.where((l) => p.maps(l) && !left.contains(l))) {
           db.execute('DELETE FROM item_values WHERE item_id = ? AND field_key = ?', [id, CatalogRepo.specKey(label)]);
         }
       }

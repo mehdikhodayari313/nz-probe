@@ -167,6 +167,7 @@ class DesalterImporter {
     final sh = h.sheet;
     final cols = h.cols;
     final out = <({int row, Map<String, Object?> values, Map<String, FieldMeta> meta})>[];
+    final extras = extraInputColumns(h);
     for (var r = h.dataStart; r <= sh.maxRow; r++) {
       final rowNo = cols['Row'] == null
           ? ([for (final k in ['Equipment Name', 'Tag No.', 'Unit Price (Reference)']) if (cols[k] != null) sh.text(r, cols[k]!)]
@@ -191,6 +192,10 @@ class DesalterImporter {
         final flag = fill == _yellow ? 'inferred' : (fill == _blue ? 'fx' : null);
         if (flag != null || (note != null && note.isNotEmpty)) meta[e.value] = FieldMeta(flag, note);
       }
+      for (final (c, head) in extras) {
+        final v = sh.cell(r, c)?.value;
+        if (v != null) values['x:$head'] = v is double ? v : asText(v).trim();
+      }
       values.removeWhere((k, v) => v == null || (v is String && v.isEmpty));
       out.add((row: rowNo.toInt(), values: values, meta: meta));
     }
@@ -214,6 +219,7 @@ class DesalterImporter {
     final projectsBefore = docs.projects().length;
     final docsBefore = docs.documents().length;
     final rowToItem = <int, int>{};
+    final extraAdded = <String>{};
     final src = fileName ?? 'بانک دیسالتر';
 
     db.transaction(() {
@@ -254,6 +260,7 @@ class DesalterImporter {
           documentId = docs.ensureDocument(projectId: projectId, title: title, docType: 'v8');
         }
 
+        extraAdded.addAll(storeExtraColumns(values, (l) => catalog.ensureSpecField(cat.id, l)));
         final id = items.create(
           categoryId: cat.id,
           values: values,
@@ -277,6 +284,10 @@ class DesalterImporter {
       _archiveMtoDuplicates(cat.id, report, batch);
     });
 
+    if (extraAdded.isNotEmpty) {
+      report.warnings.add('ستون‌های اضافه‌ی فایل (${extraAdded.map((e) => '«$e»').join('، ')}) در قالب برنامه نبودند؛ '
+          'به‌صورت «مشخصات فنی (از منبع)» ثبت شدند.');
+    }
     report.projects = docs.projects().length - projectsBefore;
     report.documents = docs.documents().length - docsBefore;
     return report;

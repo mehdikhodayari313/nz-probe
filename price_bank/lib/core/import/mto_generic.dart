@@ -421,6 +421,7 @@ class MtoGeneric {
       }
     }
     _resolve(sh, l);
+    _unheaded(sh, l);
     return l;
   }
 
@@ -438,7 +439,7 @@ class MtoGeneric {
     if (_has(h, r'month|ماه|duration|مدت|\bdays?\b|روز') && !isPrice && !money) return MtoColRole.spec;
     if (isPrice && _has(h, _pRate) && !_has(h, _pTotal) && !inBlock && !_has(h, _pQuote)) return MtoColRole.rate;
     if (isPrice) {
-      if (_has(h, _pSkipPrice)) return MtoColRole.ignore;
+      if (_has(h, _pSkipPrice)) return MtoColRole.spec; // «Ratio»، «%»، «No. of quotations»: مشخصه، نه قیمت
       if (_has(h, _pTotal) && !_has(h, r'unit|واحد')) return MtoColRole.total;
       if (inBlock || _has(h, _pQuote)) return MtoColRole.quote;
       if (_has(h, _pOld)) return MtoColRole.old;
@@ -562,7 +563,8 @@ class MtoGeneric {
     ]) {
       final list = l.all(r).toList();
       for (final x in list.skip(1)) {
-        x.role = r == MtoColRole.remarks ? MtoColRole.spec : MtoColRole.ignore;
+        // ستون دوم وزن/تعداد/ملاحظات هم داده است (مثل «weight / m» کنار «Total Weight») ← مشخصه
+        x.role = (r == MtoColRole.remarks || r == MtoColRole.qty || r == MtoColRole.weight) ? MtoColRole.spec : MtoColRole.ignore;
       }
     }
     // اگر شرح نیست ولی زیرستون‌های «DESCRIPTION» هست، اولی شرح است
@@ -585,7 +587,9 @@ class MtoGeneric {
     if (l.first(MtoColRole.desc) == null && !l.columns.any((c) => c.namePart)) {
       l.notes.add('ستون شرح پیدا نشد؛ از فهرست ستون‌ها انتخاب کنید.');
     }
-    if (!l.columns.any((c) => c.role.isPrice)) l.notes.add('ستون قیمت پیدا نشد؛ از فهرست ستون‌ها انتخاب کنید.');
+    if (!l.columns.any((c) => c.role.isPrice || c.role == MtoColRole.total || c.role == MtoColRole.rate)) {
+      l.notes.add('ستون قیمت پیدا نشد؛ از فهرست ستون‌ها انتخاب کنید.');
+    }
     if (l.summary) l.notes.add('جدول جمع‌بندی به نظر می‌رسد (بدون تگ و تعداد)؛ به طور پیش‌فرض وارد نمی‌شود.');
   }
 
@@ -644,7 +648,10 @@ class MtoGeneric {
     final unit0 = it.goingEur ?? it.goingUsd ?? it.goingIrr;
     final unitCur = it.goingEur != null ? 'EUR' : (it.goingUsd != null ? 'USD' : (it.goingIrr != null ? 'IRR' : null));
     final qn = (it.quantity ?? 1) > 0 ? (it.quantity ?? 1) : 1.0;
-    if (unit0 != null) {
+    if (unit0 != null && unit0 <= 1 && qn >= 100 && rowTot != null) {
+      // «office furnish | 300000 | total | 1»: «تعداد» در واقع مبلغ است ← مبلغ یکجا
+      asLot(rowTot, totCur ?? unitCur, 'جمع ردیف');
+    } else if (unit0 != null) {
       final sameCur = totCur == null || unitCur == null || totCur == unitCur;
       if (rowTot != null && sameCur && factor == 1 && !qtyKg) {
         final exp = unit0 * (qtyLen ? (qtyRaw ?? 1) : qn);
@@ -717,6 +724,76 @@ class MtoGeneric {
       final pc = ovF * 100;
       lines.add('Overhead: ${pc.toStringAsFixed((pc - pc.round()).abs() < 0.05 ? 0 : 1)}%');
     }
+  }
+
+  static String _colLetter(int c) {
+    var s = '';
+    for (var n = c; n > 0; n = (n - 1) ~/ 26) {
+      s = String.fromCharCode(65 + (n - 1) % 26) + s;
+    }
+    return s;
+  }
+
+  /// ستون‌های داده‌دارِ بی‌عنوان داخل جدول هم خوانده می‌شوند (هیچ ستونی بی‌صدا دور ریخته نمی‌شود):
+  /// کنار «تعداد» با متن کوتاه ← واحد؛ عددی که تعداد × آن = جمع ردیف ← قیمت واحد؛ بقیه ← مشخصه «ستون X».
+  static void _unheaded(XlsxSheet sh, MtoLayout l) {
+    if (l.columns.isEmpty) return;
+    final used = {for (final c in l.columns) ...c.cols};
+    final minC = l.columns.map((c) => c.col).reduce((a, b) => a < b ? a : b);
+    final maxC = used.reduce((a, b) => a > b ? a : b);
+    final qty = l.first(MtoColRole.qty);
+    final totals = l.all(MtoColRole.total).toList();
+    final hasUnit = l.columns.any((c) => c.role.isPrice || c.role == MtoColRole.rate);
+    final added = <MtoColumn>[];
+    for (var c = minC; c <= maxC && c <= sh.maxCol; c++) {
+      if (used.contains(c)) continue;
+      // ادامه‌ی ادغام ستون دیگر در سطر عنوان نیست
+      final hm = sh.mergeAt(l.headerRow, c);
+      if (hm != null && hm.$2 < c && used.contains(hm.$2)) continue;
+      var nums = 0, texts = 0, textLen = 0;
+      for (var r = l.dataStart; r <= sh.maxRow && r < l.dataStart + 60; r++) {
+        if (sh.isMergedTail(r, c)) continue;
+        final cell = sh.cell(r, c);
+        if (cell == null) continue;
+        final t = cell.text.trim();
+        if (t.isEmpty || _isXlError(t)) continue;
+        if (cell.value is double) {
+          if ((cell.number ?? 0) != 0) nums++;
+        } else {
+          texts++;
+          textLen += t.length;
+        }
+      }
+      if (nums + texts < 2) continue;
+      MtoColRole role = MtoColRole.spec;
+      var label = 'ستون ${_colLetter(c)}';
+      String? cur;
+      if (texts >= nums && qty != null && c == qty.cols.last + 1 && textLen / texts <= 12 && l.first(MtoColRole.unit) == null) {
+        role = MtoColRole.unit;
+        label = 'واحد';
+      } else if (nums > texts && qty != null && totals.isNotEmpty && !hasUnit) {
+        var ok = 0, n = 0;
+        for (var r = l.dataStart; r <= sh.maxRow && r < l.dataStart + 60; r++) {
+          final q = sh.cell(r, qty.col)?.number, v = sh.cell(r, c)?.number;
+          final t = [for (final tc in totals) sh.cell(r, tc.col)?.number].whereType<double>().where((x) => x > 0).firstOrNull;
+          if (q == null || v == null || t == null || q <= 0 || v <= 0) continue;
+          n++;
+          if ((q * v - t).abs() <= 0.02 * t) ok++;
+        }
+        if (n >= 2 && ok >= 0.6 * n) {
+          role = MtoColRole.going;
+          label = 'قیمت واحد (ستون بی‌عنوان ${_colLetter(c)})';
+          cur = totals.map((t) => t.currency).whereType<String>().firstOrNull;
+        }
+      }
+      final col = MtoColumn(c, label, label, role)..currency = cur;
+      added.add(col);
+      l.notes.add('ستون ${_colLetter(c)} عنوان نداشت؛ به‌عنوان «$label» خوانده شد.');
+    }
+    if (added.isEmpty) return;
+    l.columns
+      ..addAll(added)
+      ..sort((a, b) => a.col.compareTo(b.col));
   }
 
   /// پکیج مستقل در شیت ظروف/مخازن («AIR DRYER PACKAGE»، «WALNUT FILTER») رده‌ی خودش را دارد

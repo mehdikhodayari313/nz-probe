@@ -136,6 +136,7 @@ class CompressorImporter {
     final sh = h.sheet;
     final cols = h.cols;
     final out = <({int row, Map<String, Object?> values, Map<String, FieldMeta> meta})>[];
+    final extras = extraInputColumns(h);
     for (var r = h.dataStart; r <= sh.maxRow; r++) {
       // بدون ستون Row: شماره‌ی ردیف از جای سطر؛ سطر بی‌نام و بی‌قیمت قلم نیست
       final rowNo = cols['Row'] == null
@@ -160,6 +161,10 @@ class CompressorImporter {
         final flag = fill == _yellow ? 'inferred' : (fill == _blue ? 'fx' : null);
         if (flag != null || (note != null && note.isNotEmpty)) meta[e.value] = FieldMeta(flag, note);
       }
+      for (final (c, head) in extras) {
+        final v = sh.cell(r, c)?.value;
+        if (v != null) values['x:$head'] = v is double ? v : asText(v).trim();
+      }
       values.removeWhere((k, v) => v == null || (v is String && v.isEmpty));
       out.add((row: rowNo.toInt(), values: values, meta: meta));
     }
@@ -183,6 +188,7 @@ class CompressorImporter {
     final projectsBefore = docs.projects().length;
     final docsBefore = docs.documents().length;
     final rowToItem = <int, int>{};
+    final extraAdded = <String>{};
     final src = fileName ?? 'بانک کمپرسور هوا';
     final iap = <({String ref, Map<String, Object?> values, int? projectId, int? documentId, int itemId})>[];
 
@@ -225,6 +231,7 @@ class CompressorImporter {
           values['remarks'] = '${values['remarks'] ?? ''}\nدر بانک خشک‌کن هوا هم دیده می‌شود: قلم $recordId-DRY (بدون قیمت).'.trim();
         }
 
+        extraAdded.addAll(storeExtraColumns(values, (l) => catalog.ensureSpecField(cat.id, l)));
         final id = items.create(
           categoryId: cat.id,
           values: values,
@@ -254,6 +261,10 @@ class CompressorImporter {
       }
     });
 
+    if (extraAdded.isNotEmpty) {
+      report.warnings.add('ستون‌های اضافه‌ی فایل (${extraAdded.map((e) => '«$e»').join('، ')}) در قالب برنامه نبودند؛ '
+          'به‌صورت «مشخصات فنی (از منبع)» ثبت شدند.');
+    }
     report.projects = docs.projects().length - projectsBefore;
     report.documents = docs.documents().length - docsBefore;
     return report;

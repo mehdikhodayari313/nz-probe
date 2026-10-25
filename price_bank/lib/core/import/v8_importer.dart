@@ -106,6 +106,8 @@ class V8Importer {
           '${h.fuzzy.entries.map((e) => '«${e.value}» ← ${e.key}').join('، ')}');
     }
     final rowCol = h['Row'] ?? 1;
+    final extras = extraInputColumns(h, alsoUsed: {...fieldCols.values, rowCol});
+    final extraAdded = <String>{};
     final batch = Audit.newBatch();
     final projectsBefore = docs.projects().length;
     final docsBefore = docs.documents().length;
@@ -142,6 +144,11 @@ class V8Importer {
           }
         }
 
+        for (final (c, head) in extras) {
+          final v = sh.cell(r, c)?.value;
+          if (v != null && asText(v).trim().isNotEmpty) values['x:$head'] = v is double ? v : asText(v).trim();
+        }
+        extraAdded.addAll(storeExtraColumns(values, (l) => catalog.ensureSpecField(cat.id, l)));
         final projectName = (values['project'] as String?)?.trim();
         final projectId = (projectName == null || projectName.isEmpty) ? null : docs.ensureProject(projectName);
 
@@ -173,6 +180,10 @@ class V8Importer {
       _importQuotes(wb, report, rowToItem);
     });
 
+    if (extraAdded.isNotEmpty) {
+      report.warnings.add('ستون‌های اضافه‌ی فایل (${extraAdded.map((e) => '«$e»').join('، ')}) در قالب برنامه نبودند؛ '
+          'به‌صورت «مشخصات فنی (از منبع)» ثبت شدند.');
+    }
     report.projects = docs.projects().length - projectsBefore;
     report.documents = docs.documents().length - docsBefore;
     return report;

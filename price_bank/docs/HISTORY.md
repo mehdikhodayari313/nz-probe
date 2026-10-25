@@ -154,3 +154,15 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   multi-PPI category settings in the estimator and methods pages; Persian only for now; Iranian industry indices to be extracted
   by Claude; expert classification of electrical/instrument/piping.
 
+## v0.9.3 (1405/08/03) — no source column is lost
+- User: ROTARY «DIFF PRESS.» was not stored. Cause: pump specs were stored only when a template field existed; everything
+  else stayed in the remarks text. Now: pump field `diff_pressure_bar` (ensured on startup, sort next to head); diff head
+  inferred ΔP × 10.2 (SG 1, field_meta inferred, same rule as the v8 bank) when the source has no head; one-time backfill
+  for earlier MTO pumps (`pump_diff_pressure_v1`).
+- Same class of bugs fixed: unmapped pump specs → `mto_*` spec fields; non-pump specs whose rule matched but extracted
+  nothing (`EquipmentProfile.leftovers`) are kept as spec fields (also on startup re-parse); unheaded data columns
+  (`_unheaded`: unit beside qty, unit price when qty × col = row total, else «ستون X»); second weight/qty column and
+  ratio/%/avg price columns → spec instead of ignored; bank importers store extra non-formula input columns as spec
+  fields and report them (`extraInputColumns`, `storeExtraColumns`). Tests extended (pump ΔP/head/meta, unheaded
+  columns, extra bank column «Site Altitude (m)» in messy fixtures).
+

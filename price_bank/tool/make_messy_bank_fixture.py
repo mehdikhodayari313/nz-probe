@@ -15,6 +15,11 @@ drop = {'cmp': 'Compressors per Price Unit', 'des': 'No. of Transformers', 'pump
 for c in ms[4]:
     if c.value == drop:
         ms.delete_cols(c.column); break
+# ستون تازه‌ی کاربر (در قالب برنامه نیست) — باید به‌صورت مشخصه ثبت شود
+nc = ms.max_column + 1
+ms.cell(4, nc, 'Site Altitude (m)')
+for r in range(5, ms.max_row + 1):
+    if ms.cell(r, 1).value is not None: ms.cell(r, nc, 700 + r)
 ms.insert_rows(1, 2)  # عنوان دو ردیف پایین‌تر
 ms.title = 'Master DB'
 vq = wb['Vendor_Quotes']; vq.insert_rows(1, 1)

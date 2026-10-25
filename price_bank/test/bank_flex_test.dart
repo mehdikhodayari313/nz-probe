@@ -46,6 +46,10 @@ void main() {
     expect(r1.corrections, r0.corrections);
     expect(_prices(pb1, 'COMPRESSOR'), _prices(pb0, 'COMPRESSOR'));
     expect(r1.warnings.join('\n'), contains('Compressors per Price Unit'));
+    // ستون تازه‌ی فایل (در قالب برنامه نیست) گم نمی‌شود
+    expect(r1.warnings.join('\n'), contains('Site Altitude (m)'));
+    final alt = pb1.db.scalar("SELECT COUNT(*) FROM item_values WHERE field_key = 'mto_site_altitude_m'") as int;
+    expect(alt, r1.items);
     expect(r1.warnings.join('\n'), contains('Cost Year (Shamsi)'));
     pb0.close();
     pb1.close();
@@ -65,6 +69,10 @@ void main() {
     expect(r1.corrections, r0.corrections);
     expect(_prices(pb1, 'DESALTER'), _prices(pb0, 'DESALTER'));
     expect(r1.warnings.join('\n'), contains('No. of Transformers'));
+    // ستون تازه‌ی فایل (در قالب برنامه نیست) گم نمی‌شود
+    expect(r1.warnings.join('\n'), contains('Site Altitude (m)'));
+    final alt = pb1.db.scalar("SELECT COUNT(*) FROM item_values WHERE field_key = 'mto_site_altitude_m'") as int;
+    expect(alt, r1.items);
     pb0.close();
     pb1.close();
   }, skip: !hasDes);

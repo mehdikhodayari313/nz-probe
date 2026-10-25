@@ -913,6 +913,7 @@ class MtoImporter {
             }
           }
           seenTags.add('${cat.id}|${it.tag}');
+          final meta = <String, FieldMeta>{};
           final values = <String, Object?>{
             'tag': it.tag,
             'name': it.name,
@@ -927,6 +928,23 @@ class MtoImporter {
             // دبی، هد، فشار رانش، کلاس متریال، استاندارد، … در فیلدهای قالب پمپ
             for (final e in {...extractFreeSpecs(it.description, 'PUMP'), ...extractPumpSpecs(it.specs, it.name)}.entries) {
               values.putIfAbsent(e.key, () => e.value);
+            }
+            // هد از اختلاف فشار وقتی منبع هد ندارد (قاعده‌ی بانک v8: ΔP × 10.2، SG = 1، مقدار استنباطی)
+            final dp = values['diff_pressure_bar'];
+            if (values['diff_head_m'] == null && dp is double && dp > 0) {
+              values['diff_head_m'] = double.parse((dp * 10.2).toStringAsFixed(1));
+              meta['diff_head_m'] = FieldMeta('inferred',
+                  'INFERRED – ${s.name} ردیف ${it.row}: Differential Pressure $dp bar → head ≈ $dp×10.2 m (SG 1.0 assumed)');
+            }
+            // مشخصه‌هایی که فیلد قالب پمپ ندارند هم ثبت می‌شوند (نه فقط در متن شرح)
+            for (final e in pumpSpecLeftovers(it.specs)) {
+              if (RegExp(r'^(section|group|price basis|overhead|unit price in source|quantity in source)\b', caseSensitive: false)
+                  .hasMatch(e.key)) {
+                continue;
+              }
+              final key = catalog.ensureSpecField(cat.id, e.key);
+              if (key.$2) rep.specFields++;
+              values.putIfAbsent(key.$1, () => e.value);
             }
           } else {
             values['mto_description'] = it.description;
@@ -947,8 +965,7 @@ class MtoImporter {
                 rep.weights++;
               }
             }
-            for (final e in it.specs.entries) {
-              if (profile != null && profile.maps(e.key)) continue;
+            for (final e in (profile == null ? it.specs.entries.toList() : profile.leftovers(it.specs))) {
               final key = catalog.ensureSpecField(cat.id, e.key);
               if (key.$2) rep.specFields++;
               values[key.$1] = e.value;
@@ -957,6 +974,7 @@ class MtoImporter {
           final id = items.create(
             categoryId: cat.id,
             values: values,
+            meta: meta,
             projectId: pid,
             reason: 'ورود MTO ${a.docRef ?? a.fileName} (${s.name} ردیف ${it.row})',
             batch: batch,

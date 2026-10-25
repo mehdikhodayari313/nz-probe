@@ -106,7 +106,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   if it differs, `gh run rerun <run-id>` of the final commit before taking the zip.
 - Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx] [compressor bank xlsx]` (CI passes
   all three fixtures; expects 146 pumps, 9 desalters, 10 compressors / 3 quotes / 4 peers).
-- Current released version: **0.9.2** (1405/08/02, flexible MTO/estimate and bank readers; zip on `price-bank-releases`).
+- Current released version: **0.9.3** (1405/08/03, no source column lost: pump ΔP, leftover specs, unheaded/extra columns; zip on `price-bank-releases`).
 - Releases/tags cannot be created from Claude sessions (403). Published builds live on branch
   **`price-bank-releases`** (`price_bank_vX.Y_windows.zip` + README table) — add each new version there.
 - Commit trailer (always):
@@ -213,6 +213,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   installation/civil/mobilization/machinery/salary (not equipment). Reference test: `test/mto_estimate_test.dart`
   (anonymized estimate, formula + values-only copies). New odd file → make an anonymized fixture with
   `tool/make_estimate_fixture.py` and add assertions there.
+- **No column may be dropped** (user 1405/08/03, ROTARY «DIFF PRESS.» was lost): every spec that has no template field,
+  or whose rule extracted nothing, is stored as an `mto_*` spec field; unheaded data columns, duplicate weight/qty columns
+  and extra bank input columns are stored too. Pump ΔP → `diff_pressure_bar`; head inferred ΔP × 10.2 (SG 1) as in the v8 bank.
 - Banks: always map columns through `bank_headers.dart` (`findSheetHeaders`, `BankTable`), never fixed header rows/columns.
   Messy-bank test: `test/bank_flex_test.dart`.
 

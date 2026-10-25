@@ -58,7 +58,8 @@ void main() {
         // قلم بیرون از ستون شرح
         expect(named('Existing Flare move').goingEur, closeTo(1000000 * k, 1));
         // تجهیز کارگاه: ستون قیمت بی‌عنوان، «total | 1» ← مبلغ یکجا
-        expect(named('ofiice building (Contractor offices)').goingEur, closeTo(250 * k, 0.5));
+        expect(named('ofiice building (Contractor offices)').goingEur, 250); // ستون قیمت بی‌عنوان E (تعداد × E = جمع)
+        expect(named('ofiice building (Contractor offices)').description, contains('Unit: m2')); // ستون واحد بی‌عنوان D
         expect(named('office furnish').quantity, 1);
         expect(named('office furnish').goingEur, closeTo(300000 * k, 1));
         // حقوق: «Total month» مدت است نه جمع؛ جمع ردیف (یورو) مبلغ است
@@ -103,7 +104,13 @@ void main() {
         expect([v('FL-160')['stack_diameter_in'], v('FL-160')['stack_height_m']], [16, 10]); // «16" & 8"»، «10000 mm»
         expect([v('PK-176')['injection_rate_lph'], v('PK-176')['discharge_pressure_barg']], [25, 42]);
         final p = v('P-110 A/B');
-        expect([p['capacity_m3h'], p['material_class'], p['diff_head_m']], [20.5, 'I-1', null]); // «Overhead» هد نیست
+        // «DIFF PRESS.: 11.6» ← اختلاف فشار؛ هد = ΔP × 10.2 (SG = 1، استنباطی مثل بانک v8)؛ «Overhead 60%» هد نیست
+        expect([p['capacity_m3h'], p['material_class'], p['diff_pressure_bar'], p['diff_head_m']], [20.5, 'I-1', 11.6, 118.3]);
+        final pm = pb.items.get(pb.db.scalar('SELECT id FROM items WHERE tag = ?', ['P-110 A/B']) as int)!.meta['diff_head_m']!;
+        expect([pm.flag, pm.note], ['inferred', contains('SG 1.0')]);
+        // مشخصه‌ی بی‌فیلد قالب هم ثبت می‌شود، نه فقط در متن شرح
+        expect(p['mto_fluid_content'], 'WATER');
+        expect(v('PK-140 A/B')['mto_dimension'], 'B.V');
         expect(v('E-100')['scope'], isNull); // عدد ستون REMARKS دامنه‌ی تأمین نیست
         expect(v('V-120')['mto_section'], isNot(contains('#NAME?')));
         final svc = pb.catalog.categoryByCode('SERVICES')!;
