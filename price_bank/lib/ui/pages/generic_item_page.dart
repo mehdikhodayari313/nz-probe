@@ -150,31 +150,32 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
             'price' => Icons.payments_outlined,
             _ => Icons.fact_check_outlined,
           },
-          child: LayoutBuilder(builder: (context, cons) {
-            final wide = g.value.first.groupKey == 'description';
-            final cols = wide ? 1 : (cons.maxWidth > 1100 ? 3 : (cons.maxWidth > 700 ? 2 : 1));
-            final w = (cons.maxWidth - (cols - 1) * 16) / cols;
-            return Wrap(spacing: 16, runSpacing: 14, children: [
-              for (final f in g.value)
-                SizedBox(
-                  width: w,
-                  child: FieldTile(
-                    field: f,
-                    categoryId: item.categoryId,
-                    value: _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
-                    meta: item.meta[f.key],
-                    editing: _editing && f.editable,
-                    changed: _draft.containsKey(f.key),
-                    onChanged: (v) => setState(() => _draft[f.key] = v),
-                  ),
-                ),
-            ]);
-          }),
+          child: FieldGrid(
+            fields: arrangeCompanions(g.value, editing: _editing),
+            editing: _editing,
+            extraOf: (f) => _extra(f, item),
+            fullWidth: g.value.first.groupKey == 'description',
+            valueOf: (f) => _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
+            badges: (f) => (item.meta[f.key]?.flag == null ? 0 : 1) + (_draft.containsKey(f.key) ? 1 : 0),
+            tile: (f) => FieldTile(
+              field: f,
+              categoryId: item.categoryId,
+              value: _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
+              meta: item.meta[f.key],
+              editing: _editing && f.editable,
+              changed: _draft.containsKey(f.key),
+              onChanged: (v) => setState(() => _draft[f.key] = v),
+              extra: _extra(f, item),
+            ),
+          ),
         ),
         const SizedBox(height: 14),
       ],
     ]);
   }
+
+  String? _extra(FieldDef f, ItemRecord item) =>
+      _editing ? null : companionNote(f, (k) => _draft.containsKey(k) ? _draft[k] : item.valueOf(k));
 
   Future<void> _save(BuildContext context, ItemRecord item, List<FieldDef> fields) async {
     if (_draft.isEmpty) {

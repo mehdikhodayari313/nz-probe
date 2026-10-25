@@ -311,30 +311,31 @@ class _SpecTab extends StatelessWidget {
         SectionCard(
           title: g.key,
           icon: _groupIcon(g.value.first.groupKey),
-          child: LayoutBuilder(builder: (context, cons) {
-            final cols = cons.maxWidth > 1100 ? 3 : (cons.maxWidth > 700 ? 2 : 1);
-            final w = (cons.maxWidth - (cols - 1) * 16) / cols;
-            return Wrap(spacing: 16, runSpacing: 14, children: [
-              for (final f in g.value)
-                SizedBox(
-                  width: w,
-                  child: FieldTile(
-                    field: f,
-                    categoryId: AppScope.of(context).pb.pumpCategory.id,
-                    value: draft.containsKey(f.key) ? draft[f.key] : _value(f),
-                    meta: item?.meta[f.key],
-                    editing: editing && f.editable,
-                    changed: draft.containsKey(f.key),
-                    onChanged: (v) => onChanged(f.key, v),
-                  ),
-                ),
-            ]);
-          }),
+          child: FieldGrid(
+            fields: arrangeCompanions(g.value, editing: editing),
+            editing: editing,
+            extraOf: _extra,
+            valueOf: (f) => draft.containsKey(f.key) ? draft[f.key] : _value(f),
+            badges: (f) => (item?.meta[f.key]?.flag == null ? 0 : 1) + (draft.containsKey(f.key) ? 1 : 0),
+            tile: (f) => FieldTile(
+              field: f,
+              categoryId: AppScope.of(context).pb.pumpCategory.id,
+              value: draft.containsKey(f.key) ? draft[f.key] : _value(f),
+              meta: item?.meta[f.key],
+              editing: editing && f.editable,
+              changed: draft.containsKey(f.key),
+              onChanged: (v) => onChanged(f.key, v),
+              extra: _extra(f),
+            ),
+          ),
         ),
         const SizedBox(height: 14),
       ],
     ]);
   }
+
+  String? _extra(FieldDef f) =>
+      editing ? null : companionNote(f, (k) => draft.containsKey(k) ? draft[k] : item?.valueOf(k));
 
   Object? _value(FieldDef f) {
     if (f.storage != FieldStorage.calc) return item?.valueOf(f.key);

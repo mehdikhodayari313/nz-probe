@@ -314,14 +314,14 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.strong)),
         ),
-        GridColumn(label: 'نام / سرویس', width: 200, align: TextAlign.start, ltr: true, text: (r) => r.item.name, sortKey: (r) => r.item.name),
+        GridColumn(label: 'نام / سرویس', width: 200, fitMax: 330, align: TextAlign.start, ltr: true, text: (r) => r.item.name, sortKey: (r) => r.item.name),
         GridColumn(label: 'پروژه', width: 110, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
         for (final f in keySpecs)
           GridColumn(
             label: '${f.labelFa}${f.unit == null ? '' : '\n${f.unit}'}',
-            width: f.type == 'number' ? 92 : 120,
-            ltr: f.type != 'number',
-            numeric: f.type == 'number',
+            width: f.type == FieldType.number ? 92 : 120,
+            ltr: f.type != FieldType.number,
+            numeric: f.type == FieldType.number,
             tooltip: f.labelEn,
             text: (r) {
               final v = r.item.values[f.key];
@@ -330,7 +330,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
             },
             sortKey: (r) {
               final v = r.item.values[f.key];
-              if (f.type == 'number') return v is num ? v.toDouble() : double.negativeInfinity;
+              if (f.type == FieldType.number) return v is num ? v.toDouble() : double.negativeInfinity;
               return v?.toString() ?? '';
             },
           ),

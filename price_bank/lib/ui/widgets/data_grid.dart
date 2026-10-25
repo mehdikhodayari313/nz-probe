@@ -30,6 +30,7 @@ class GridColumn<T> {
     this.grow = true,
     this.ltr = false,
     this.clean = true,
+    this.fitMax,
   });
   final String label;
 
@@ -50,6 +51,9 @@ class GridColumn<T> {
 
   /// «Not stated» و مشابه آن به «—» تبدیل شود (در تاریخچه خاموش است تا متن اصلی دیده شود).
   final bool clean;
+
+  /// اگر مقدار دارد: عرض ستون به اندازه‌ی بلندترین متن (حداکثر همین مقدار) و متن بلندتر در دو خط.
+  final double? fitMax;
 }
 
 class DataGrid<T> extends StatefulWidget {
@@ -103,21 +107,50 @@ class _DataGridState<T> extends State<DataGrid<T>> {
   }
 
   /// عرض نهایی ستون‌ها: اگر جا هست، اضافه به تناسب بین ستون‌های قابل رشد تقسیم می‌شود.
-  List<double> _widths(double available) {
-    final base = [for (final c in widget.columns) c.width];
+  List<double> _widths(BuildContext context, double available) {
+    final base = [for (final c in widget.columns) c.fitMax == null ? c.width : _fitWidth(context, c)];
     final total = base.fold<double>(0, (s, w) => s + w);
     if (total >= available) return base;
-    final growable = widget.columns.where((c) => c.grow).fold<double>(0, (s, c) => s + c.width);
+    var growable = 0.0;
+    for (var i = 0; i < base.length; i++) {
+      if (widget.columns[i].grow) growable += base[i];
+    }
     if (growable == 0) return base;
     final extra = available - total;
-    return [for (final c in widget.columns) c.grow ? c.width + extra * c.width / growable : c.width];
+    return [
+      for (var i = 0; i < base.length; i++) widget.columns[i].grow ? base[i] + extra * base[i] / growable : base[i]
+    ];
+  }
+
+  final _fitCache = <String, (List<T>, double)>{};
+
+  /// عرض لازم برای بلندترین متن ستون (اندازه‌گیری با همان سبک خانه‌ها).
+  double _fitWidth(BuildContext context, GridColumn<T> c) {
+    final hit = _fitCache[c.label];
+    if (hit != null && identical(hit.$1, widget.rows)) return hit.$2;
+    final style = Theme.of(context).textTheme.bodySmall;
+    final scale = MediaQuery.textScalerOf(context);
+    var widest = 0.0;
+    for (final r in widget.rows) {
+      final tp = TextPainter(
+        text: TextSpan(text: c.text(r), style: style),
+        textDirection: TextDirection.rtl,
+        textScaler: scale,
+        maxLines: 1,
+      )..layout();
+      if (tp.width > widest) widest = tp.width;
+      tp.dispose();
+    }
+    final w = (widest + 20).clamp(c.width, c.fitMax!).toDouble();
+    _fitCache[c.label] = (widget.rows, w);
+    return w;
   }
 
   @override
   Widget build(BuildContext context) {
     final rows = _sorted;
     return LayoutBuilder(builder: (context, cons) {
-      final widths = _widths(cons.maxWidth - 1);
+      final widths = _widths(context, cons.maxWidth - 1);
       final total = widths.fold<double>(0, (s, w) => s + w);
       final scrollH = total > cons.maxWidth;
       return Scrollbar(
@@ -254,7 +287,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     final empty = s == gridEmpty;
     return Text(
       s,
-      maxLines: 1,
+      maxLines: c.fitMax == null ? 1 : 2,
       overflow: TextOverflow.ellipsis,
       textAlign: c.align,
       textDirection: c.ltr && !empty ? TextDirection.ltr : null,

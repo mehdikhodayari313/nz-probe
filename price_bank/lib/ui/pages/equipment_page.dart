@@ -309,6 +309,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
           GridColumn(
             label: 'نام / سرویس',
             width: 190,
+            fitMax: 330,
             align: TextAlign.start,
             text: (r) => r.item.name,
             sortKey: (r) => r.item.name,
