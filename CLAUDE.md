@@ -97,7 +97,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
   then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
   `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
-- Current released version: **0.9.4** (1405/08/03, session 1: filter counts, consolidated price bank import, document delete/merge). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Current released version: **0.9.5** (1405/08/03, session 1 + feedback: «نامشخص» filter option, project comparison removed). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
 - Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)

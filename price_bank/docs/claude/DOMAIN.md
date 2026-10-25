@@ -41,4 +41,5 @@
   docs not counted; one document used by several projects counted once.
 - Piping bank (Piping_Price_Bank, 2656 items, prices in thousand rials, base year per family) is imported in session 4 with
   the piping classification (#17).
+- Filters (user 1405/08/03): empty and «Not stated» are the same option «نامشخص» (manual entries may be incomplete).
 

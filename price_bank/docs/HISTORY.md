@@ -185,3 +185,9 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   (no auxiliary docs, one doc shared by several projects counted once) on documents page and dashboard.
   User decision (option A): counts are exact without duplicates; each document listed under its project.
 
+## v0.9.5 (1405/08/03) — user feedback on session 1
+- Filters: empty values and source «Not stated» are one option «نامشخص» (`isUnknownValue`, `kEmptyOptionLabel`); user:
+  some items are entered manually and incompletely, so «unknown» covers both. Catalog options that mean unknown are hidden.
+- Dashboard: «مقایسه‌ی پروژه‌ها» chart removed (part of #21; the per-project totals table and category price column stay
+  until session 6).
+

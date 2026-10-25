@@ -95,7 +95,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
     }
     for (final e in _filters.entries) {
       if (e.value == null || e.key == except) continue;
-      if (e.value == kEmptyOption ? _val(r, e.key).isNotEmpty : _val(r, e.key) != e.value) return false;
+      if (e.value == kEmptyOption ? !isUnknownValue(_val(r, e.key)) : _val(r, e.key) != e.value) return false;
     }
     for (final e in _ranges.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
@@ -500,7 +500,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
     final catalog = listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(listKey);
     final labels = <String, String?>{for (final o in catalog) o.value: o.labelFa};
     final values = <String>[
-      for (final o in catalog) o.value,
+      for (final o in catalog)
+        if (!isUnknownValue(o.value)) o.value,
       for (final v in (counts.keys.toList()..sort())) if (!labels.containsKey(v)) v,
     ];
     if (key == 'cost_year') values.sort();
@@ -509,7 +510,6 @@ class _EquipmentPageState extends State<EquipmentPage> {
     final current = _filters[key];
     String show(String v) {
       if (v == kEmptyOption) return kEmptyOptionLabel;
-      if (v == 'Not stated' || v == '(Not stated)') return 'نامشخص';
       if (key == 'cost_year') return fa(v);
       if (listKey == 'YN' || listKey == 'YNS') return labels[v] ?? v;
       return v;

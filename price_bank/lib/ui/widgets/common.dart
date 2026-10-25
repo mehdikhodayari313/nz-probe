@@ -600,17 +600,23 @@ class CountBadge extends StatelessWidget {
 }
 
 /// متن گزینه‌ی دراپ‌داون + تعداد اقلام آن (دراپ‌داون باید isExpanded باشد).
-/// گزینه‌ی «خالی» فیلترها: اقلامی که آن مشخصه را ندارند (تا جمع گزینه‌ها همیشه برابر «همه» باشد)
+/// گزینه‌ی «نامشخص» فیلترها: اقلامی که آن مشخصه را ندارند یا منبع «Not stated» گفته (جمع گزینه‌ها = «همه»)
 const kEmptyOption = '\u0000empty';
-const kEmptyOptionLabel = 'خالی (در منبع نیست)';
+const kEmptyOptionLabel = 'نامشخص';
 
-/// شمارش گزینه‌های یک فیلتر: (تعداد هر مقدار، تعداد خالی)؛ جمع همه = تعداد ردیف‌ها
+/// مقدار نامشخص: خالی (در منبع نبود یا ناقص وارد شده) یا «Not stated» منبع — در فیلترها یک گزینه‌ی «نامشخص»
+bool isUnknownValue(String v) {
+  final t = v.trim();
+  return t.isEmpty || t == 'Not stated' || t == '(Not stated)' || t == 'نامشخص' || t == 'Unknown';
+}
+
+/// شمارش گزینه‌های یک فیلتر: (تعداد هر مقدار، تعداد نامشخص)؛ جمع همه = تعداد ردیف‌ها
 ({Map<String, int> counts, int empty}) countValues<T>(Iterable<T> rows, String Function(T) valueOf) {
   final counts = <String, int>{};
   var empty = 0;
   for (final r in rows) {
     final v = valueOf(r);
-    if (v.isEmpty) {
+    if (isUnknownValue(v)) {
       empty++;
     } else {
       counts[v] = (counts[v] ?? 0) + 1;

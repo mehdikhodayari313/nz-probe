@@ -101,8 +101,6 @@ class DashboardPage extends StatelessWidget {
         ),
       ]),
       const SizedBox(height: 16),
-      _ProjectChart(rows: included, unit: unit, targetYear: s.targetYear),
-      const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
       LayoutBuilder(builder: (context, cons) {
@@ -661,122 +659,6 @@ class _StepCard extends StatelessWidget {
     );
   }
 }
-
-/// نمودار ستونی تعاملی: جمع قیمت هر پروژه در سال منبع و سال هدف.
-/// نشانگر ماوس روی هر ستون، مبلغ دقیق را نشان می‌دهد؛ ستون‌ها با انیمیشن رشد می‌کنند.
-class _ProjectChart extends StatefulWidget {
-  const _ProjectChart({required this.rows, required this.unit, required this.targetYear});
-  final List<EquipRow> rows;
-  final MoneyUnit unit;
-  final int targetYear;
-
-  @override
-  State<_ProjectChart> createState() => _ProjectChartState();
-}
-
-class _ProjectChartState extends State<_ProjectChart> {
-  int? _hover;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = Theme.of(context);
-    final data = <String, (double, double)>{};
-    for (final r in widget.rows) {
-      if (r.irrSource == null || r.irrTarget == null) continue;
-      final q = r.qty;
-      final k = r.item.projectName ?? 'بدون پروژه';
-      final e = data[k] ?? (0, 0);
-      data[k] = (e.$1 + r.irrSource! * q, e.$2 + r.irrTarget! * q);
-    }
-    final list = data.entries.toList()..sort((a, b) => b.value.$2.compareTo(a.value.$2));
-    if (list.isEmpty) return const SizedBox();
-    final maxV = list.map((e) => e.value.$2 > e.value.$1 ? e.value.$2 : e.value.$1).reduce((a, b) => a > b ? a : b);
-    const chartH = 190.0;
-    final srcColor = AppColors.petrol.withValues(alpha: 0.45);
-    const tgtColor = AppColors.amber;
-
-    Widget bar(double v, Color c, String tip, bool hl) => Tooltip(
-          message: tip,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: maxV <= 0 ? 0 : v / maxV),
-            duration: const Duration(milliseconds: 700),
-            curve: Curves.easeOutCubic,
-            builder: (context, f, _) => AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: hl ? 26 : 22,
-              height: (chartH - 20) * f + 2,
-              decoration: BoxDecoration(
-                color: c,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(6)),
-                boxShadow: hl ? [BoxShadow(color: c.withValues(alpha: 0.5), blurRadius: 12)] : null,
-              ),
-            ),
-          ),
-        );
-
-    return SectionCard(
-      title: 'مقایسه‌ی پروژه‌ها: سال منبع در برابر سال ${fa(widget.targetYear)}',
-      subtitle: 'همه‌ی تجهیزات · نشانگر ماوس را روی هر ستون نگه دارید تا مبلغ دقیق دیده شود (${unitLabel(widget.unit)}، قیمت × تعداد)',
-      icon: Icons.bar_chart_rounded,
-      trailing: Wrap(spacing: 12, children: [
-        _legendDot(context, srcColor, 'سال منبع'),
-        _legendDot(context, tgtColor, 'سال ${fa(widget.targetYear)}'),
-      ]),
-      child: SizedBox(
-        height: chartH + 64,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(crossAxisAlignment: CrossAxisAlignment.end, children: [
-            for (var i = 0; i < list.length; i++)
-              MouseRegion(
-                onEnter: (_) => setState(() => _hover = i),
-                onExit: (_) => setState(() => _hover = null),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  width: 150,
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding: const EdgeInsets.only(top: 8),
-                  decoration: BoxDecoration(
-                    color: _hover == i ? AppColors.petrol.withValues(alpha: 0.06) : null,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Column(mainAxisAlignment: MainAxisAlignment.end, children: [
-                    Text('×${faNum(list[i].value.$1 > 0 ? list[i].value.$2 / list[i].value.$1 : 0, decimals: 1)}',
-                        style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w800, color: AppColors.amberText)),
-                    const SizedBox(height: 4),
-                    Row(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-                      bar(list[i].value.$1, srcColor,
-                          '${list[i].key}\nسال منبع: ${money(list[i].value.$1, widget.unit)}', _hover == i),
-                      const SizedBox(width: 6),
-                      bar(list[i].value.$2, tgtColor,
-                          '${list[i].key}\nسال ${fa(widget.targetYear)}: ${money(list[i].value.$2, widget.unit)}', _hover == i),
-                    ]),
-                    Container(height: 1.5, color: t.colorScheme.outlineVariant),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      height: 34,
-                      child: Text(list[i].key,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: t.textTheme.labelSmall?.copyWith(fontWeight: _hover == i ? FontWeight.w800 : FontWeight.w500)),
-                    ),
-                  ]),
-                ),
-              ),
-          ]),
-        ),
-      ),
-    );
-  }
-
-  Widget _legendDot(BuildContext context, Color c, String s) => Row(mainAxisSize: MainAxisSize.min, children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(3))),
-        const SizedBox(width: 5),
-        Text(s, style: Theme.of(context).textTheme.labelSmall),
-      ]);
-}
-
 
 /// تفکیک تجهیزات بر اساس رده: تعداد، سهم از جمع سال هدف، استعلام‌ها + ورود MTO.
 class _CategoriesCard extends StatelessWidget {

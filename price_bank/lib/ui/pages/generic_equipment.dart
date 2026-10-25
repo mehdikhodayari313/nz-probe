@@ -87,7 +87,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     for (final e in _enumF.entries) {
       if (e.value == null || e.key == except) continue;
       final v = r.item.values[e.key]?.toString() ?? '';
-      if (e.value == kEmptyOption ? v.isNotEmpty : v != e.value) return false;
+      if (e.value == kEmptyOption ? !isUnknownValue(v) : v != e.value) return false;
     }
     for (final e in _rangeF.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
@@ -416,7 +416,11 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     final (:counts, :empty) = countValues(all, (GenericRow r) => r.item.values[key]?.toString() ?? '');
     final opts = listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(listKey);
     final labels = {for (final o in opts) o.value: o.labelFa};
-    final values = [for (final o in opts) o.value, for (final v in counts.keys) if (!labels.containsKey(v)) v];
+    final values = [
+      for (final o in opts)
+        if (!isUnknownValue(o.value)) o.value,
+      for (final v in counts.keys) if (!labels.containsKey(v)) v,
+    ];
     if (empty > 0 || _enumF[key] == kEmptyOption) values.add(kEmptyOption);
     counts[kEmptyOption] = empty;
     final cur = _enumF[key];
