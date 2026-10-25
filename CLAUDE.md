@@ -97,7 +97,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
   then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
   `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
-- Current released version: **0.9.8** (1405/08/04, detail fields sized to content on a grid, pressure companions merged, name column fits). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Current released version: **0.9.9** (1405/08/04, session 2: document eye toggle #1, newer MTO revision = basis price #5, «(قید نشده)» tag/project). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
 - Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)
@@ -118,6 +118,12 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Detail pages lay fields out with `FieldGrid` (field_editor.dart): ~140px cells, span from measured label/value/longest enum option
   (user 1405/08/04: boxes sized to the largest value they can hold, orderly grid). Same-meaning pairs (`fieldCompanions`:
   head↔ΔP, design pressure↔its source text) are never two boxes side by side: companion shown inside the main box.
+- Hidden documents (#1, schema v3 `documents.hidden`, `items.source_document_id`): every item list/count must go through
+  `ItemsRepo.loadCategory`/`count` or add `ItemsRepo.visibleSql` (alias `i`); `ItemRecord.observations` = visible only,
+  `hiddenObservations` for display. MTO revision (#5): `MtoImporter._revisionOf` (newer by issue date, unknown → later import
+  newer, bank items stay reference), `_fillFromRevision` (empty fields only).
+- Missing tag/project («Not stated…», «(نام پروژه در فایل قید نشده است) – …», empty) → «(قید نشده)» (`isNotStated`,
+  `notStatedCell`, `GridColumn.notStated`) in tables, detail fields and headers (user 1405/08/04, all equipment).
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.
 - **UI libraries (added 1405/08/02, not yet used in pages):** `fl_chart` (charts), `data_table_2` (tables with fixed
   header/columns, sorting), `flex_color_scheme` (themes), `flutter_animate` + `animations` (effects, page/container

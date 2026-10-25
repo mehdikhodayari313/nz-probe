@@ -27,3 +27,6 @@
    cost) should be chosen with the user. Desalter «Internals & Transformators» rows of an estimate stay separate DESALTER items
    (user may move/merge in preview).
 10. Decisions 1–6 above (domestic/foreign methods, methods page, Iranian indices, E/I/P classification) are not implemented yet.
+11. APP_CHANGES sessions 1–2 done (v0.9.9). Next: session 3 (#2a–d, #3, #10, #13, #27, #28, #30 — equipment page layout,
+    screenshots before applying). #5 open point: quantity of a newer revision is only reported, not applied — ask the user
+    if newer quantities should replace old ones.

@@ -137,6 +137,10 @@ class MtoImportReport {
 
   /// دیسالترهایی که در بانک دیسالتر هستند و وارد نشدند (جزء skippedDuplicates)
   int skippedBankDuplicates = 0;
+
+  /// بازنگری دیگر همان پروژه (همان رده و تگ): قیمت‌ها به همان قلم اضافه شد.
+  /// [revisedNewer]: این فایل جدیدتر است → قیمت آن مبنای محاسبات شد؛ [revisedOlder]: قدیمی‌تر یا قلم بانک → فقط ثبت.
+  int revisedNewer = 0, revisedOlder = 0;
   bool alreadyImported = false;
   final Map<String, int> perCategory = {};
   final List<String> warnings = [];
@@ -846,8 +850,11 @@ class MtoImporter {
     if (project.isEmpty) throw ArgumentError('نام پروژه خالی است');
     final title = a.docRef ?? a.fileName;
     final pidExisting = db.scalar('SELECT id FROM projects WHERE name = ?', [project]) as int?;
+    // سندی که پیش‌تر وارد شده ولی هیچ قلم و قیمتی ندارد (مثلاً بازنگری‌ای که همه‌ی اقلامش تکراری حساب شد) دوباره وارد می‌شود
     if (pidExisting != null &&
-        db.scalar('SELECT 1 FROM documents WHERE project_id = ? AND title = ? AND doc_type = ?',
+        db.scalar(
+                'SELECT 1 FROM documents d WHERE d.project_id = ? AND d.title = ? AND d.doc_type = ? AND (EXISTS '
+                '(SELECT 1 FROM price_obs o WHERE o.document_id = d.id) OR EXISTS (SELECT 1 FROM items i WHERE i.source_document_id = d.id))',
                 [pidExisting, title, 'mto']) !=
             null) {
       rep.alreadyImported = true;
@@ -887,30 +894,38 @@ class MtoImporter {
         }
         final isPump = cat.code == 'PUMP';
         for (final it in s.items) {
+          int? revise; // قلم موجود همین پروژه از بازنگری دیگر
+          var newer = true; // این فایل جدیدتر است → قیمتش مبنا می‌شود
           // تگ تکراری در همین فایل (مثل شماره‌ردیف تکراری): با پسوند حفظ می‌شود، نه حذف
           final key = '${cat.id}|${it.tag}';
-          if (seenTags.contains(key)) {
+          final repeated = seenTags.contains(key);
+          if (repeated) {
             var n = 2;
             while (seenTags.contains('${cat.id}|${it.tag} ($n)')) {
               n++;
             }
             it.tag = '${it.tag} ($n)';
-          } else {
-            // تکراری: همان تگ در همان پروژه و رده از ورود قبلی (مثلاً پمپ‌های v8)
-            final dup = db.scalar(
-                "SELECT id FROM items WHERE category_id = ? AND project_id = ? AND tag = ? AND status = 'active'",
-                [cat.id, pid, it.tag]);
-            if (dup != null) {
+          }
+          // تکراری: همان تگ در همان پروژه و رده از ورود قبلی (مثلاً پمپ‌های v8) یا بازنگری دیگر همین MTO
+          final dup = db.scalar(
+              "SELECT id FROM items WHERE category_id = ? AND project_id = ? AND tag = ? AND status = 'active'",
+              [cat.id, pid, it.tag]) as int?;
+          if (dup != null) {
+            final r = _revisionOf(dup, docId, a);
+            if (r == null) {
               rep.skippedDuplicates++;
               continue;
             }
-            // دیسالتر: بانک دیسالتر مرجع است؛ همان قلم (پایه‌ی تگ و قیمت یکسان) دوباره وارد نمی‌شود
-            if (cat.code == 'DESALTER' &&
-                findDesalterBankDuplicate(db, cat.id, it.tag, [it.goingEur, it.goingIrr, it.goingUsd]) != null) {
-              rep.skippedDuplicates++;
-              rep.skippedBankDuplicates++;
-              continue;
-            }
+            (revise, newer) = (dup, r.$1);
+            if (r.$2 != null) rep.warnings.add('${it.tag}: ${r.$2}');
+          }
+          // دیسالتر: بانک دیسالتر مرجع است؛ همان قلم (پایه‌ی تگ و قیمت یکسان) دوباره وارد نمی‌شود
+          if (!repeated &&
+              cat.code == 'DESALTER' &&
+              findDesalterBankDuplicate(db, cat.id, it.tag, [it.goingEur, it.goingIrr, it.goingUsd]) != null) {
+            rep.skippedDuplicates++;
+            rep.skippedBankDuplicates++;
+            continue;
           }
           seenTags.add('${cat.id}|${it.tag}');
           final meta = <String, FieldMeta>{};
@@ -971,15 +986,25 @@ class MtoImporter {
               values[key.$1] = e.value;
             }
           }
-          final id = items.create(
-            categoryId: cat.id,
-            values: values,
-            meta: meta,
-            projectId: pid,
-            reason: 'ورود MTO ${a.docRef ?? a.fileName} (${s.name} ردیف ${it.row})',
-            batch: batch,
-          );
-          var hasPrimary = false;
+          final int id;
+          if (revise != null) {
+            id = revise;
+            _fillFromRevision(id, values, meta, it, '${a.docRef ?? a.fileName} (${s.name} ردیف ${it.row})', rep);
+            newer ? rep.revisedNewer++ : rep.revisedOlder++;
+          } else {
+            id = items.create(
+              categoryId: cat.id,
+              values: values,
+              meta: meta,
+              projectId: pid,
+              sourceDocumentId: docId,
+              reason: 'ورود MTO ${a.docRef ?? a.fileName} (${s.name} ردیف ${it.row})',
+              batch: batch,
+            );
+          }
+          // قیمت بازنگری قدیمی‌تر فقط ثبت می‌شود و مبنا نمی‌شود
+          var hasPrimary = !newer;
+          final olderNote = newer ? '' : ' — بازنگری قدیمی‌تر یا قلم بانک (مبنا نیست)';
           // ۱) قیمت مبنای مشاور
           String? goingCurEff;
           double? goingAmt;
@@ -1000,15 +1025,16 @@ class MtoImporter {
             items.addObservation(id,
                 documentId: docId,
                 kind: 'estimate',
-                primary: true,
+                primary: newer,
                 currency: goingCurEff,
                 amount: goingAmt,
                 costYear: s.goingYear ?? goingYear ?? a.issueYear,
                 costMonth: s.goingYear != null ? s.goingMonth : (goingYear != null ? goingMonth : a.issueMonth),
                 sourceLocation: s.layout == null ? '${s.name}!E${it.row}:F${it.row}' : '${s.name} ردیف ${it.row}',
-                notes: s.layout == null
-                    ? 'قیمت مبنای مشاور (GOING UNIT PRICE ${s.goingLabel})'
-                    : 'قیمت مبنا/برآورد MTO${s.goingLabel.isEmpty ? '' : ' (${s.goingLabel})'}');
+                notes: (s.layout == null
+                        ? 'قیمت مبنای مشاور (GOING UNIT PRICE ${s.goingLabel})'
+                        : 'قیمت مبنا/برآورد MTO${s.goingLabel.isEmpty ? '' : ' (${s.goingLabel})'}') +
+                    olderNote);
             hasPrimary = true;
             rep.estimates++;
           }
@@ -1041,7 +1067,7 @@ class MtoImporter {
             items.addObservation(id,
                 documentId: oldDoc(),
                 kind: 'estimate',
-                primary: !hasPrimary,
+                primary: !hasPrimary && revise == null,
                 currency: cur,
                 amount: amt,
                 costYear: oy,
@@ -1051,6 +1077,7 @@ class MtoImporter {
             hasPrimary = true;
             rep.estimates++;
           }
+          if (revise != null) continue;
           rep.items++;
           rep.perCategory[cat.code] = (rep.perCategory[cat.code] ?? 0) + 1;
         }
@@ -1059,5 +1086,57 @@ class MtoImporter {
     rep.vendors = (db.scalar('SELECT COUNT(*) FROM vendors') as int) - vendorsBefore;
     return rep;
   }
+
+  /// قلم موجود [itemId] (همان پروژه، رده و تگ) و این فایل: (این فایل جدیدتر است؟, یادداشت) یا null = همان سند (تکراری).
+  /// جدیدتر = تاریخ صدور دیرتر یا برابر؛ اگر تاریخ یکی معلوم نیست، فایلی که بعد وارد می‌شود جدیدتر فرض و گزارش می‌شود.
+  /// قلم بانک قیمت (مرجع، تصمیم کاربر) با MTO جایگزین نمی‌شود.
+  (bool, String?)? _revisionOf(int itemId, int docId, MtoAnalysis a) {
+    final p = db.queryOne(
+        'SELECT o.document_id, d.doc_type, d.issue_year, d.issue_month, i.legacy_ref FROM items i '
+        'LEFT JOIN price_obs o ON o.item_id = i.id AND o.is_primary = 1 LEFT JOIN documents d ON d.id = o.document_id '
+        'WHERE i.id = ?',
+        [itemId]);
+    if (p == null) return null;
+    final srcDoc = db.scalar('SELECT source_document_id FROM items WHERE id = ?', [itemId]) as int?;
+    if (p['document_id'] == docId || (p['document_id'] == null && srcDoc == docId)) return null;
+    if (p['legacy_ref'] != null || p['doc_type'] == 'price_bank' || p['doc_type'] == 'v8') {
+      return (false, 'قلم بانک قیمت است (مرجع)؛ قیمت این فایل فقط ثبت شد');
+    }
+    final oy = p['issue_year'] as int?, om = p['issue_month'] as int?;
+    final ny = a.issueYear, nm = a.issueMonth;
+    if (oy == null || ny == null) {
+      return p['document_id'] == null
+          ? (true, null)
+          : (true, 'تاریخ بازنگری قبلی یا این فایل معلوم نیست؛ این فایل جدیدتر فرض شد و قیمتش مبنا شد');
+    }
+    return ((ny * 12 + (nm ?? 0)) >= (oy * 12 + (om ?? 0)), null);
+  }
+
+  /// بازنگری دیگر یک قلم: فقط فیلدهای خالی قلم پر می‌شود (مقدار موجود عوض نمی‌شود)؛ اختلاف تعداد گزارش می‌شود.
+  void _fillFromRevision(int id, Map<String, Object?> values, Map<String, FieldMeta> meta, MtoItem it, String src,
+      MtoImportReport rep) {
+    final cur = items.get(id)!;
+    final fill = <String, Object?>{};
+    for (final e in values.entries) {
+      if (const {'tag', 'name', 'quantity', 'remarks'}.contains(e.key)) continue;
+      final v = e.value;
+      if (v == null || (v is String && v.trim().isEmpty)) continue;
+      final old = cur.valueOf(e.key);
+      if (old == null || (old is String && old.trim().isEmpty)) fill[e.key] = v;
+    }
+    if (fill.isNotEmpty) {
+      items.update(id, fill, reason: 'تکمیل از بازنگری $src');
+      for (final k in fill.keys) {
+        final m = meta[k];
+        if (m != null) items.setMeta(id, k, m);
+      }
+    }
+    final q = it.quantity;
+    if (q != null && cur.quantity != null && (q - cur.quantity!).abs() > 1e-9) {
+      rep.warnings.add('${it.tag}: تعداد در این فایل ${_n(q)} و در قلم موجود ${_n(cur.quantity!)} است؛ تعداد عوض نشد');
+    }
+  }
+
+  static String _n(double v) => v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 
 }

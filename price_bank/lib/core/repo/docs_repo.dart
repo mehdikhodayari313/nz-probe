@@ -4,6 +4,7 @@
 
 import '../db/db.dart';
 import 'audit.dart';
+import 'items_repo.dart';
 
 class Project {
   Project.fromRow(DbRow r)
@@ -39,8 +40,12 @@ class SourceDocument {
         fxRateType = r['fx_rate_type'] as String?,
         consultant = r['consultant'] as String?,
         notes = r['notes'] as String?,
-        priceCount = (r['price_count'] as int?) ?? 0;
+        priceCount = (r['price_count'] as int?) ?? 0,
+        hidden = (r['hidden'] as int? ?? 0) == 1;
   final int id;
+
+  /// پنهان از مشاهده و همه‌ی محاسبات (دکمه‌ی چشم در «پروژه‌ها و اسناد»)
+  final bool hidden;
   final int? projectId;
   final String? projectName;
   final String title;
@@ -64,7 +69,7 @@ class DocsRepo {
 
   List<Project> projects() => [
         for (final r in db.query('SELECT p.*, (SELECT COUNT(*) FROM items i WHERE i.project_id = p.id '
-            "AND i.status = 'active') AS item_count FROM projects p ORDER BY p.name"))
+            "AND i.status = 'active' AND ${ItemsRepo.visibleSql}) AS item_count FROM projects p ORDER BY p.name"))
           Project.fromRow(r),
       ];
 
@@ -186,6 +191,34 @@ class DocsRepo {
     });
   }
 
+  /// اسناد کمکی («— قیمت‌های بازنگری قبلی») یک سند اصلی
+  List<int> _auxiliaryOf(int id) {
+    final row = db.queryOne('SELECT project_id, title FROM documents WHERE id = ?', [id]);
+    if (row == null) return const [];
+    return [
+      for (final r in db.query("SELECT id FROM documents WHERE project_id IS ? AND doc_type = 'mto_previous' AND title LIKE ?",
+          [row['project_id'], '${row['title']} — %']))
+        r['id'] as int,
+    ];
+  }
+
+  /// پنهان/پیدا کردن یک سند (با سند کمکی آن): قیمت‌هایش از همه‌ی محاسبات کنار می‌رود و قلمی که قیمت دیگری ندارد
+  /// از جدول‌ها، شمارش‌ها و تخمین‌ها پنهان می‌شود. داده‌ای حذف نمی‌شود.
+  void setHidden(int id, bool hidden, {String? reason}) {
+    final ids = [id, ..._auxiliaryOf(id)];
+    final batch = Audit.newBatch();
+    db.transaction(() {
+      for (final d in ids) {
+        final old = db.scalar('SELECT hidden FROM documents WHERE id = ?', [d]) as int?;
+        if (old == null || (old == 1) == hidden) continue;
+        db.execute('UPDATE documents SET hidden = ?, updated_at = ?, updated_by = ? WHERE id = ?',
+            [hidden ? 1 : 0, nowIso(), audit.userId, d]);
+        audit.log(entity: 'document', entityId: d, field: 'hidden', oldValue: old == 1 ? 'پنهان' : 'پیدا',
+            newValue: hidden ? 'پنهان' : 'پیدا', reason: reason, batch: batch);
+      }
+    });
+  }
+
   /// اصلاح گروهی سال قیمت همه‌ی قیمت‌های یک سند (وقتی بعداً معلوم شود سال اشتباه بوده).
   int setCostYearForDocument(int documentId, int year, {int? month, String? reason}) {
     final rows = db.query('SELECT id, item_id, cost_year, cost_year_text FROM price_obs WHERE document_id = ?', [documentId]);
@@ -232,6 +265,8 @@ class DocsRepo {
         audit.log(entity: 'item', entityId: it['id'], field: 'delete',
             oldValue: '${it['tag'] ?? ''} ${it['name']}'.trim(), reason: reason ?? 'حذف پروژه', batch: batch);
       }
+      db.execute('UPDATE items SET source_document_id = NULL WHERE source_document_id IN '
+          '(SELECT id FROM documents WHERE project_id = ?) AND project_id IS NOT ?', [id, id]);
       db.execute('DELETE FROM items WHERE project_id = ?', [id]);
       db.execute('DELETE FROM documents WHERE project_id = ?', [id]);
       db.execute('DELETE FROM projects WHERE id = ?', [id]);
@@ -248,14 +283,14 @@ class DocsRepo {
     if (row == null) return (prices: 0, items: 0, documents: 0);
     final batch = Audit.newBatch();
     return db.transaction(() {
-      final ids = <int>[
-        id,
-        for (final r in db.query("SELECT id FROM documents WHERE project_id IS ? AND doc_type = 'mto_previous' AND title LIKE ?",
-            [row['project_id'], '${row['title']} — %']))
-          r['id'] as int,
-      ];
+      final ids = <int>[id, ..._auxiliaryOf(id)];
       final ph = List.filled(ids.length, '?').join(',');
-      final touched = [for (final r in db.query('SELECT DISTINCT item_id FROM price_obs WHERE document_id IN ($ph)', ids)) r['item_id'] as int];
+      final touched = [
+        for (final r in db.query(
+            'SELECT item_id FROM price_obs WHERE document_id IN ($ph) UNION SELECT id FROM items WHERE source_document_id IN ($ph)',
+            [...ids, ...ids]))
+          r['item_id'] as int
+      ];
       final nPrices = db.scalar('SELECT COUNT(*) FROM price_obs WHERE document_id IN ($ph)', ids) as int;
       db.execute('DELETE FROM price_obs WHERE document_id IN ($ph)', ids);
       var nItems = 0;
@@ -268,6 +303,7 @@ class DocsRepo {
         db.execute('DELETE FROM items WHERE id = ?', [it]);
         nItems++;
       }
+      db.execute('UPDATE items SET source_document_id = NULL WHERE source_document_id IN ($ph)', ids);
       db.execute('DELETE FROM documents WHERE id IN ($ph)', ids);
       audit.log(entity: 'document', entityId: id, field: 'delete',
           oldValue: '${row['title']} ($nPrices قیمت، $nItems قلم)', reason: reason, batch: batch);
@@ -292,6 +328,7 @@ class DocsRepo {
           final ra = a['revision'] as String? ?? '', rb = b['revision'] as String? ?? '';
           if (!(ra == rb || ra.isEmpty || rb.isEmpty) || !sameTitle(a['title'] as String, b['title'] as String)) continue;
           db.execute('UPDATE price_obs SET document_id = ? WHERE document_id = ?', [a['id'], b['id']]);
+          db.execute('UPDATE items SET source_document_id = ? WHERE source_document_id = ?', [a['id'], b['id']]);
           for (final f in ['doc_ref', 'issue_year', 'issue_month', 'source_fx_eur', 'source_fx_usd', 'fx_rate_type', 'consultant']) {
             if (a[f] == null && b[f] != null) db.execute('UPDATE documents SET $f = ? WHERE id = ?', [b[f], a['id']]);
           }

@@ -427,7 +427,8 @@ class PriceBank {
 
   /// تعداد اقلام فعال هر رده (شناسه‌ی رده ← تعداد)
   Map<int, int> categoryCounts() => {
-        for (final r in db.query("SELECT category_id, COUNT(*) AS n FROM items WHERE status = 'active' GROUP BY category_id"))
+        for (final r in db.query("SELECT i.category_id, COUNT(*) AS n FROM items i WHERE i.status = 'active' AND ${ItemsRepo.visibleSql} "
+          'GROUP BY i.category_id'))
           r['category_id'] as int: r['n'] as int,
       };
 

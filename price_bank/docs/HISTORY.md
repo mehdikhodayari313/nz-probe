@@ -210,3 +210,18 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - `fieldCompanions`: ΔP shown inside the head box («اختلاف فشار … bar»), design pressure source text inside the design
   pressure box only when it differs; in edit mode companions are separate but moved to the end of the group.
 - Fix: generic table number columns compared `FieldType` with a string → sorted as text; now numeric.
+
+## v0.9.9 (1405/08/04) — session 2 (#1, #5) + «(قید نشده)»
+- User: missing tag/project shown as a short «(قید نشده)» that fits the cell, for all equipment; build session 2 and deliver
+  together (no separate change-list round).
+- #1: schema v3 — `documents.hidden`, `items.source_document_id` (backfilled from the first non-auxiliary price, else from
+  the «ورود MTO <title> (» audit reason). Eye button per main document (auxiliary «قیمت‌های بازنگری قبلی» follows).
+  Hidden = item whose prices are all from hidden docs, or price-less item whose source doc is hidden. `loadCategory`,
+  `count`, category counts and project item counts filter with `ItemsRepo.visibleSql`; prices of hidden docs are only in
+  `hiddenObservations` (note in the prices tab). Nothing is deleted.
+- #5: same project + category + tag from another MTO file → prices added to the existing item instead of skipping it;
+  newer (issue date ≥, or unknown date → later import, reported) becomes primary, older/bank items keep their basis
+  (bank is reference). Empty fields filled from the revision; quantity differences reported. Repeated in-file tags
+  («X (2)») are matched too (previously re-import created duplicates). A document imported earlier with no items/prices
+  can be imported again. `deleteDocument` also removes price-less items that came only from that document.
+- Tests: `test/doc_hide_revision_test.dart` (hide/unhide, newer/older revision, delete, migration backfill).

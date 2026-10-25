@@ -86,7 +86,7 @@ class DocumentsPage extends StatelessWidget {
         child: Table(
           columnWidths: const {
             0: FlexColumnWidth(2), 1: FlexColumnWidth(3.5), 2: FixedColumnWidth(80), 3: FixedColumnWidth(90),
-            4: FixedColumnWidth(150), 5: FixedColumnWidth(70), 6: FixedColumnWidth(148),
+            4: FixedColumnWidth(150), 5: FixedColumnWidth(70), 6: FixedColumnWidth(196),
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
@@ -95,7 +95,11 @@ class DocumentsPage extends StatelessWidget {
               children: [for (final h in ['پروژه', 'عنوان سند', 'بازنگری', 'سال صدور', 'نرخ تسعیر منبع', 'قیمت‌ها', '']) _c(h, b: true)],
             ),
             for (final d in _ordered(docs))
-              TableRow(children: [
+              TableRow(
+                  decoration: d.hidden
+                      ? BoxDecoration(color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.6))
+                      : null,
+                  children: [
                 _c(DocsRepo.isAuxiliary(d) ? '' : (d.projectName ?? '—')),
                 DocsRepo.isAuxiliary(d)
                     ? Padding(
@@ -105,13 +109,31 @@ class DocumentsPage extends StatelessWidget {
                           Expanded(child: _c(d.title)),
                         ]),
                       )
-                    : _c(d.title, b: true),
+                    : (d.hidden
+                        ? Row(children: [
+                            Flexible(child: _c(d.title, b: true)),
+                            Pill('پنهان', color: Tones.warn(context), tooltip: 'اقلام و قیمت‌های این سند در جدول‌ها و محاسبات نیستند'),
+                          ])
+                        : _c(d.title, b: true)),
                 _c(d.revision.isEmpty ? '—' : d.revision),
                 _c(d.issueYear == null ? '—' : fa(d.issueYear)),
                 _c(d.sourceFxEur == null ? 'جدول نرخ ارز' : '${faNum(d.sourceFxEur)} ریال/یورو'),
                 _c(fa(d.priceCount)),
                 canEdit
                     ? Row(mainAxisSize: MainAxisSize.min, children: [
+                        if (!DocsRepo.isAuxiliary(d))
+                          IconButton(
+                            key: ValueKey('doc-eye-${d.id}'),
+                            tooltip: d.hidden
+                                ? 'پیدا کردن سند: اقلام و قیمت‌هایش دوباره در جدول‌ها و محاسبات می‌آیند'
+                                : 'پنهان کردن سند: اقلام و قیمت‌هایش از جدول‌ها و همه‌ی محاسبات کنار می‌روند (حذف نمی‌شوند)',
+                            icon: Icon(d.hidden ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 18, color: d.hidden ? Tones.warn(context) : null),
+                            onPressed: () {
+                              app.pb.docs.setHidden(d.id, !d.hidden);
+                              app.dataChanged(calcInputs: true);
+                            },
+                          ),
                         IconButton(tooltip: 'ویرایش سند', icon: const Icon(Icons.edit_outlined, size: 18), onPressed: () => _editDoc(context, d)),
                         IconButton(
                           tooltip: 'اصلاح سال قیمت همه‌ی اقلام این سند',

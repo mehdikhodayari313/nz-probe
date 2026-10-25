@@ -276,4 +276,22 @@ CREATE TABLE audit_log(
     'ALTER TABLE fx_rate_types ADD COLUMN user_defined INTEGER NOT NULL DEFAULT 0',
     'ALTER TABLE fx_rate_types ADD COLUMN description TEXT',
   ]),
+  // بند ۱ و ۵ برنامه‌ی تغییرات (۱۴۰۵/۰۸/۰۴): پنهان کردن یک سند از مشاهده و محاسبات؛ سند مبدأ هر قلم
+  Migration(3, 'پنهان کردن سند؛ سند مبدأ هر قلم', [
+    'ALTER TABLE documents ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0',
+    'ALTER TABLE items ADD COLUMN source_document_id INTEGER',
+    // سند مبدأ = سند نخستین قیمت (جز سند کمکی «قیمت‌های بازنگری قبلی»)
+    '''
+UPDATE items SET source_document_id = (
+  SELECT o.document_id FROM price_obs o JOIN documents d ON d.id = o.document_id
+  WHERE o.item_id = items.id ORDER BY (d.doc_type = 'mto_previous'), o.id LIMIT 1)''',
+    // قلم بی‌قیمت: از شرح ورود در تاریخچه («ورود MTO <عنوان> (…)»)
+    '''
+UPDATE items SET source_document_id = (
+  SELECT d.id FROM audit_log a JOIN documents d ON d.project_id IS items.project_id
+    AND substr(a.reason, 1, length(d.title) + 11) = 'ورود MTO ' || d.title || ' ('
+  WHERE a.entity = 'item' AND a.entity_id = CAST(items.id AS TEXT) AND a.field = '*' ORDER BY a.id LIMIT 1)
+WHERE source_document_id IS NULL''',
+    'CREATE INDEX ix_items_srcdoc ON items(source_document_id)',
+  ]),
 ];

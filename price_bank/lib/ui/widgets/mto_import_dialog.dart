@@ -7,6 +7,7 @@ import '../../app/app_state.dart';
 import '../../core/import/mto_generic.dart';
 import '../../core/import/mto_importer.dart';
 import '../../core/repo/catalog_repo.dart';
+import '../../core/repo/items_repo.dart';
 import '../../core/xlsx/xlsx_reader.dart';
 import '../format.dart';
 import '../theme.dart';
@@ -163,6 +164,11 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                 Text('اقلام: ${fa(rep.items)} · استعلام‌ها: ${fa(rep.quotes)} · برآوردها: ${fa(rep.estimates)}'),
                 Text('فروشندگان جدید: ${fa(rep.vendors)} · فیلدهای مشخصات جدید: ${fa(rep.specFields)}'),
                 if (rep.skippedDuplicates > 0) Text('تکراری (همان تگ در همان پروژه، وارد نشد): ${fa(rep.skippedDuplicates)}'),
+                if (rep.revisedNewer > 0)
+                  Text('بازنگری جدیدتر اقلام موجود: ${fa(rep.revisedNewer)} قلم — قیمت این فایل مبنای محاسبات شد؛ '
+                      'قیمت‌های قبلی در «قیمت‌ها و استعلام‌ها» ماند'),
+                if (rep.revisedOlder > 0)
+                  Text('بازنگری قدیمی‌تر (یا قلم بانک قیمت): ${fa(rep.revisedOlder)} قلم — قیمت فقط ثبت شد و مبنا نشد'),
                 if (rep.weights > 0) Text('وزن تجهیز ثبت‌شده (از MTO یا شیت‌های نصب): ${fa(rep.weights)}'),
                 const SizedBox(height: 8),
                 Wrap(spacing: 6, runSpacing: 6, children: [
@@ -189,7 +195,8 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
     final leafs = all.where((c) => c.enabled && !parents.contains(c.id)).toList();
     // تعداد اقلام موجود هر رده در بانک
     final counts = {
-      for (final r in app.pb.db.query("SELECT category_id, COUNT(*) AS n FROM items WHERE status = 'active' GROUP BY category_id"))
+      for (final r in app.pb.db.query("SELECT i.category_id, COUNT(*) AS n FROM items i WHERE i.status = 'active' AND ${ItemsRepo.visibleSql} "
+          'GROUP BY i.category_id'))
         r['category_id'] as int: r['n'] as int,
     };
     final existing = app.pb.docs.projects().map((p) => p.name).toList();

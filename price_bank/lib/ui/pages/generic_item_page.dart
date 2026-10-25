@@ -16,6 +16,7 @@ import '../../core/repo/items_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/data_grid.dart' show gridNotStated, isNotStated;
 import '../widgets/field_editor.dart';
 
 class GenericItemPage extends StatefulWidget {
@@ -63,7 +64,7 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
       appBar: AppBar(
         titleSpacing: 0,
         title: Row(children: [
-          Text(item.tag?.isNotEmpty == true ? item.tag! : cat.nameFa,
+          Text(isNotStated(item.tag) ? '${cat.nameFa} $gridNotStated' : item.tag!,
               textDirection: TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.w800)),
           const SizedBox(width: 12),
           Flexible(child: Text(item.name, overflow: TextOverflow.ellipsis, style: t.textTheme.titleSmall)),
@@ -313,7 +314,7 @@ class _PricesTab extends StatelessWidget {
     final app = AppScope.of(context);
     final t = Theme.of(context);
     final unit = app.unit;
-    if (item.observations.isEmpty) {
+    if (item.observations.isEmpty && item.hiddenObservations.isEmpty) {
       return const EmptyState(icon: Icons.request_quote_outlined, title: 'برای این قلم قیمتی ثبت نشده است');
     }
     final head = TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: AppColors.strong);
@@ -329,6 +330,7 @@ class _PricesTab extends StatelessWidget {
           'مقایسه‌ی «قیمت بازنگری قبلی تعدیل‌شده» با استعلام‌های جدید، دقت روش تعدیل را برای همین قلم نشان می‌دهد.',
         ],
       ),
+      if (item.hiddenObservations.isNotEmpty) HiddenPricesNote(item.hiddenObservations),
       SectionCard(
         title: 'همه‌ی قیمت‌ها',
         icon: Icons.request_quote_outlined,

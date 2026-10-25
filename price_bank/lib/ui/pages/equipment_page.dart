@@ -8,6 +8,7 @@ import '../../app/app_state.dart';
 import '../../core/calc/pump_engine.dart';
 import '../../core/price_bank.dart';
 import '../../core/repo/catalog_repo.dart';
+import '../../core/repo/items_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -650,7 +651,8 @@ class _CategoryPanel extends StatelessWidget {
 
     final counts = {
       for (final r in app.pb.db.query(
-          "SELECT category_id, COUNT(*) AS n FROM items WHERE status = 'active' GROUP BY category_id"))
+          "SELECT i.category_id, COUNT(*) AS n FROM items i WHERE i.status = 'active' AND ${ItemsRepo.visibleSql} "
+          'GROUP BY i.category_id'))
         r['category_id'] as int: r['n'] as int,
     };
 

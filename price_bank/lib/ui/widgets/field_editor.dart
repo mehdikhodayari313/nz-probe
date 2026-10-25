@@ -7,6 +7,7 @@ import '../../core/repo/items_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'data_grid.dart' show gridNotStated, isNotStated;
 
 /// نمایش یا ویرایش یک فیلد قالب، با توضیح فیلد و برچسب «استنباطی».
 class FieldTile extends StatelessWidget {
@@ -119,8 +120,10 @@ class FieldTile extends StatelessWidget {
           ),
       ]),
     );
-    if (note == null || note.isEmpty) return box;
-    return Tooltip(message: note, child: box);
+    final v = value;
+    final tip = text == gridNotStated && v is String && v.trim().isNotEmpty ? v.trim() : note;
+    if (tip == null || tip.isEmpty) return box;
+    return Tooltip(message: tip, child: box);
   }
 
   Widget _editor(BuildContext context) {
@@ -266,6 +269,10 @@ bool _isMoney(FieldDef f) => f.unit == 'EUR' || f.unit == 'USD' || f.unit == 'IR
 /// متن نمایشی مقدار یک فیلد (همان که در کادر فیلد دیده می‌شود).
 String fieldDisplayText(BuildContext context, FieldDef field, Object? v) {
   final unit = AppScope.of(context).unit;
+  // تگ/پروژه‌ای که در منبع نیامده: برچسب کوتاه (متن کامل منبع در راهنمای شناور کادر)
+  if ((field.key == 'tag' || field.key == 'project') && (v == null || v is String) && isNotStated(v as String?)) {
+    return gridNotStated;
+  }
   if (v == null || (v is String && v.isEmpty)) return '—';
   if (v is num) {
     return _isMoney(field)
@@ -352,5 +359,35 @@ class FieldGrid extends StatelessWidget {
         for (final f in fields) SizedBox(width: widthOf(f), child: tile(f)),
       ]);
     });
+  }
+}
+
+/// یادداشت «قیمت‌های اسناد پنهان» در زبانه‌ی قیمت‌ها: این قیمت‌ها نگه داشته شده‌اند ولی در هیچ محاسبه‌ای نیستند.
+class HiddenPricesNote extends StatelessWidget {
+  const HiddenPricesNote(this.obs, {super.key});
+  final List<PriceObs> obs;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final docs = {for (final o in obs) o.documentTitle ?? '—'}.join('، ');
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Tones.warn(context).withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Tones.warn(context).withValues(alpha: 0.5)),
+      ),
+      child: Row(children: [
+        Icon(Icons.visibility_off_outlined, size: 18, color: Tones.warn(context)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('${fa(obs.length)} قیمت از اسناد پنهان ($docs) در محاسبات و این فهرست نیست؛ '
+              'برای برگرداندن، سند را در «پروژه‌ها و اسناد» پیدا کنید.',
+              style: t.textTheme.bodySmall),
+        ),
+      ]),
+    );
   }
 }

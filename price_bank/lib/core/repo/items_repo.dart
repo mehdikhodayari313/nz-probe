@@ -39,10 +39,14 @@ class PriceObs {
         sourceLocation = r['source_location'] as String?,
         sourceFxRate = r['source_fx_rate'] as double?,
         extra = r['extra_json'] == null ? const {} : (jsonDecode(r['extra_json'] as String) as Map<String, dynamic>),
-        notes = r['notes'] as String?;
+        notes = r['notes'] as String?,
+        documentHidden = (r['doc_hidden'] as int? ?? 0) == 1;
 
   final int id;
   final int itemId;
+
+  /// سند این قیمت پنهان شده است (در هیچ محاسبه‌ای نیست؛ فقط در «قیمت‌ها و استعلام‌ها» دیده می‌شود)
+  final bool documentHidden;
   final int? documentId;
   final String? documentTitle;
   final double? documentFxEur;
@@ -96,6 +100,7 @@ class ItemRecord {
     required this.values,
     required this.meta,
     required this.observations,
+    this.hiddenObservations = const [],
   });
 
   final int id;
@@ -112,7 +117,11 @@ class ItemRecord {
   final String updatedAt;
   final Map<String, Object?> values;
   final Map<String, FieldMeta> meta;
+  /// قیمت‌های اسناد پیدا (مبنای همه‌ی محاسبات)
   final List<PriceObs> observations;
+
+  /// قیمت‌های اسناد پنهان (فقط برای نمایش)
+  final List<PriceObs> hiddenObservations;
 
   PriceObs? get primary {
     for (final o in observations) {
@@ -162,16 +171,23 @@ class ItemsRepo {
   final CatalogRepo catalog;
 
   static const _obsSelect = '''
-SELECT o.*, d.title AS doc_title, d.source_fx_eur AS doc_fx_eur, v.name AS vendor_name
+SELECT o.*, d.title AS doc_title, d.source_fx_eur AS doc_fx_eur, d.hidden AS doc_hidden, v.name AS vendor_name
 FROM price_obs o
 LEFT JOIN documents d ON d.id = o.document_id
 LEFT JOIN vendors v ON v.id = o.vendor_id''';
 
-  /// همه‌ی اقلام یک رده (با مقادیر و قیمت‌ها) — بارگذاری گروهی و سریع.
+  /// شرط SQL «قلم دیده می‌شود» برای جدول items با نام مستعار i: دست‌کم یک قیمت از سند پیدا دارد، یا هیچ قیمتی
+  /// ندارد و سند مبدأش پنهان نیست. قلمی که همه‌ی قیمت‌هایش از اسناد پنهان است از مشاهده و محاسبات کنار می‌رود.
+  static const visibleSql = '(EXISTS (SELECT 1 FROM price_obs vo LEFT JOIN documents vd ON vd.id = vo.document_id '
+      'WHERE vo.item_id = i.id AND COALESCE(vd.hidden, 0) = 0) OR (NOT EXISTS (SELECT 1 FROM price_obs vo '
+      'WHERE vo.item_id = i.id) AND NOT EXISTS (SELECT 1 FROM documents vd WHERE vd.id = i.source_document_id '
+      'AND vd.hidden = 1)))';
+
+  /// همه‌ی اقلام یک رده (با مقادیر و قیمت‌ها) — بارگذاری گروهی و سریع. اقلام اسناد پنهان کنار می‌روند.
   List<ItemRecord> loadCategory(int categoryId, {bool includeArchived = false}) {
     final rows = db.query(
       'SELECT i.*, p.name AS project_name FROM items i LEFT JOIN projects p ON p.id = i.project_id '
-      'WHERE i.category_id = ? ${includeArchived ? '' : "AND i.status = 'active'"} ORDER BY i.id',
+      'WHERE i.category_id = ? ${includeArchived ? '' : "AND i.status = 'active'"} AND $visibleSql ORDER BY i.id',
       [categoryId],
     );
     if (rows.isEmpty) return const [];
@@ -216,8 +232,9 @@ LEFT JOIN vendors v ON v.id = o.vendor_id''';
     return _build(r, values, meta, obs);
   }
 
-  ItemRecord _build(DbRow r, Map<String, Object?> values, Map<String, FieldMeta> meta, List<PriceObs> obs) =>
-      ItemRecord(
+  ItemRecord _build(DbRow r, Map<String, Object?> values, Map<String, FieldMeta> meta, List<PriceObs> all) {
+    final obs = [for (final o in all) if (!o.documentHidden) o];
+    return ItemRecord(
         id: r['id'] as int,
         categoryId: r['category_id'] as int,
         projectId: r['project_id'] as int?,
@@ -233,10 +250,13 @@ LEFT JOIN vendors v ON v.id = o.vendor_id''';
         values: values,
         meta: meta,
         observations: obs,
+        hiddenObservations: obs.length == all.length ? const [] : [for (final o in all) if (o.documentHidden) o],
       );
+  }
 
   int count(int categoryId) =>
-      db.scalar("SELECT COUNT(*) FROM items WHERE category_id = ? AND status = 'active'", [categoryId]) as int;
+      db.scalar("SELECT COUNT(*) FROM items i WHERE i.category_id = ? AND i.status = 'active' AND $visibleSql",
+          [categoryId]) as int;
 
   // ---------------------------------------------------------------------------
   // ایجاد و ویرایش
@@ -247,6 +267,7 @@ LEFT JOIN vendors v ON v.id = o.vendor_id''';
     required Map<String, Object?> values,
     int? projectId,
     int? documentId,
+    int? sourceDocumentId,
     String? reason,
     Map<String, FieldMeta> meta = const {},
     String? batch,
@@ -256,11 +277,11 @@ LEFT JOIN vendors v ON v.id = o.vendor_id''';
       final uid = audit.userId;
       final id = db.insert(
         'INSERT INTO items(category_id, project_id, tag, name, quantity, include_in_totals, remarks, legacy_ref, '
-        'created_at, created_by, updated_at, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)',
+        'source_document_id, created_at, created_by, updated_at, updated_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)',
         [
           categoryId, projectId, _txt(values['tag']), _txt(values['name']) ?? '(بدون نام)', _num(values['quantity']),
           _txt(values['include_in_totals']) == 'N' ? 0 : 1, _txt(values['remarks']), _txt(values['v8_row']),
-          now, uid, now, uid,
+          sourceDocumentId ?? documentId, now, uid, now, uid,
         ],
       );
       final fields = catalog.fields(categoryId);

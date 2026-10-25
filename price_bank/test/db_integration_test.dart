@@ -28,7 +28,7 @@ void main() {
 
   test('مهاجرت ۲: نام جدول پیش‌فرض و روش تعدیل M6', () {
     final pb = PriceBank.memory(loadSeed());
-    expect(pb.db.schemaVersion, 2);
+    expect(pb.db.schemaVersion, 3);
     final types = pb.settingsRepo.fxRateTypes();
     expect(types.first.code, 'V8');
     expect(types.first.nameFa, 'جدول پیش‌فرض');

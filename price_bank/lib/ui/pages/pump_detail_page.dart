@@ -9,6 +9,7 @@ import '../../core/repo/items_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/data_grid.dart' show gridNotStated, isNotStated;
 import '../widgets/field_editor.dart';
 
 /// جزئیات، ویرایش و محاسبه‌ی یک پمپ. itemId == null یعنی پمپ جدید.
@@ -55,7 +56,7 @@ class _PumpDetailPageState extends State<PumpDetailPage> with SingleTickerProvid
       appBar: AppBar(
         titleSpacing: 0,
         title: Row(children: [
-          Text(item == null ? 'پمپ جدید' : (item.tag?.isNotEmpty == true ? item.tag! : 'پمپ'),
+          Text(item == null ? 'پمپ جدید' : (isNotStated(item.tag) ? 'پمپ $gridNotStated' : item.tag!),
               style: const TextStyle(fontWeight: FontWeight.w700)),
           if (item != null) ...[
             const SizedBox(width: 12),
@@ -259,7 +260,10 @@ class _PriceStrip extends StatelessWidget {
         ),
         Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
           Wrap(spacing: 6, runSpacing: 6, children: [
-            if (item.projectName != null) Pill(item.projectName!, icon: Icons.folder_outlined),
+            if (item.projectName != null)
+              isNotStated(item.projectName)
+                  ? Pill('پروژه $gridNotStated', icon: Icons.folder_outlined, tooltip: item.projectName)
+                  : Pill(item.projectName!, icon: Icons.folder_outlined),
             if (!item.include) Pill('خارج از جمع‌ها', color: t.colorScheme.outline),
             if (item.status != 'active') Pill('بایگانی‌شده', color: Tones.bad(context)),
             for (final f in flags) Pill(f, color: Tones.warn(context), icon: Icons.warning_amber_rounded),
@@ -512,7 +516,7 @@ class _PricesTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    if (item.observations.isEmpty) {
+    if (item.observations.isEmpty && item.hiddenObservations.isEmpty) {
       return const EmptyState(icon: Icons.request_quote_outlined, title: 'قیمتی ثبت نشده');
     }
     return ListView(padding: const EdgeInsets.all(20), children: [
@@ -526,6 +530,7 @@ class _PricesTab extends StatelessWidget {
           'قیمت‌های «تعدیل‌شده‌ی مشاور» استعلام واقعی نیستند و نباید در صحت‌سنجی روش تعدیل استفاده شوند.',
         ],
       ),
+      if (item.hiddenObservations.isNotEmpty) HiddenPricesNote(item.hiddenObservations),
       for (final o in item.observations)
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
