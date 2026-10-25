@@ -191,3 +191,7 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - Dashboard: «مقایسه‌ی پروژه‌ها» chart removed (part of #21; the per-project totals table and category price column stay
   until session 6).
 
+## v0.9.6 (1405/08/03) — pump table: differential pressure column
+- User: add the ΔP column; head = differential head → column renamed «هد اختلافی (m)»; ΔP (bar) is a separate quantity,
+  so it sits on the other side of «دبی» to avoid confusion (`equipment_page` column 'dp', CSV export too).
+

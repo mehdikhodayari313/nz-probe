@@ -311,6 +311,14 @@ class _EquipmentPageState extends State<EquipmentPage> {
         ('type', GridColumn(label: 'نوع', width: 58, ltr: true, text: (r) => _val(r, 'api610_type'), sortKey: (r) => _val(r, 'api610_type'))),
         ('mat', GridColumn(label: 'متریال', width: 62, ltr: true, text: (r) => _val(r, 'material_class'), sortKey: (r) => _val(r, 'material_class'))),
         (
+          'dp',
+          GridColumn(
+              label: 'اختلاف فشار\nbar', width: 72, numeric: true,
+              tooltip: 'اختلاف فشار پمپ طبق منبع (Differential Pressure)؛ کمیتی جدا از هد اختلافی',
+              text: (r) => _num(asNumber(r.item.values['diff_pressure_bar'])),
+              sortKey: (r) => asNumber(r.item.values['diff_pressure_bar']))
+        ),
+        (
           'q',
           GridColumn(
               label: 'دبی\nm³/h', width: 64, numeric: true,
@@ -320,7 +328,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
         (
           'h',
           GridColumn(
-              label: 'هد\nm', width: 58, numeric: true,
+              label: 'هد اختلافی\nm', width: 72, numeric: true,
+              tooltip: 'هد اختلافی (Differential Head). اگر منبع فقط اختلاف فشار داده، هد = اختلاف فشار × ۱۰٫۲ با فرض SG = ۱ (استنباطی)',
               text: (r) => _num(asNumber(r.item.values['diff_head_m'])),
               sortKey: (r) => asNumber(r.item.values['diff_head_m']))
         ),
@@ -568,7 +577,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
   }
 
   Widget _rangeFilter(BuildContext context, String key, (TextEditingController, TextEditingController) c) {
-    final label = switch (key) { 'capacity_m3h' => 'دبی m³/h', 'diff_head_m' => 'هد m', _ => 'توان kW' };
+    final label = switch (key) { 'capacity_m3h' => 'دبی m³/h', 'diff_head_m' => 'هد اختلافی m', _ => 'توان kW' };
     InputDecoration dec(String h) => InputDecoration(hintText: h, isDense: true);
     return SizedBox(
       width: 220,
@@ -594,6 +603,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
         esc(_val(r, 'sub_category')),
         esc(_val(r, 'api610_type')),
         esc(_val(r, 'material_class')),
+        asText(r.item.values['diff_pressure_bar']),
         asText(r.item.values['capacity_m3h']),
         asText(r.item.values['diff_head_m']),
         r.result.sizeKw.number?.toStringAsFixed(2) ?? '',
