@@ -97,7 +97,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
   then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
   `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
-- Current released version: **0.9.7** (1405/08/03, session 1 + feedback: «نامشخص» filter, comparison removed, pump head in m). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Current released version: **0.9.8** (1405/08/04, detail fields sized to content on a grid, pressure companions merged, name column fits). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
 - Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)
@@ -115,6 +115,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Real client files (MTOs, PEPs) are committed **only** under `refs/` (user decision 1405/07/24, see `refs/README.md`), never in `price_bank/`. `test/fixtures_private/` holds the user's v8 bank and
   validation workbook (repo is private). `test/fixtures/*` and `test/fixtures/full/*` are anonymized copies
   (project names replaced, numbers randomized) — regenerate the same way if needed.
+- Detail pages lay fields out with `FieldGrid` (field_editor.dart): ~140px cells, span from measured label/value/longest enum option
+  (user 1405/08/04: boxes sized to the largest value they can hold, orderly grid). Same-meaning pairs (`fieldCompanions`:
+  head↔ΔP, design pressure↔its source text) are never two boxes side by side: companion shown inside the main box.
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.
 - **UI libraries (added 1405/08/02, not yet used in pages):** `fl_chart` (charts), `data_table_2` (tables with fixed
   header/columns, sorting), `flex_color_scheme` (themes), `flutter_animate` + `animations` (effects, page/container

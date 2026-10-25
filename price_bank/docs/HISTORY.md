@@ -200,3 +200,13 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   pumps with only ΔP show the equivalent head ΔP × 10.2 (`_headM`, also used by the head range filter and CSV). ΔP stays
   on the pump detail page next to the head (field `diff_pressure_bar`). The 0.9.6 ΔP table column was removed.
 
+
+## v0.9.8 (1405/08/04) — field sizes and name column
+- User: name/service column must fit equipment names; two pressure boxes side by side look bad; boxes far too big for
+  4–5 character numbers → size to the largest value they can hold, keep an orderly layout.
+- `GridColumn.fitMax`: column width = longest text (measured), max 330, longer names in two lines (pump + other categories).
+- `FieldGrid` in pump and generic detail pages: cells ~140px, each field spans enough cells for its label, its value and
+  the longest enum option; text/money wider; description full width.
+- `fieldCompanions`: ΔP shown inside the head box («اختلاف فشار … bar»), design pressure source text inside the design
+  pressure box only when it differs; in edit mode companions are separate but moved to the end of the group.
+- Fix: generic table number columns compared `FieldType` with a string → sorted as text; now numeric.
