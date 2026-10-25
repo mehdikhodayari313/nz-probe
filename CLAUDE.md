@@ -32,7 +32,7 @@
 - **حافظه‌ی پروژه همین فایل است** (در Claude Code تحت وب جای دیگری برای دستورالعمل نیست). بدون اینکه کاربر بخواهد:
   - هر دستور یا ترجیح دائمی که کاربر در گفتگو می‌گوید («از این به بعد…»، «همیشه…»، قاعده‌ی محاسبه، تصمیم طراحی)
     را همان موقع در این فایل (بخش مناسب) ثبت کن.
-  - پایان هر کار/نسخه: یک بخش کوتاه به `price_bank/docs/HISTORY.md` اضافه کن، «Open items» را به‌روز کن،
+  - پایان هر کار/نسخه: یک بخش کوتاه به `price_bank/docs/HISTORY.md` اضافه کن، `docs/claude/OPEN_ITEMS.md` و وضعیت بندهای `APP_CHANGES.md` را به‌روز کن،
     و commit + push روی **main** (نه شاخه‌ی جدا؛ اگر محیط شاخه‌ی جدا ساخت، در main ادغام کن).
 - نیازمندی‌های فنی هر رده (مشخصات، ضرایب، روش تعدیل) که کاربر می‌دهد → خلاصه در
   `price_bank/docs/requirements/<CODE>.md` (مثل DESALTER.md، COMPRESSOR.md) تا گفتگوی بعدی بدون تکرار بداند.
@@ -53,6 +53,16 @@
 - پکیجی که چند رده را یکجا قیمت داده (مثل پکیج کامل هوای ابزار دقیق) در همه‌ی رده‌های مربوط دیده شود (یک رکورد، بدون شمارش دوباره).
 - `spec/state.json` را دستی ویرایش نکن (فقط اسکریپت).
 - فایل‌های واقعی پروژه‌ها محرمانه‌اند؛ مخزن خصوصی است و نباید عمومی شود.
+- **قواعد کاربر ۱۴۰۵/۰۸/۰۳ (دائمی):**
+  1. توضیح هر بخش (علامت ❗/ⓘ و راهنمای فیلدها) مستقل و بدون ارجاع به بانک قیمت V8 نوشته شود. **V8 را در کل نرم‌افزار فراموش کن**:
+     در متن‌های برنامه نامی از V8 نیاید؛ برنامه فقط با MTOها و بانک‌های قیمتی که کاربر می‌دهد کار می‌کند
+     (کد داخلی می‌تواند بماند، اما برچسب، راهنما، نام شاخص/منبع مثل FX_USD_V8 و پیام‌ها نه).
+  2. هر صفحه یا مرحله‌ای که طراحی/تغییر ظاهری می‌شود: **پیش از نهایی کردن، تصویرش در گفتگو فرستاده شود** و پس از تأیید کاربر اعمال
+     شود (تصویر از آزمون ویجت با فونت واقعی Vazirmatn، `matchesGoldenFile`/`toImage`، در scratchpad و SendUserFile).
+  3. خواننده‌ی MTO و بانک‌های قیمت باید هر نوع فایل مشابه آنچه تاکنون داده شده — و تغییرات بیشتر از آن — را بخواند
+     (بخش «File readers» پایین).
+  4. نرخ ارز ماهانه و PPIهای داخل و خارج ایران را کاربر در GitHub به‌روز می‌کند؛ پیش از کار روی شاخص‌ها آخرین نسخه را از
+     همان‌جا بخوان (شاخه‌های `ci-pb-fx`، `ci-pb-indices` و هر مسیری که کاربر بگوید).
 - **مراجع پروژه در `refs/`** (تصمیم کاربر ۱۴۰۵/۰۷/۲۴): فایل‌های اصلی MTO/PEP، بانک پمپ v8.1، اعتبارسنجی تعدیل، شرح نیاز و اسناد کلیدی؛
   فهرست و شیت‌های مهم هر فایل در `refs/README.md`. برای تصمیم‌های داده‌ای (شمار رکوردها، مبنای قیمت، سال، ضرایب پنهان) اول همین‌جا را ببین.
   این فایل‌ها را به `price_bank/test/fixtures*` کپی نکن و در کد برنامه ارجاع نده؛ آزمون‌ها با فیکسچرهای ناشناس می‌مانند.
@@ -80,38 +90,12 @@ previous-revision price), escalate prices to a target year (EUR-based methods M0
 search per equipment category, estimate new equipment from peers, multi-user with audit history. RTL Persian
 UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 
-## Build / test
-- Since 1405/07/27 the cloud environment allows `storage.googleapis.com` and `pub.dev`, and the environment's
-  Setup script installs Flutter stable in `/opt/flutter` (+ `libsqlite3-dev`; log `/var/log/flutter-setup.log`).
-  **Run locally first:** `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`
-  (≈1.5 min for all tests). Afterwards `git checkout analysis_options.yaml` and delete `pubspec.lock` (pub get
-  rewrites/creates them; do not commit). If `flutter` is missing, the setup script failed — read its log.
-- Official Dart/Flutter MCP server is configured for the project (`.mcp.json` at repo root, enabled in
-  `.claude/settings.json`): tools `analyze_files` (analyzer errors per file/root), `lsp` (hover, definition,
-  symbols), `pub`, `pub_dev_search`, `read_package_uris`, `rip_grep_packages`. Runtime tools (hot reload, widget
-  inspector, VM service, driver) are disabled — the Windows app cannot run here. It uses the real Dart binary
-  `/opt/flutter/bin/cache/dart-sdk/bin/dart` (the `/opt/flutter/bin/dart` wrapper prints a root banner on stdout,
-  which breaks MCP stdio). If Flutter is not installed, the server simply fails to start; use Bash instead.
-- Windows build + exe smoke test still run only in GitHub Actions (`.github/workflows/price_bank.yml`), which also
-  repeats Linux analyze + `flutter test`.
-- Push to `main` (paths `price_bank/**`) triggers CI. Results are pushed to branches (artifact download is blocked):
-  - `ci-pb-test`: `commit.txt`, `analyze.txt`, `test.txt`
-  - `ci-pb-windows`: `smoke.txt` (`RESULT: OK`)
-  - `ci-pb-dist`: `price_bank_windows.zip` + `commit.txt`
-  Read with `git clone -q --depth 1 -b <branch> https://github.com/mehdikhodayari313/nz-probe <dir>`;
-  check `commit.txt` == pushed SHA (test ≈4 min, Windows build ≈8–10 min after push).
-- Quick failure scan: `grep -E " error |warning" analyze.txt; grep -n "\[E\]\|All tests\|Some tests" test.txt`.
-- `gh` works in the sandbox (`gh run list/view/rerun`). Two pushes a few minutes apart run in parallel and both
-  force-push the ci-pb-* branches; the OLDER run can finish last. Always compare `commit.txt` with the released SHA;
-  if it differs, `gh run rerun <run-id>` of the final commit before taking the zip.
-- Exe smoke test: `price_bank.exe --smoke <report> <db> [pumps v8 xlsx] [desalter bank xlsx] [compressor bank xlsx]` (CI passes
-  all three fixtures; expects 146 pumps, 9 desalters, 10 compressors / 3 quotes / 4 peers).
-- Current released version: **0.9.3** (1405/08/03, no source column lost: pump ΔP, leftover specs, unheaded/extra columns; zip on `price-bank-releases`).
-- Releases/tags cannot be created from Claude sessions (403). Published builds live on branch
-  **`price-bank-releases`** (`price_bank_vX.Y_windows.zip` + README table) — add each new version there.
-- Commit trailer (always):
-  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
-- Bump the version label in `lib/ui/shell.dart` (`نسخه‌ی ۰٫X · آفلاین`) and the README header per release.
+## Build / test / release (details: `price_bank/docs/claude/BUILD_CI.md`)
+- Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
+  then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
+  `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
+- Current released version: **0.9.3** (1405/08/03). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)
 - **No gradients anywhere** — they render white on the user's GPU (blank sidebar). Solid colors + BoxShadow only.
@@ -141,68 +125,9 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - The indices page series list is lazy; adding series pushes others off-screen → UI tests must `scrollUntilVisible`.
 - `_reparseExisting` fills new template fields only once per template change (app_meta `profile_fields_<CODE>`).
 
-## Code map (`price_bank/lib`)
-- `core/` (pure Dart, used by tests): `price_bank.dart` (facade: repos, engines, `computeCategory`,
-  `bankCategories()` all enabled leaf cats, `estimableCategories()` pump + profiled cats, `backtestCategory`,
-  weight ref), `db/` (sqlite3, `migrations.dart`, EAV `item_values`, `price_obs`, `audit_log`),
-  `repo/` (catalog, items, docs, indices, settings, users, `seed.dart`, `generic_templates.dart` = enables
-  generic categories, creates profile fields, factor seeds, re-parses older MTO items/pumps on startup).
-- `core/calc/`: `pump_engine.dart` (v8-exact pump calc, golden-tested on 146 records), `methods.dart`
-  (M0–M6 definitions/stats, `MethodFactors`, `methodLabelFor`), `generic_engine.dart` (non-pump escalation),
-  `estimator.dart` (pump estimator + transfer calculator), `generic_estimator.dart` (CAP/NEAR/MANUAL,
-  config factor incl. optional WEIGHT factor), `backtest.dart` (method accuracy from bank: old price vs quotes),
-  `compressor.dart` (air compressor bank = Calc_Spec of Air_Compressor v8: per-compressor NormEsc, estimator A/A2/B/C/E;
-  `computeCategory('COMPRESSOR')` puts `GenericRow.cmp`), `desalter.dart` (desalter bank = Calc_Spec of Desalters_Price_Bank v8: factors, NormEsc, Coef A/B, ln-ln fit,
-  estimator A/B/C + weighted final; `computeCategory('DESALTER')` uses it and puts `GenericRow.des`).
-  `methods.dart` also has M7 composite basket (`MixPart`, `MethodFactors.compositeIndex`, `mixLabel`).
-- `core/catalog/profiles.dart`: per-category templates (fields, MTO label rules, size driver + n, factor groups,
-  `weightKey`), `parseMtoDescription`, `extractPumpSpecs`, `extractFreeSpecs` (free text like
-  "ID=5300 mm, 19.5 bar D.P."), `suggestCategoryFromText` (+priority words), `defaultCategoryMethod` /
-  `defaultCategoryMix`, `factorOption(g, v, code:)`; part file `desalter_profile.dart` (desalter fields, Factors_DES
-  seeds, lists DES_*, `inferDesalter` from MTO text); part file `compressor_profile.dart` (Factors_CMP seeds, lists CMP_*,
-  `inferCompressor`); `us_ppi.dart` (BLS PCU333912 seeded on startup); `eurostat_ppi.dart` (PPI series seeded on startup).
-- `core/import/`: `mto_importer.dart` (Pazanan quote-block format + orchestration, `run()` writes items and
-  observations, doc info, revision date, filename info), `mto_generic.dart` (any other layout: sheet kind
-  items/install/skip, header detection incl. multi-row/merged headers, column roles, multi-row items,
-  sections, Kg units, continuation pages, install-sheet weights), `v8_importer.dart`, `desalter_importer.dart`
-  (Desalters bank: columns by header text, cached values, vendors/quotes, KPL year correction, MTO duplicates),
-  `compressor_importer.dart` (air compressor bank: all quotes incl. no-reply, KPL fix, price-less AIR_DRYER item per IA/PA package).
-- `core/xlsx/xlsx_reader.dart`: own xlsx reader (merges, comments, fills).
-- `app/app_state.dart`: AppState (revision-cached pumps / genericRows / allRows), AppScope.
-- `ui/`: `shell.dart` (sidebar, top bar: target year, FX table, method chip, Rial/Toman, Back button),
-  `pages/` (dashboard, indices, methods, equipment + generic_equipment + item pages, estimator +
-  generic_estimator_tab + desalter_estimator_tab, factors, documents, history, users, settings), `widgets/` (common, data_grid,
-  field_editor, factor_dialog, mto_import_dialog, category_picker), `theme.dart`, `format.dart`.
-- Outside `lib/`: `spec/` (Excel «خروجی_قطعی» → `pending/*.json` via `tool/extract_final.py` and the
-  `spec_extract` workflow; see Part 1 above), `tool/` (gen_seed, extract_final, make_export_template),
-  `docs/HISTORY.md`, `docs/requirements/<CODE>.md` (per-category decisions; DESALTER قطعی, HEX در حال بررسی),
-  `docs/data/` (PPI CSV), `tool/fetch_eurostat.py` + `.github/workflows/pb_indices.yml`, `tool/data/` (raw Eurostat JSON),
-  `test/fixtures*/` (anonymized MTO fixtures; real client files are never committed).
+## Code map → `price_bank/docs/claude/CODE_MAP.md` (read the part you need)
 
-## Domain essentials
-- Default escalation **M6** = EU pump PPI (C28.13) + API 610 price floor (pumps S/D only). For non-pump
-  categories M6 ≡ M4 with the category's PPI. **User rule: each equipment has its own escalation method** (the
-  top-bar/pump method never applies to other categories); M7 = composite PPI basket per category (`cat_mix_<CODE>`).
-- Per-category settings keys: `cat_method_<CODE>`, `cat_ppi_<CODE>`, `cat_n_<CODE>`, `cat_est_<CODE>`, `cat_wexp_<CODE>`,
-  M5 uses `defaultCategoryUsPpi(code)` (COMPRESSOR = PPI_US_333912_GREG, others pump 333914).
-  Compressor params `cmp_n`, `cmp_fit`, `cmp_kw`, `cmp_bench`, `cmp_min_peers`, `cmp_final`.
-  `cat_mix_<CODE>` ("PPI_EU_C2529_GREG:0.7;…"; empty = profile default), `cat_mixrule_<CODE>` (Strict | empty =
-  Renormalize). `AppSettings.methodFor(code)` = cat_method else `defaultCategoryMethod` (DESALTER M7, others M4).
-  Factor sets `PUMP_ROT`, `GEN_<CODE>`.
-- Desalter = user's Desalters_Price_Bank v8.x method (docs/requirements/DESALTER.md); the bank file is the reference.
-  User decisions: KPL-476 cost year 1394/10 (corrected on import), Pazanan 1393 R02 and 1404 quotes are separate
-  records, MTO desalter with same tag base + same amount = duplicate (archived/skipped). Params keys `des_n_a`,
-  `des_fit_a`, `des_n_b`, `des_fit_b`, `des_kva_on`, `des_kva_m`, `des_kva_base`, `des_final`. Desalter keeps the
-  empty-weight field but no WEIGHT/PRESS factor.
-  v0.9.1: Scope fields + project phase are NOT on desalter records (estimator inputs only; user rule: equipment section
-  holds only specs relevant to selection). Equipment filters per category via `EquipmentProfile.filterKeys`.
-- Price flow: unit price in source currency → EUR at source year (IRR via document source FX if set) → escalate
-  EUR → convert with target-year FX table. CPI/rial inflation is NOT used (validation showed ~50% under-estimate).
-- Vessel-type empty weight (`empty_weight_kg`) is optional and neutral until ≥2 items of the category have it;
-  then WEIGHT factor = (W/size ÷ median)^0.8 replaces the PRESS factor.
-- MTO import: duplicate import blocked per (project, document title); same tag in same project+category from a
-  previous import is skipped; duplicates inside one file get " (2)" suffix. Unknown category → MISC_PKG;
-  summary tables (no tag & no qty) are unticked by default.
+## Domain essentials → `price_bank/docs/claude/DOMAIN.md` (escalation methods, settings keys, desalter/compressor decisions, price flow)
 
 ## File readers (user 1405/08/02: «very important», a file failed in front of his boss)
 - Every MTO/estimate/bank file must load without errors and without dropping any item: raw prices, overhead and other
@@ -219,44 +144,13 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Banks: always map columns through `bank_headers.dart` (`findSheetHeaders`, `BankTable`), never fixed header rows/columns.
   Messy-bank test: `test/bank_flex_test.dart`.
 
-## User decisions 1405/08/02 (Word file of 33 points + answers)
-1. Some equipment is domestic, some imported → the pricing method needs a manufacture-location option that offers the
-   suitable methods for that choice.
-2. Only the important methods; do not clutter.
-3. Category settings for multi-PPI equipment must be reachable from that equipment's estimator page and from the methods page.
-4. Languages last; Persian only for now.
-5. Claude must extract the Iranian industry indices (by any means).
-6. Classify/optimize electrical, instrumentation and piping like an expert engineer of that discipline.
 
-## Open items / next steps (keep this list current)
-1. User will send requirements for electrical, instrumentation and remaining mechanical templates. Add profiles
-   in `profiles.dart` (new fields of existing MTO items are filled once automatically on startup).
-2. Escalation per equipment type: each category has its own method (`methodFor`, default M4; DESALTER M7 composite).
-   User may send exact methods/baskets per type → `defaultCategoryMethod` / `defaultCategoryMix` in profiles.dart.
-3. HEX (heat exchangers): Excel bank `HeatExchangers_Price_Bank_v8.1` built (docs/requirements/HEX.md, در حال بررسی): per-sub-category
-   PPI basket (C28.25; STE 70/15/15 with C24.10≡C24.1 & C24.20≡C24.2; ACH 85/15 Al; CIP C28.13), weights editable. C25.30≡C25.3
-   (DE chain-linked <2018). Series only in the PPI CSV / `tool/data/eurostat_ppi_20261015c.json`, NOT yet in the app — add when user says «اعمال کن».
-4. Desalter (docs/requirements/DESALTER.md): kVA per transformer, CSV record year, calibration of Factors_DES and
-   basket weights are still Provisional. Finding to discuss: Pazanan 1393 estimate escalated ≈3.41 M€ vs 1404 quotes
-   1.93 M€ (−43%). Gachsaran PEP year (1402/05) and pump "x bar" meaning still unconfirmed.
-5. Air compressor bank (docs/requirements/COMPRESSOR.md): implemented in v0.9. Factors_CMP still Provisional (4 peers only;
-   Domestic 0.6 is circular). Next: AIR_DRYER bank — price-less items CMP-00xx-DRY wait for manual prices (estimate in remarks).
-6. Pump count (user 1405/07/24): app shows 101 = MTO KPL 40 + PEP G4 26 + MTO Pazanan 21 + catalog sample PUMPS 14
-   (user imported project files, never the v8.1 bank). Bank 146 adds 18 Pazanan R02 1393 duplicate-tag records,
-   13 KPL package pumps without price (P-113/123 desalter recycle, P-130–134/140–144 IGF, P-148 stripper) and 14 CSV
-   18061405 pumps (CSV not importable). Bugs: dashboard hides the pump-bank import once MTO pumps exist; v8 import has no
-   MTO dedupe (project names differ). Proposed fix (awaiting user OK): pump bank = reference like desalter.
-7. PIPING (docs/requirements/PIPING.md): consolidated Excel bank delivered 1405/08/02 (2659 items, 31 families, PPI+FX, market sheet).
-   Not in app. Calibrated 1405/08/02 (user: lowest error vs his project quotes): NIMA FX, base year 1388 (GLB 1387, TEE/TRD/CRD 1391,
-   CAP 1396, FLG 1385), qty factor off. Sheets: my quotes, Gachsaran-4 project prices, calibration. Open: F52 ×1.3, TEE WPHY60 2.5 vs 2.2.
-8. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
-9. SERVICES category (v0.9.2) escalates with the default PPI; a construction/labour index (Iranian or Eurostat construction
-   cost) should be chosen with the user. Desalter «Internals & Transformators» rows of an estimate stay separate DESALTER items
-   (user may move/merge in preview).
-10. Decisions 1–6 above (domestic/foreign methods, methods page, Iranian indices, E/I/P classification) are not implemented yet.
+## Open items → `price_bank/docs/claude/OPEN_ITEMS.md` (keep current at the end of every version)
+
+## App change plan → `price_bank/docs/requirements/APP_CHANGES.md` (29 items from the user's Word file, sessions 1–8, status per item)
 
 ## Working method that saves tokens
-- Read only the files the task touches (use the code map). Prefer targeted `grep`/`sed -n` over whole files.
+- Read only the files the task touches (use `docs/claude/CODE_MAP.md`). Prefer targeted `grep`/`sed -n` over whole files.
 - Make edits with small exact replacements; push once per coherent change; wait for CI; fix; then build.
 - Add/extend tests for every behavior change (fixtures are in `test/fixtures`), keep all tests green.
-- At the end of each version: update `docs/HISTORY.md` (one short section) and the open-items list above.
+- At the end of each version: update `docs/HISTORY.md` (one short section), `docs/claude/OPEN_ITEMS.md` and item status in `APP_CHANGES.md`.
