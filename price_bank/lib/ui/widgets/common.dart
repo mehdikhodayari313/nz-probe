@@ -600,6 +600,25 @@ class CountBadge extends StatelessWidget {
 }
 
 /// متن گزینه‌ی دراپ‌داون + تعداد اقلام آن (دراپ‌داون باید isExpanded باشد).
+/// گزینه‌ی «خالی» فیلترها: اقلامی که آن مشخصه را ندارند (تا جمع گزینه‌ها همیشه برابر «همه» باشد)
+const kEmptyOption = '\u0000empty';
+const kEmptyOptionLabel = 'خالی (در منبع نیست)';
+
+/// شمارش گزینه‌های یک فیلتر: (تعداد هر مقدار، تعداد خالی)؛ جمع همه = تعداد ردیف‌ها
+({Map<String, int> counts, int empty}) countValues<T>(Iterable<T> rows, String Function(T) valueOf) {
+  final counts = <String, int>{};
+  var empty = 0;
+  for (final r in rows) {
+    final v = valueOf(r);
+    if (v.isEmpty) {
+      empty++;
+    } else {
+      counts[v] = (counts[v] ?? 0) + 1;
+    }
+  }
+  return (counts: counts, empty: empty);
+}
+
 class CountedLabel extends StatelessWidget {
   const CountedLabel(this.text, this.count, {super.key, this.dimZero = true});
   final String text;

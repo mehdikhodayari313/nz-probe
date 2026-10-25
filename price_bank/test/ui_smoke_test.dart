@@ -77,7 +77,7 @@ void main() {
 
   testWidgets('صفحه‌ها با دیتابیس خالی هم باز می‌شوند', (tester) async {
     await boot(tester, withData: false);
-    expect(find.text('ورود داده‌های بانک قیمت v8'), findsOneWidget);
+    expect(find.text('ورود بانک قیمت تجهیزات'), findsOneWidget);
     for (var i = 0; i < labels.length; i++) {
       await go(tester, i);
       debugPrint('✓ ' 'صفحه‌ی ${labels[i]} (خالی)');

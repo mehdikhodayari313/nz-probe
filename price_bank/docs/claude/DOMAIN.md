@@ -33,3 +33,12 @@
 4. Languages last; Persian only for now.
 5. Claude must extract the Iranian industry indices (by any means).
 6. Classify/optimize electrical, instrumentation and piping like an expert engineer of that discipline.
+
+## User decisions 1405/08/03 (session 1)
+- Consolidated price bank (one sheet per family) is the reference: an active item of the same category + tag + price from
+  an MTO or another bank is archived on import.
+- Project/document counts (option A): exact, no duplicates; each document under its project; auxiliary «قیمت‌های بازنگری قبلی»
+  docs not counted; one document used by several projects counted once.
+- Piping bank (Piping_Price_Bank, 2656 items, prices in thousand rials, base year per family) is imported in session 4 with
+  the piping classification (#17).
+

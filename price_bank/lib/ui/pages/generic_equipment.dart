@@ -68,7 +68,8 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         }
       });
 
-  bool _match(GenericRow r) {
+  /// [except]: فیلتری که برای شمارش گزینه‌های خودش نادیده گرفته می‌شود ('_project' = پروژه)
+  bool _match(GenericRow r, {String? except}) {
     final q = _search.text.trim().toLowerCase();
     if (q.isNotEmpty) {
       final hay = [r.item.tag, r.item.name, r.item.projectName, r.item.remarks, ...r.item.values.values.map((v) => v?.toString())]
@@ -77,12 +78,16 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
           .toLowerCase();
       if (!q.split(RegExp(r'\s+')).every(hay.contains)) return false;
     }
-    if (_project != null && r.item.projectName != _project) return false;
+    if (_project != null && except != '_project') {
+      final pn = r.item.projectName ?? '';
+      if (_project == kEmptyOption ? pn.isNotEmpty : pn != _project) return false;
+    }
     if (_onlyPriced && !r.result.eurTarget.isNumber) return false;
     if (_onlyQuoted && r.quoteCount == 0) return false;
     for (final e in _enumF.entries) {
-      if (e.value == null) continue;
-      if (r.item.values[e.key]?.toString() != e.value) return false;
+      if (e.value == null || e.key == except) continue;
+      final v = r.item.values[e.key]?.toString() ?? '';
+      if (e.value == kEmptyOption ? v.isNotEmpty : v != e.value) return false;
     }
     for (final e in _rangeF.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
@@ -113,6 +118,9 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         ? [for (final k in _profile!.gridKeys) if (fieldsByKey[k] != null) fieldsByKey[k]!]
         : specFields.take(2).toList();
     final projects = {for (final r in all) r.item.projectName ?? ''}..remove('');
+    // شمارش هر فیلتر بر پایه‌ی بقیه‌ی فیلترها: «همه» = تعداد ردیف‌های ممکن = جمع گزینه‌ها
+    final forProject = all.where((r) => _match(r, except: '_project')).toList();
+    final noProject = forProject.where((r) => (r.item.projectName ?? '').isEmpty).length;
     final totalIrr = rows
         .where((r) => r.item.include && r.result.irrTarget.isNumber)
         .fold<double>(0, (a, r) => a + r.result.irrTarget.number! * (r.item.quantity ?? 1));
@@ -216,20 +224,23 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                 SizedBox(
                   width: 190,
                   child: DropdownButtonFormField<String?>(itemHeight: null, 
-                    value: projects.contains(_project) ? _project : null,
+                    value: projects.contains(_project) || (_project == kEmptyOption && noProject > 0) ? _project : null,
                     isExpanded: true,
                     decoration: const InputDecoration(labelText: 'پروژه'),
                     items: [
-                      DropdownMenuItem<String?>(value: null, child: CountedLabel('همه', all.length)),
+                      DropdownMenuItem<String?>(value: null, child: CountedLabel('همه', forProject.length)),
                       for (final p in projects.toList()..sort())
                         DropdownMenuItem<String?>(
-                            value: p, child: CountedLabel(p, all.where((r) => r.item.projectName == p).length)),
+                            value: p, child: CountedLabel(p, forProject.where((r) => r.item.projectName == p).length)),
+                      if (noProject > 0)
+                        DropdownMenuItem<String?>(value: kEmptyOption, child: CountedLabel('بدون پروژه', noProject)),
                     ],
                     onChanged: (v) => setState(() => _project = v),
                   ),
                 ),
                 if (_profile != null)
-                  for (final f in _profile!.enumFields) _enumFilter(context, all, f.key, f.labelFa, f.list),
+                  for (final f in _profile!.enumFields)
+                    _enumFilter(context, all.where((r) => _match(r, except: f.key)).toList(), f.key, f.labelFa, f.list),
                 if (_profile != null)
                   _rangeFilter(context, '_size', '${_profile!.driver.labelFa} (${_profile!.driver.unit})'),
                 if (_profile != null)
@@ -402,17 +413,15 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
 
   Widget _enumFilter(BuildContext context, List<GenericRow> all, String key, String labelFa, String? listKey) {
     final t = Theme.of(context);
-    final counts = <String, int>{};
-    for (final r in all) {
-      final v = r.item.values[key]?.toString();
-      if (v == null || v.isEmpty) continue;
-      counts[v] = (counts[v] ?? 0) + 1;
-    }
+    final (:counts, :empty) = countValues(all, (GenericRow r) => r.item.values[key]?.toString() ?? '');
     final opts = listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(listKey);
     final labels = {for (final o in opts) o.value: o.labelFa};
     final values = [for (final o in opts) o.value, for (final v in counts.keys) if (!labels.containsKey(v)) v];
+    if (empty > 0 || _enumF[key] == kEmptyOption) values.add(kEmptyOption);
+    counts[kEmptyOption] = empty;
     final cur = _enumF[key];
-    String show(String v) => (labels[v] == null || labels[v] == v) ? v : '${labels[v]}';
+    String show(String v) =>
+        v == kEmptyOption ? kEmptyOptionLabel : ((labels[v] == null || labels[v] == v) ? v : '${labels[v]}');
     return SizedBox(
       width: 178,
       child: DropdownButtonFormField<String?>(itemHeight: null, 

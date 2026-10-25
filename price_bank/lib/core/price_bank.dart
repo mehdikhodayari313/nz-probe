@@ -14,6 +14,7 @@ import 'calc/generic_engine.dart';
 import 'calc/pump_engine.dart';
 import 'calc/series.dart';
 import 'db/db.dart';
+import 'import/price_bank_importer.dart';
 import 'import/compressor_importer.dart';
 import 'import/desalter_importer.dart';
 import 'import/mto_importer.dart';
@@ -108,6 +109,7 @@ class PriceBank {
   DesalterImporter desalterImporter() => DesalterImporter(db, audit, catalog, items, docs);
 
   CompressorImporter compressorImporter() => CompressorImporter(db, audit, catalog, items, docs);
+  PriceBankImporter priceBankImporter() => PriceBankImporter(db, audit, catalog, items, docs);
 
   // ---------------------------------------------------------------------------
   // محاسبات

@@ -18,6 +18,7 @@ import '../repo/docs_repo.dart';
 import '../repo/items_repo.dart';
 import '../xlsx/xlsx_reader.dart';
 import 'bank_headers.dart';
+import 'price_bank_importer.dart';
 import 'v8_importer.dart';
 
 class DesalterImportReport {
@@ -135,6 +136,8 @@ class DesalterImporter {
         if (meta.text(r, 1) == 'equipment_code') return meta.text(r, 2) == 'DES';
       }
     }
+    // بانک تجمیعی (شیت هر تجهیز) خواننده‌ی خودش را دارد
+    if (PriceBankImporter.isPriceBank(wb)) return false;
     final h = masterHeaders(wb);
     if (h == null) return false;
     for (var r = 1; r < h.row && r <= 4; r++) {

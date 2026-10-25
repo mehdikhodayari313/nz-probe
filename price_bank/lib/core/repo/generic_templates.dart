@@ -9,7 +9,9 @@ import '../catalog/eurostat_ppi.dart';
 import '../catalog/profiles.dart';
 import '../catalog/us_ppi.dart';
 import '../db/db.dart';
+import 'audit.dart';
 import 'catalog_repo.dart';
+import 'docs_repo.dart';
 
 /// رده‌هایی که از مرحله‌ی ۲ (ورود MTO) فعال می‌شوند.
 const genericCategoryCodes = [
@@ -111,6 +113,7 @@ void ensureGenericTemplates(Db db) {
   _reparseExisting(db);
   _reparseMtoPumps(db);
   _backfillPumpDiffPressure(db);
+  _mergeDuplicateDocsOnce(db);
 }
 
 /// فیلدهای Scope و مرحله‌ی پروژه از بخش تجهیزات دیسالتر برداشته شدند (فقط ورودی تخمین‌اند).
@@ -222,6 +225,14 @@ void _reparseMtoPumps(Db db) {
       }
     }
   });
+}
+
+/// یک بار: اسناد تکراری (همان سند با عنوان کمی متفاوت) در دیتابیس‌های قبلی یکی می‌شوند
+void _mergeDuplicateDocsOnce(Db db) {
+  const flag = 'docs_merged_v1';
+  if (db.scalar('SELECT value FROM app_meta WHERE key = ?', [flag]) != null) return;
+  DocsRepo(db, Audit(db, null)).mergeDuplicateDocuments();
+  db.execute('INSERT OR REPLACE INTO app_meta(key, value) VALUES (?, ?)', [flag, nowIso()]);
 }
 
 /// یک بار: اختلاف فشار پمپ‌های MTO قبلی از شرح (و هد استنباطی ΔP × 10.2 اگر هد خالی است)

@@ -19,6 +19,7 @@ import '../repo/docs_repo.dart';
 import '../repo/items_repo.dart';
 import '../xlsx/xlsx_reader.dart';
 import 'bank_headers.dart';
+import 'price_bank_importer.dart';
 import 'desalter_importer.dart' show isKplRecord, kplCostYear, kplCostMonth, kplCorrectionNote;
 import 'v8_importer.dart';
 
@@ -102,6 +103,8 @@ class CompressorImporter {
         if (meta.text(r, 1) == 'equipment_code') return meta.text(r, 2) == 'CMP';
       }
     }
+    // بانک تجمیعی (شیت هر تجهیز) خواننده‌ی خودش را دارد
+    if (PriceBankImporter.isPriceBank(wb)) return false;
     final h = masterHeaders(wb);
     if (h == null) return false;
     // عنوان شیت («MASTER AIR COMPRESSOR PRICE DATABASE») یا ستون‌های خاص کمپرسور

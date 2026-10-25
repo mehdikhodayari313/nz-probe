@@ -81,6 +81,8 @@ class HeaderMap {
 }
 
 /// کیفیت تطبیق عنوان فایل با عنوان مورد انتظار (۰ = نه)
+int headerQuality(String want, String got, [List<String> syn = const []]) => _quality(want, got, syn);
+
 int _quality(String want, String got, List<String> syn) {
   if (got.trim().isEmpty) return 0;
   final nw = normHeader(want), ng = normHeader(got);

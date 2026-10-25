@@ -23,7 +23,7 @@ class DocumentsPage extends StatelessWidget {
       PageHeader(
         icon: Icons.folder_rounded,
         title: 'پروژه‌ها و اسناد منبع',
-        subtitle: '${fa(projects.length)} پروژه · ${fa(docs.length)} سند',
+        subtitle: '${fa(projects.length)} پروژه · ${fa(app.pb.docs.sourceDocumentCount())} سند منبع',
         actions: [
           if (canEdit)
             FilledButton.icon(
@@ -86,7 +86,7 @@ class DocumentsPage extends StatelessWidget {
         child: Table(
           columnWidths: const {
             0: FlexColumnWidth(2), 1: FlexColumnWidth(3.5), 2: FixedColumnWidth(80), 3: FixedColumnWidth(90),
-            4: FixedColumnWidth(150), 5: FixedColumnWidth(70), 6: FixedColumnWidth(100),
+            4: FixedColumnWidth(150), 5: FixedColumnWidth(70), 6: FixedColumnWidth(148),
           },
           defaultVerticalAlignment: TableCellVerticalAlignment.middle,
           children: [
@@ -94,10 +94,18 @@ class DocumentsPage extends StatelessWidget {
               decoration: BoxDecoration(color: AppColors.headerBg),
               children: [for (final h in ['پروژه', 'عنوان سند', 'بازنگری', 'سال صدور', 'نرخ تسعیر منبع', 'قیمت‌ها', '']) _c(h, b: true)],
             ),
-            for (final d in docs)
+            for (final d in _ordered(docs))
               TableRow(children: [
-                _c(d.projectName ?? '—'),
-                _c(d.title, b: true),
+                _c(DocsRepo.isAuxiliary(d) ? '' : (d.projectName ?? '—')),
+                DocsRepo.isAuxiliary(d)
+                    ? Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 14),
+                        child: Row(children: [
+                          Icon(Icons.subdirectory_arrow_left_rounded, size: 16, color: Theme.of(context).colorScheme.outline),
+                          Expanded(child: _c(d.title)),
+                        ]),
+                      )
+                    : _c(d.title, b: true),
                 _c(d.revision.isEmpty ? '—' : d.revision),
                 _c(d.issueYear == null ? '—' : fa(d.issueYear)),
                 _c(d.sourceFxEur == null ? 'جدول نرخ ارز' : '${faNum(d.sourceFxEur)} ریال/یورو'),
@@ -110,6 +118,12 @@ class DocumentsPage extends StatelessWidget {
                           icon: const Icon(Icons.event_repeat_rounded, size: 18),
                           onPressed: () => _bulkYear(context, d),
                         ),
+                        if (app.user.isAdmin && !DocsRepo.isAuxiliary(d))
+                          IconButton(
+                            tooltip: 'حذف سند',
+                            icon: Icon(Icons.delete_outline_rounded, size: 19, color: Tones.bad(context)),
+                            onPressed: () => _deleteDoc(context, d),
+                          ),
                       ])
                     : const SizedBox(),
               ]),
@@ -117,6 +131,63 @@ class DocumentsPage extends StatelessWidget {
         ),
       ),
     ]);
+  }
+
+  /// سند کمکی («قیمت‌های بازنگری قبلی») درست زیر سند اصلی‌اش
+  static List<SourceDocument> _ordered(List<SourceDocument> docs) {
+    final main = docs.where((d) => !DocsRepo.isAuxiliary(d)).toList();
+    final aux = docs.where(DocsRepo.isAuxiliary).toList();
+    final out = <SourceDocument>[];
+    for (final d in main) {
+      out.add(d);
+      for (final a in aux.where((a) => a.projectId == d.projectId && a.title.startsWith('${d.title} — ')).toList()) {
+        out.add(a);
+        aux.remove(a);
+      }
+    }
+    return [...out, ...aux];
+  }
+
+  /// پشتیبان کامل پیش از حذف؛ null = دیتابیس حافظه‌ای. خطا = استثنا
+  static String? _backup(AppState app, String prefix) {
+    final dbPath = app.pb.db.path;
+    if (dbPath == ':memory:') return null;
+    final dir = Directory('${File(dbPath).parent.path}${Platform.pathSeparator}backups')..createSync(recursive: true);
+    final n = DateTime.now();
+    String two(int v) => v.toString().padLeft(2, '0');
+    final path = '${dir.path}${Platform.pathSeparator}${prefix}_'
+        '${n.year}${two(n.month)}${two(n.day)}_${two(n.hour)}${two(n.minute)}${two(n.second)}.db';
+    app.pb.db.backupTo(path);
+    return path;
+  }
+
+  Future<void> _deleteDoc(BuildContext context, SourceDocument d) async {
+    final app = AppScope.read(context);
+    final ok = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _DeleteDialog(
+        title: 'حذف سند «${d.title}»',
+        body: 'با حذف این سند، ${fa(d.priceCount)} قیمت ثبت‌شده از آن (و قیمت‌های بازنگری قبلی همراهش) حذف می‌شود. '
+            'قلمی که دیگر هیچ قیمتی نداشته باشد هم حذف می‌شود؛ قلمی که قیمت دیگری از سند یا استعلام دیگر دارد می‌ماند.\n'
+            'پس از حذف می‌توانید همان فایل را دوباره وارد کنید. پیش از حذف، یک نسخه‌ی پشتیبان کامل از دیتابیس در پوشه‌ی backups '
+            'ذخیره می‌شود و حذف در تاریخچه ثبت می‌شود.',
+        button: 'حذف سند',
+      ),
+    );
+    if (ok == null || !context.mounted) return;
+    String? backup;
+    try {
+      backup = _backup(app, 'before_delete_document_${d.id}');
+    } catch (e) {
+      if (context.mounted) showSnack(context, 'پشتیبان‌گیری ناموفق بود؛ حذف انجام نشد: $e', error: true);
+      return;
+    }
+    final res = app.pb.docs.deleteDocument(d.id, reason: ok.isEmpty ? 'حذف سند منبع' : ok);
+    app.dataChanged(calcInputs: true);
+    if (context.mounted) {
+      showSnack(context,
+          'سند حذف شد (${fa(res.prices)} قیمت، ${fa(res.items)} قلم).${backup == null ? '' : ' پشتیبان پیش از حذف: $backup'}');
+    }
   }
 
   static Widget _c(String s, {bool b = false}) => Padding(
@@ -140,20 +211,20 @@ class DocumentsPage extends StatelessWidget {
   Future<void> _deleteProject(BuildContext context, Project p) async {
     final app = AppScope.read(context);
     final nDocs = app.pb.docs.documents(projectId: p.id).length;
-    final ok = await showDialog<String>(context: context, builder: (ctx) => _DeleteProjectDialog(project: p, docCount: nDocs));
+    final ok = await showDialog<String>(
+      context: context,
+      builder: (ctx) => _DeleteDialog(
+        title: 'حذف پروژه «${p.nameFa ?? p.name}»',
+        body: 'با حذف این پروژه، ${fa(p.itemCount)} قلم (با همه‌ی مشخصات، قیمت‌ها و استعلام‌ها) و ${fa(nDocs)} سند منبع آن حذف می‌شوند.\n'
+            'پیش از حذف، یک نسخه‌ی پشتیبان کامل از دیتابیس به طور خودکار در پوشه‌ی backups کنار دیتابیس ذخیره می‌شود و حذف در تاریخچه ثبت می‌شود.',
+        button: 'حذف پروژه',
+      ),
+    );
     if (ok == null || !context.mounted) return;
     // پشتیبان خودکار پیش از حذف
     String? backup;
     try {
-      final dbPath = app.pb.db.path;
-      if (dbPath != ':memory:') {
-        final dir = Directory('${File(dbPath).parent.path}${Platform.pathSeparator}backups')..createSync(recursive: true);
-        final n = DateTime.now();
-        String two(int v) => v.toString().padLeft(2, '0');
-        backup = '${dir.path}${Platform.pathSeparator}before_delete_project_${p.id}_'
-            '${n.year}${two(n.month)}${two(n.day)}_${two(n.hour)}${two(n.minute)}${two(n.second)}.db';
-        app.pb.db.backupTo(backup);
-      }
+      backup = _backup(app, 'before_delete_project_${p.id}');
     } catch (e) {
       if (context.mounted) showSnack(context, 'پشتیبان‌گیری ناموفق بود؛ حذف انجام نشد: $e', error: true);
       return;
@@ -279,17 +350,18 @@ class DocumentsPage extends StatelessWidget {
 }
 
 
-/// تأیید حذف پروژه: نمایش اثر حذف + تایپ کلمه‌ی «حذف» + دلیل.
-class _DeleteProjectDialog extends StatefulWidget {
-  const _DeleteProjectDialog({required this.project, required this.docCount});
-  final Project project;
-  final int docCount;
+/// تأیید حذف (پروژه یا سند): نمایش اثر حذف + تایپ کلمه‌ی «حذف» + دلیل.
+class _DeleteDialog extends StatefulWidget {
+  const _DeleteDialog({required this.title, required this.body, required this.button});
+  final String title;
+  final String body;
+  final String button;
 
   @override
-  State<_DeleteProjectDialog> createState() => _DeleteProjectDialogState();
+  State<_DeleteDialog> createState() => _DeleteDialogState();
 }
 
-class _DeleteProjectDialogState extends State<_DeleteProjectDialog> {
+class _DeleteDialogState extends State<_DeleteDialog> {
   final _confirm = TextEditingController();
   final _reason = TextEditingController();
 
@@ -303,11 +375,10 @@ class _DeleteProjectDialogState extends State<_DeleteProjectDialog> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final p = widget.project;
     final ready = _confirm.text.trim() == 'حذف';
     return AlertDialog(
       icon: Icon(Icons.delete_forever_rounded, color: Tones.bad(context), size: 40),
-      title: Text('حذف پروژه «${p.nameFa ?? p.name}»'),
+      title: Text(widget.title),
       content: SizedBox(
         width: 480,
         child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -318,11 +389,7 @@ class _DeleteProjectDialogState extends State<_DeleteProjectDialog> {
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Tones.bad(context).withValues(alpha: 0.3)),
             ),
-            child: Text(
-              'با حذف این پروژه، ${fa(p.itemCount)} قلم (با همه‌ی مشخصات، قیمت‌ها و استعلام‌ها) و ${fa(widget.docCount)} سند منبع آن حذف می‌شوند.\n'
-              'پیش از حذف، یک نسخه‌ی پشتیبان کامل از دیتابیس به طور خودکار در پوشه‌ی backups کنار دیتابیس ذخیره می‌شود و حذف در تاریخچه ثبت می‌شود.',
-              style: t.textTheme.bodySmall?.copyWith(height: 1.9),
-            ),
+            child: Text(widget.body, style: t.textTheme.bodySmall?.copyWith(height: 1.9)),
           ),
           const SizedBox(height: 14),
           TextField(
@@ -344,7 +411,7 @@ class _DeleteProjectDialogState extends State<_DeleteProjectDialog> {
           style: FilledButton.styleFrom(backgroundColor: Tones.bad(context)),
           onPressed: ready ? () => Navigator.pop(context, _reason.text.trim()) : null,
           icon: const Icon(Icons.delete_rounded),
-          label: const Text('حذف پروژه'),
+          label: Text(widget.button),
         ),
       ],
     );

@@ -166,3 +166,22 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   fields and report them (`extraInputColumns`, `storeExtraColumns`). Tests extended (pump ΔP/head/meta, unheaded
   columns, extra bank column «Site Altitude (m)» in messy fixtures).
 
+## v0.9.4 (1405/08/03) — session 1 of APP_CHANGES (#2f, #6, #20)
+- #2f: filter dropdowns (pumps `equipment_page`, other categories `generic_equipment`, project filter) count with
+  `countValues` (common.dart) and offer «خالی (در منبع نیست)» / «بدون پروژه» (`kEmptyOption`); each filter's counts are
+  faceted on the other active filters, so «همه» = shown rows = sum of options. Test `docs_counts_test.dart`.
+- #6: `price_bank_importer.dart` reads the user's consolidated bank (PriceBank_Desalting: one sheet per family + Vendor_Quotes):
+  family sheet = header row with name/tag + unit price + cost year + RID/Record Type (found anywhere, fuzzy headers);
+  category from title code/sheet name/item name; columns → category fields (labelEn, key, `_fieldSynonyms`), other
+  technical columns through the category's MTO rules (`profile.extract`/`extractPumpSpecs`), leftovers → spec fields;
+  computed bank columns skipped; Record Type/Parent Package kept (package tree #22); month → cost_month; doc FX → source fx;
+  all quotes by Linked RID (deduped); re-import skips existing RIDs. User decision: bank is the reference → active item
+  of the same category + tag + price from another source is archived. Dashboard dispatch first; card/dialog texts
+  without V8. Fixtures `PriceBank_test.xlsx` (+ messy) via `tool/make_pricebank_fixture.py` / `make_messy_pricebank_fixture.py`.
+  Piping bank (2656 items) deferred to session 4 (user).
+- #20: `DocsRepo.deleteDocument` (prices of the doc + its «قیمت‌های بازنگری قبلی» doc; items left without any price
+  removed; backup + typed confirmation in UI), `sameTitle`/`normTitle` (same doc with extension/punctuation/longer title),
+  `ensureDocument` dedupes, one-time `mergeDuplicateDocuments` on startup (`docs_merged_v1`), `sourceDocumentCount`
+  (no auxiliary docs, one doc shared by several projects counted once) on documents page and dashboard.
+  User decision (option A): counts are exact without duplicates; each document listed under its project.
+

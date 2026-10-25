@@ -97,7 +97,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
   then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
   `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
-- Current released version: **0.9.3** (1405/08/03). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Current released version: **0.9.4** (1405/08/03, session 1: filter counts, consolidated price bank import, document delete/merge). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
 - Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)
@@ -144,6 +144,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - **No column may be dropped** (user 1405/08/03, ROTARY «DIFF PRESS.» was lost): every spec that has no template field,
   or whose rule extracted nothing, is stored as an `mto_*` spec field; unheaded data columns, duplicate weight/qty columns
   and extra bank input columns are stored too. Pump ΔP → `diff_pressure_bar`; head inferred ΔP × 10.2 (SG 1) as in the v8 bank.
+- Consolidated price bank (one sheet per family + Vendor_Quotes): `price_bank_importer.dart`; it is the reference (same
+  category + tag + price elsewhere → archived). Test `test/price_bank_import_test.dart` (+ messy fixture).
 - Banks: always map columns through `bank_headers.dart` (`findSheetHeaders`, `BankTable`), never fixed header rows/columns.
   Messy-bank test: `test/bank_flex_test.dart`.
 

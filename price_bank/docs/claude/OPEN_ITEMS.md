@@ -17,7 +17,8 @@
    (user imported project files, never the v8.1 bank). Bank 146 adds 18 Pazanan R02 1393 duplicate-tag records,
    13 KPL package pumps without price (P-113/123 desalter recycle, P-130–134/140–144 IGF, P-148 stripper) and 14 CSV
    18061405 pumps (CSV not importable). Bugs: dashboard hides the pump-bank import once MTO pumps exist; v8 import has no
-   MTO dedupe (project names differ). Proposed fix (awaiting user OK): pump bank = reference like desalter.
+   MTO dedupe (project names differ). v0.9.4: the user's consolidated price bank (164 pumps + all families) is the reference;
+   importing it archives same-tag/same-price MTO duplicates; the import card is always shown (no V8 wording).
 7. PIPING (docs/requirements/PIPING.md): consolidated Excel bank delivered 1405/08/02 (2659 items, 31 families, PPI+FX, market sheet).
    Not in app. Calibrated 1405/08/02 (user: lowest error vs his project quotes): NIMA FX, base year 1388 (GLB 1387, TEE/TRD/CRD 1391,
    CAP 1396, FLG 1385), qty factor off. Sheets: my quotes, Gachsaran-4 project prices, calibration. Open: F52 ×1.3, TEE WPHY60 2.5 vs 2.2.

@@ -84,7 +84,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
     ];
   }
 
-  bool _match(PumpRow r, String q) {
+  /// [except]: فیلتری که برای شمارش گزینه‌های خودش نادیده گرفته می‌شود (شمارش وابسته به بقیه‌ی فیلترها)
+  bool _match(PumpRow r, String q, {String? except}) {
     if (q.isNotEmpty) {
       final hay = [
         r.item.tag, r.item.name, r.item.remarks, r.item.projectName,
@@ -93,8 +94,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
       if (!q.split(RegExp(r'\s+')).every(hay.contains)) return false;
     }
     for (final e in _filters.entries) {
-      if (e.value == null) continue;
-      if (_val(r, e.key) != e.value) return false;
+      if (e.value == null || e.key == except) continue;
+      if (e.value == kEmptyOption ? _val(r, e.key).isNotEmpty : _val(r, e.key) != e.value) return false;
     }
     for (final e in _ranges.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
@@ -467,7 +468,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
         if (_showFilters) ...[
           const SizedBox(height: 10),
           Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
-            for (final e in _enumFilters.entries) _enumFilter(context, all, e.key, e.value, fields[e.key]?.listKey),
+            for (final e in _enumFilters.entries)
+              _enumFilter(context, [
+                for (final r in all)
+                  if (_match(r, _search.text.trim().toLowerCase(), except: e.key)) r,
+              ], e.key, e.value, fields[e.key]?.listKey),
             for (final e in _ranges.entries) _rangeFilter(context, e.key, e.value),
             ToggleChip(
               label: 'فقط دارای قیمت تعدیل‌شده',
@@ -488,14 +493,10 @@ class _EquipmentPageState extends State<EquipmentPage> {
   }
 
   /// فیلتر انتخابی: همه‌ی گزینه‌های فهرست قالب (حتی بدون پمپ) + مقادیر موجود، با تعداد هر گزینه.
+  /// [all]: ردیف‌هایی که با بقیه‌ی فیلترها می‌خوانند؛ «همه» = تعداد آن‌ها = جمع گزینه‌ها (با «خالی»)
   Widget _enumFilter(BuildContext context, List<PumpRow> all, String key, String label, String? listKey) {
     final t = Theme.of(context);
-    final counts = <String, int>{};
-    for (final r in all) {
-      final v = _val(r, key);
-      if (v.isEmpty) continue;
-      counts[v] = (counts[v] ?? 0) + 1;
-    }
+    final (:counts, :empty) = countValues(all, (PumpRow r) => _val(r, key));
     final catalog = listKey == null ? const <EnumOption>[] : AppScope.read(context).pb.catalog.options(listKey);
     final labels = <String, String?>{for (final o in catalog) o.value: o.labelFa};
     final values = <String>[
@@ -503,8 +504,11 @@ class _EquipmentPageState extends State<EquipmentPage> {
       for (final v in (counts.keys.toList()..sort())) if (!labels.containsKey(v)) v,
     ];
     if (key == 'cost_year') values.sort();
+    if (empty > 0 || _filters[key] == kEmptyOption) values.add(kEmptyOption);
+    counts[kEmptyOption] = empty;
     final current = _filters[key];
     String show(String v) {
+      if (v == kEmptyOption) return kEmptyOptionLabel;
       if (v == 'Not stated' || v == '(Not stated)') return 'نامشخص';
       if (key == 'cost_year') return fa(v);
       if (listKey == 'YN' || listKey == 'YNS') return labels[v] ?? v;

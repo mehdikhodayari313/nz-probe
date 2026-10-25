@@ -5,6 +5,7 @@ import '../../app/app_state.dart';
 import '../../core/calc/methods.dart';
 import '../../core/import/compressor_importer.dart';
 import '../../core/import/desalter_importer.dart';
+import '../../core/import/price_bank_importer.dart';
 import '../../core/import/v8_importer.dart';
 import '../../core/xlsx/xlsx_reader.dart';
 import '../format.dart';
@@ -93,7 +94,7 @@ class DashboardPage extends StatelessWidget {
         KpiTile(
           label: 'پروژه‌ها',
           value: fa(projects.length),
-          sub: '${fa(app.pb.docs.documents().length)} سند منبع',
+          sub: '${fa(app.pb.docs.sourceDocumentCount())} سند منبع',
           icon: Icons.folder_rounded,
           color: AppColors.teal,
           onTap: () => AppShell.go(context, AppShell.documents),
@@ -394,7 +395,7 @@ class _ImportCardState extends State<_ImportCard> {
 
   Future<void> _run() async {
     final res = await FilePicker.platform.pickFiles(
-      dialogTitle: 'انتخاب فایل بانک قیمت v8 (پمپ، دیسالتر یا کمپرسور هوا)',
+      dialogTitle: 'انتخاب فایل بانک قیمت تجهیزات',
       type: FileType.custom,
       allowedExtensions: const ['xlsx'],
     );
@@ -406,6 +407,37 @@ class _ImportCardState extends State<_ImportCard> {
       if (!mounted) return;
       final app = AppScope.read(context);
       final wb = XlsxWorkbook.openFile(path);
+      if (PriceBankImporter.isPriceBank(wb)) {
+        final rep = app.pb.priceBankImporter().run(wb, fileName: res!.files.single.name);
+        app.dataChanged(calcInputs: true);
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            icon: Icon(rep.items == 0 ? Icons.info_outline : Icons.check_circle_rounded, color: Tones.good(ctx), size: 40),
+            title: Text(rep.items == 0 ? 'همه‌ی رکوردهای این بانک قبلاً وارد شده‌اند' : 'ورود بانک قیمت کامل شد'),
+            content: SizedBox(
+              width: 520,
+              child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text('تجهیزات: ${fa(rep.items)}${rep.components > 0 ? ' (${fa(rep.components)} جزء پکیج بدون قیمت جدا)' : ''}'),
+                if (rep.perCategory.isNotEmpty)
+                  Text(rep.perCategory.entries
+                      .map((e) => '${app.pb.catalog.categoryByCode(e.key)?.nameFa ?? e.key}: ${fa(e.value)}')
+                      .join('، ')),
+                Text('پروژه‌ها: ${fa(rep.projects)} · اسناد منبع: ${fa(rep.documents)}'),
+                Text('استعلام‌ها: ${fa(rep.quotes)} (${fa(rep.quotesPriced)} قیمت‌دار، بقیه بی‌پاسخ/انصراف)'),
+                if (rep.specFields > 0) Text('مشخصات فنی بدون فیلد قالب که به‌صورت مشخصه ثبت شد: ${fa(rep.specFields)} عنوان'),
+                if (rep.skippedExisting > 0) Text('رکوردهای قبلاً واردشده (تکرار نشد): ${fa(rep.skippedExisting)}'),
+                if (rep.archivedDuplicates > 0)
+                  Text('اقلام تکراری از MTO یا بانک‌های دیگر بایگانی شد: ${fa(rep.archivedDuplicates)} (بانک قیمت مرجع است)'),
+                for (final w in rep.warnings.take(5)) Text('⚠ $w', style: TextStyle(color: Tones.warn(ctx))),
+              ]),
+            ),
+            actions: [FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('بسیار خوب'))],
+          ),
+        );
+        return;
+      }
       if (CompressorImporter.isCompressorBank(wb)) {
         final err = CompressorImporter.validate(wb);
         if (err != null) throw FormatException(err);
@@ -508,15 +540,13 @@ class _ImportCardState extends State<_ImportCard> {
         const SizedBox(width: 18),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(widget.pumps ? 'ورود بانک‌های قیمت تجهیزات' : 'ورود داده‌های بانک قیمت v8',
+            Text('ورود بانک قیمت تجهیزات',
                 style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700, color: t.colorScheme.onPrimaryContainer)),
             const SizedBox(height: 4),
             Text(
-              '${widget.pumps ? '' : 'فایل Pumps_Price_Bank_v8.xlsx (۱۴۶ پمپ) یا '}'
-              '${widget.desalters ? '' : 'فایل Desalters_Price_Bank_v8.xlsx (دیسالترها) '}'
-              '${widget.compressors ? '' : '${widget.desalters ? 'فایل' : 'یا'} Air_Compressor_Price_Bank_v8.xlsx (کمپرسور هوا) '}'
-              'را انتخاب کنید؛ نوع فایل خودکار تشخیص داده می‌شود. همه‌ی مشخصات، پروژه‌ها، اسناد منبع، فروشندگان، استعلام‌ها، '
-              'یادداشت‌های شاهد و برچسب مقادیر استنباطی منتقل می‌شوند. فایل اکسل تغییر نمی‌کند.',
+              'فایل بانک قیمت را انتخاب کنید: بانک تجمیعی (یک شیت برای هر تجهیز) یا بانک جداگانه‌ی پمپ، دیسالتر یا کمپرسور هوا؛ '
+              'نوع فایل خودکار تشخیص داده می‌شود. همه‌ی مشخصات، پروژه‌ها، اسناد منبع، فروشندگان، استعلام‌ها، یادداشت‌های شاهد و '
+              'برچسب مقادیر استنباطی منتقل می‌شوند؛ رکورد تکراری دوباره وارد نمی‌شود. فایل اکسل تغییر نمی‌کند.',
               style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onPrimaryContainer, height: 1.8),
             ),
           ]),
@@ -549,8 +579,8 @@ class _StartSteps extends StatelessWidget {
           hasData
               ? (hasPumps
                   ? 'داده‌ها وارد شده‌اند ✓ — برای افزودن تجهیزات، MTO پروژه‌ی تازه را از کارت «تجهیزات به تفکیک رده» وارد کنید.'
-                  : 'MTO وارد شده ✓ — بانک پمپ‌ها (v8) را هم از کارت بالا وارد کنید.')
-              : 'بانک پمپ‌ها (v8) را از کارت بالا و MTO پروژه‌ها را از «ورود MTO» وارد کنید.',
+                  : 'MTO وارد شده ✓ — بانک قیمت تجهیزات را هم از کارت بالا وارد کنید.')
+              : 'بانک قیمت تجهیزات را از کارت بالا و MTO پروژه‌ها را از «ورود MTO» وارد کنید.',
           null),
       (2, Icons.query_stats_rounded, 'شاخص‌ها و ارز',
           'نرخ ارز و شاخص‌ها را تکمیل کنید؛ جدول نرخ ارز تازه با نام دلخواه هم همان‌جا ساخته می‌شود.', AppShell.indices),
