@@ -19,15 +19,16 @@ class PageHeader extends StatelessWidget {
       child: Row(
         children: [
           if (icon != null) ...[
+            // نشان صفحه: دایره‌ی ابزار دقیق P&ID (هم‌خانواده‌ی نشان بخش‌ها)
             Container(
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: AppColors.petrol,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [BoxShadow(color: AppColors.petrol.withValues(alpha: 0.30), blurRadius: 12, offset: const Offset(0, 4))],
+                color: AppColors.petrol.withValues(alpha: 0.08),
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.petrol.withValues(alpha: 0.55), width: 1.6),
               ),
-              child: Icon(icon, color: Colors.white, size: 24),
+              child: Icon(icon, color: AppColors.strong, size: 22),
             ),
             const SizedBox(width: 14),
           ],
@@ -75,41 +76,50 @@ class SectionCard extends StatelessWidget {
     final c = accent ?? t.colorScheme.primary;
     // Material (نه Container رنگی) تا ListTile و افکت‌های لمس درون کارت درست نمایش داده شوند.
     return DecoratedBox(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: softShadow(context)),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), boxShadow: softShadow(context)),
       child: Material(
         color: t.colorScheme.surface,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.8)),
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: t.colorScheme.outlineVariant),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (title != null)
+            if (title != null) ...[
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                 child: Row(children: [
                   if (icon != null) ...[
+                    // نشان بخش به شکل دایره‌ی ابزار دقیق نقشه‌های P&ID
                     Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(color: c.withValues(alpha: 0.10), borderRadius: BorderRadius.circular(9)),
-                      child: Icon(icon, size: 18, color: c),
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: c.withValues(alpha: 0.06),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: c.withValues(alpha: 0.45), width: 1.2),
+                      ),
+                      child: Icon(icon, size: 16, color: c),
                     ),
                     const SizedBox(width: 10),
                   ],
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(title!, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      Text(title!,
+                          style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 14.5)),
                       if (subtitle != null)
                         Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
                     ]),
                   ),
-                  if (trailing != null) Flexible(child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing!)),
+                  if (trailing != null)
+                    Flexible(child: Align(alignment: AlignmentDirectional.centerEnd, child: trailing!)),
                 ]),
               ),
+              Divider(height: 1, thickness: 1, color: t.colorScheme.outlineVariant.withValues(alpha: 0.7)),
+            ],
             Padding(padding: padding, child: child),
           ],
         ),
@@ -156,7 +166,8 @@ class _HelpPanelState extends State<HelpPanel> {
               Icon(Icons.lightbulb_outline_rounded, size: 20, color: c),
               const SizedBox(width: 8),
               Expanded(
-                child: Text(widget.title, style: t.textTheme.labelLarge?.copyWith(color: c, fontWeight: FontWeight.w700)),
+                child:
+                    Text(widget.title, style: t.textTheme.labelLarge?.copyWith(color: c, fontWeight: FontWeight.w700)),
               ),
               Icon(open ? Icons.expand_less_rounded : Icons.expand_more_rounded, color: c),
             ]),
@@ -172,7 +183,8 @@ class _HelpPanelState extends State<HelpPanel> {
                   child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Padding(
                       padding: const EdgeInsets.only(top: 8, left: 8),
-                      child: Container(width: 5, height: 5, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
+                      child:
+                          Container(width: 5, height: 5, decoration: BoxDecoration(color: c, shape: BoxShape.circle)),
                     ),
                     Expanded(child: Text(l, style: t.textTheme.bodySmall?.copyWith(height: 1.9))),
                   ]),
@@ -209,12 +221,12 @@ class KpiTile extends StatelessWidget {
     final t = Theme.of(context);
     final c = color ?? t.colorScheme.primary;
     return HoverLift(
-      radius: 16,
+      radius: 14,
       child: Container(
         width: width,
         decoration: BoxDecoration(
           color: t.colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(color: t.colorScheme.outlineVariant),
         ),
         clipBehavior: Clip.antiAlias,
@@ -223,9 +235,8 @@ class KpiTile extends StatelessWidget {
           child: InkWell(
             onTap: onTap,
             child: Stack(children: [
-              PositionedDirectional(start: 0, top: 0, bottom: 0, child: Container(width: 4, color: c)),
               Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(18, 12, 14, 12),
+                padding: const EdgeInsetsDirectional.fromSTEB(16, 12, 14, 12),
                 child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Expanded(
@@ -239,15 +250,21 @@ class KpiTile extends StatelessWidget {
                       Container(
                         width: 30,
                         height: 30,
-                        decoration: BoxDecoration(color: c.withValues(alpha: 0.12), shape: BoxShape.circle),
-                        child: Icon(icon, size: 16, color: c),
+                        decoration: BoxDecoration(
+                          color: c.withValues(alpha: 0.06),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: c.withValues(alpha: 0.45), width: 1.2),
+                        ),
+                        child: Icon(icon, size: 15, color: c),
                       ),
                   ]),
                   const SizedBox(height: 6),
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     alignment: AlignmentDirectional.centerStart,
-                    child: Text(value, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800, color: c)),
+                    child: Text(value,
+                        style: t.textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w700, color: c, fontFeatures: const [FontFeature.tabularFigures()])),
                   ),
                   if (sub != null)
                     Text(sub!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
@@ -299,16 +316,18 @@ class FadeIn extends StatelessWidget {
   final int delay; // ترتیب (۰، ۱، ۲، …)
 
   @override
-  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0, end: 1),
-        duration: Duration(milliseconds: 320 + delay * 60),
-        curve: Curves.easeOutCubic,
-        builder: (context, v, child) => Opacity(
-          opacity: v,
-          child: Transform.translate(offset: Offset(0, (1 - v) * 12), child: child),
-        ),
-        child: child,
-      );
+  Widget build(BuildContext context) => MediaQuery.of(context).disableAnimations
+      ? child
+      : TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: 1),
+          duration: Duration(milliseconds: 320 + delay * 60),
+          curve: Curves.easeOutCubic,
+          builder: (context, v, child) => Opacity(
+            opacity: v,
+            child: Transform.translate(offset: Offset(0, (1 - v) * 12), child: child),
+          ),
+          child: child,
+        );
 }
 
 /// نشان ارز (یورو/دلار/ریال/تومان) تا هیچ عددی بدون واحد خوانده نشود.
@@ -380,12 +399,15 @@ class _RangePainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final cy = size.height / 2;
     final rect = Rect.fromLTWH(0, cy - barH / 2, size.width, barH);
-    canvas.drawRRect(RRect.fromRectAndRadius(rect, Radius.circular(barH)), Paint()..color = color.withValues(alpha: 0.22));
+    canvas.drawRRect(
+        RRect.fromRectAndRadius(rect, Radius.circular(barH)), Paint()..color = color.withValues(alpha: 0.22));
     if (pos != null) {
       // بخش کمینه تا مقدار مورد انتظار پررنگ‌تر
       final xm = rtl ? size.width * (1 - pos!) : size.width * pos!;
-      final filled = rtl ? Rect.fromLTRB(xm, rect.top, size.width, rect.bottom) : Rect.fromLTRB(0, rect.top, xm, rect.bottom);
-      canvas.drawRRect(RRect.fromRectAndRadius(filled, Radius.circular(barH)), Paint()..color = color.withValues(alpha: 0.6));
+      final filled =
+          rtl ? Rect.fromLTRB(xm, rect.top, size.width, rect.bottom) : Rect.fromLTRB(0, rect.top, xm, rect.bottom);
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(filled, Radius.circular(barH)), Paint()..color = color.withValues(alpha: 0.6));
     }
     if (pos != null) {
       final r = size.height / 2 - 1;
@@ -594,7 +616,9 @@ class CountBadge extends StatelessWidget {
       ),
       child: Text(fa(count),
           style: TextStyle(
-              fontSize: 11.5, fontWeight: FontWeight.w700, color: count == 0 ? t.colorScheme.outline : AppColors.petrolDark)),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w700,
+              color: count == 0 ? t.colorScheme.outline : AppColors.petrolDark)),
     );
   }
 }
@@ -663,7 +687,11 @@ class DdText extends StatelessWidget {
         message: text,
         waitDuration: const Duration(milliseconds: 350),
         child: Text(text,
-            maxLines: 1, overflow: TextOverflow.ellipsis, softWrap: false, style: style, textAlign: textAlign,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            style: style,
+            textAlign: textAlign,
             textDirection: textDirection),
       );
     }
@@ -676,7 +704,8 @@ class DdText extends StatelessWidget {
 
 /// دکمه‌ی انتخاب رده با تعداد اقلام.
 class CategoryChip extends StatelessWidget {
-  const CategoryChip({super.key, required this.label, required this.count, required this.selected, required this.onTap});
+  const CategoryChip(
+      {super.key, required this.label, required this.count, required this.selected, required this.onTap});
   final String label;
   final int count;
   final bool selected;
@@ -697,12 +726,14 @@ class CategoryChip extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
-            if (selected) const Padding(
-              padding: EdgeInsetsDirectional.only(end: 6),
-              child: Icon(Icons.check_rounded, size: 16, color: Colors.white),
-            ),
+            if (selected)
+              const Padding(
+                padding: EdgeInsetsDirectional.only(end: 6),
+                child: Icon(Icons.check_rounded, size: 16, color: Colors.white),
+              ),
             Text(label,
-                style: TextStyle(fontWeight: FontWeight.w700, color: selected ? Colors.white : t.colorScheme.onSurface)),
+                style:
+                    TextStyle(fontWeight: FontWeight.w700, color: selected ? Colors.white : t.colorScheme.onSurface)),
             const SizedBox(width: 6),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6),
@@ -712,7 +743,9 @@ class CategoryChip extends StatelessWidget {
               ),
               child: Text(fa(count),
                   style: TextStyle(
-                      fontSize: 11.5, fontWeight: FontWeight.w800, color: selected ? Colors.white : AppColors.petrolDark)),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w800,
+                      color: selected ? Colors.white : AppColors.petrolDark)),
             ),
           ]),
         ),
@@ -721,3 +754,174 @@ class CategoryChip extends StatelessWidget {
   }
 }
 
+/// یک خوانش در [ReadoutStrip].
+class Readout {
+  const Readout({required this.label, required this.value, this.sub, this.color, this.unit, this.primary = false});
+  final String label;
+  final String value;
+  final String? unit;
+  final String? sub;
+  final Color? color;
+
+  /// خوانش اصلی (قیمت مبنا): خط کهربایی «جریان» زیر آن
+  final bool primary;
+}
+
+/// نوار خوانش‌ها مثل صفحه‌ی نمایشگر تابلو کنترل: یک قاب، خوانش‌ها با خط مویی از هم جدا،
+/// خوانش اصلی با خط کهربایی. در پنجره‌ی باریک خوانش‌ها به سطر بعد می‌روند.
+class ReadoutStrip extends StatelessWidget {
+  const ReadoutStrip({super.key, required this.items, this.footer});
+  final List<Readout> items;
+  final Widget? footer;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final line = t.colorScheme.outlineVariant;
+    Widget cell(Readout r) {
+      final c = r.color ?? t.colorScheme.onSurface;
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(18, 12, 18, 12),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(r.label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: t.textTheme.labelMedium
+                  ?.copyWith(color: t.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w500)),
+          const SizedBox(height: 4),
+          Row(crossAxisAlignment: CrossAxisAlignment.baseline, textBaseline: TextBaseline.alphabetic, children: [
+            Flexible(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: AlignmentDirectional.centerStart,
+                child: Text(r.value,
+                    style: t.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: c,
+                        height: 1.15,
+                        fontFeatures: const [FontFeature.tabularFigures()])),
+              ),
+            ),
+            if (r.unit != null) ...[
+              const SizedBox(width: 6),
+              Text(r.unit!, style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            ],
+          ]),
+          if (r.primary)
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              width: 36,
+              height: 3,
+              decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(2)),
+            ),
+          if (r.sub != null)
+            Padding(
+              padding: EdgeInsets.only(top: r.primary ? 5 : 4),
+              child: Text(r.sub!,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            ),
+        ]),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: t.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: line),
+        boxShadow: softShadow(context),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [
+        LayoutBuilder(builder: (context, cons) {
+          final perRow = (cons.maxWidth / 230).floor().clamp(1, items.length);
+          final rows = <List<Readout>>[];
+          for (var i = 0; i < items.length; i += perRow) {
+            rows.add(items.sublist(i, (i + perRow).clamp(0, items.length)));
+          }
+          return Column(children: [
+            for (var r = 0; r < rows.length; r++) ...[
+              if (r > 0) Divider(height: 1, color: line),
+              IntrinsicHeight(
+                child: Row(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  for (var i = 0; i < perRow; i++) ...[
+                    if (i > 0) VerticalDivider(width: 1, thickness: 1, color: line),
+                    Expanded(child: i < rows[r].length ? cell(rows[r][i]) : const SizedBox()),
+                  ],
+                ]),
+              ),
+            ],
+          ]);
+        }),
+        if (footer != null) ...[
+          Divider(height: 1, color: line),
+          Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8), child: footer!),
+        ],
+      ]),
+    );
+  }
+}
+
+/// پلاک تگ تجهیز (مثل برچسب تگ روی نقشه): قاب با خط کهربایی در ابتدای آن.
+class TagPlate extends StatelessWidget {
+  const TagPlate({super.key, required this.tag, this.muted = false});
+  final String tag;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: t.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: AppColors.strong.withValues(alpha: 0.55), width: 1.4),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: IntrinsicHeight(
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(width: 4, color: AppColors.amber),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            child: Text(tag,
+                textDirection: muted ? null : TextDirection.ltr,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: muted ? 14 : 17,
+                  letterSpacing: muted ? 0 : 0.6,
+                  color: muted ? t.colorScheme.onSurfaceVariant : AppColors.strong,
+                )),
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// عنوان صفحه‌ی تجهیز: پلاک تگ، نام و رده
+class ItemTitle extends StatelessWidget {
+  const ItemTitle({required this.tag, required this.name, required this.sub, this.muted = false});
+  final String tag;
+  final String name;
+  final String sub;
+  final bool muted;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return Row(children: [
+      TagPlate(tag: tag, muted: muted),
+      const SizedBox(width: 14),
+      Flexible(
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
+          Text(name,
+              overflow: TextOverflow.ellipsis, style: t.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(sub,
+              overflow: TextOverflow.ellipsis,
+              style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+        ]),
+      ),
+    ]);
+  }
+}

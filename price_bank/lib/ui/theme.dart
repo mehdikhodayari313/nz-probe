@@ -49,7 +49,7 @@ class AppColors {
   static const irr = Color(0xFFB5651D);
 
   /// رنگ‌های وابسته به حالت روز/شب
-  static Color get bg => isDark ? const Color(0xFF0E1418) : const Color(0xFFF1F4F7);
+  static Color get bg => isDark ? const Color(0xFF0D1519) : const Color(0xFFEDF1F3);
   static Color get surface => isDark ? const Color(0xFF162027) : Colors.white;
   static Color get ink => isDark ? const Color(0xFFE6EDF1) : const Color(0xFF1D2939);
   static Color get line => isDark ? const Color(0xFF2A3740) : const Color(0xFFE2E8EE);
@@ -171,11 +171,18 @@ ThemeData buildTheme(Brightness b) {
       side: BorderSide(color: scheme.outlineVariant),
       labelStyle: TextStyle(fontFamily: 'Vazirmatn', fontSize: 12.5, color: scheme.onSurface),
     ),
+    // زبانه‌ها: قرص نرم زیر زبانه‌ی فعال با خط کهربایی «جریان» در پایین (حرکت نرم بین زبانه‌ها)
     tabBarTheme: TabBarThemeData(
-      labelColor: scheme.primary,
+      labelColor: light ? AppColors.petrolDark : scheme.primary,
       unselectedLabelColor: scheme.onSurfaceVariant,
-      indicatorColor: AppColors.amber,
-      indicatorSize: TabBarIndicatorSize.label,
+      indicator: ShapeDecoration(
+        color: scheme.primary.withValues(alpha: light ? 0.08 : 0.16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+      indicatorSize: TabBarIndicatorSize.tab,
+      overlayColor: WidgetStatePropertyAll(scheme.primary.withValues(alpha: 0.04)),
+      splashFactory: NoSplash.splashFactory,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 16),
       dividerColor: scheme.outlineVariant,
       labelStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w700, fontSize: 13.5),
       unselectedLabelStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w500, fontSize: 13.5),
@@ -210,8 +217,8 @@ List<BoxShadow> softShadow(BuildContext c, {bool hover = false}) => AppColors.is
         if (hover) BoxShadow(color: AppColors.petrol.withValues(alpha: 0.35), blurRadius: 18, spreadRadius: 1),
       ]
     : [
-        BoxShadow(color: const Color(0xFF101828).withValues(alpha: hover ? 0.12 : 0.06), blurRadius: hover ? 22 : 10, offset: Offset(0, hover ? 8 : 3)),
-        BoxShadow(color: const Color(0xFF101828).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1)),
+        BoxShadow(color: const Color(0xFF0B2530).withValues(alpha: hover ? 0.07 : 0.04), blurRadius: hover ? 24 : 14, offset: Offset(0, hover ? 6 : 2)),
+        BoxShadow(color: const Color(0xFF0B2530).withValues(alpha: 0.03), blurRadius: 1, offset: const Offset(0, 1)),
       ];
 
 /// رنگ‌های معنایی که در حالت روشن و تاریک خوانا هستند.

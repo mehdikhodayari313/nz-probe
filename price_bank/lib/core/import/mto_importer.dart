@@ -989,7 +989,7 @@ class MtoImporter {
           final int id;
           if (revise != null) {
             id = revise;
-            _fillFromRevision(id, values, meta, it, '${a.docRef ?? a.fileName} (${s.name} ردیف ${it.row})', rep);
+            _fillFromRevision(id, values, meta, it, '${a.docRef ?? a.fileName} (${s.name} ردیف ${it.row})', rep, newer: newer);
             newer ? rep.revisedNewer++ : rep.revisedOlder++;
           } else {
             id = items.create(
@@ -1112,9 +1112,10 @@ class MtoImporter {
     return ((ny * 12 + (nm ?? 0)) >= (oy * 12 + (om ?? 0)), null);
   }
 
-  /// بازنگری دیگر یک قلم: فقط فیلدهای خالی قلم پر می‌شود (مقدار موجود عوض نمی‌شود)؛ اختلاف تعداد گزارش می‌شود.
+  /// بازنگری دیگر یک قلم: فیلدهای خالی قلم پر می‌شود (مقدار موجود عوض نمی‌شود)؛ تعداد بازنگری جدیدتر جایگزین می‌شود
+  /// (تصمیم کاربر ۱۴۰۵/۰۸/۰۵) و در بازنگری قدیمی‌تر فقط گزارش می‌شود.
   void _fillFromRevision(int id, Map<String, Object?> values, Map<String, FieldMeta> meta, MtoItem it, String src,
-      MtoImportReport rep) {
+      MtoImportReport rep, {required bool newer}) {
     final cur = items.get(id)!;
     final fill = <String, Object?>{};
     for (final e in values.entries) {
@@ -1132,8 +1133,15 @@ class MtoImporter {
       }
     }
     final q = it.quantity;
-    if (q != null && cur.quantity != null && (q - cur.quantity!).abs() > 1e-9) {
-      rep.warnings.add('${it.tag}: تعداد در این فایل ${_n(q)} و در قلم موجود ${_n(cur.quantity!)} است؛ تعداد عوض نشد');
+    if (q != null && (cur.quantity == null || (q - cur.quantity!).abs() > 1e-9)) {
+      if (newer) {
+        items.update(id, {'quantity': q}, reason: 'تعداد بازنگری جدیدتر $src');
+        if (cur.quantity != null) {
+          rep.warnings.add('${it.tag}: تعداد از ${_n(cur.quantity!)} به ${_n(q)} (بازنگری جدیدتر) تغییر کرد');
+        }
+      } else if (cur.quantity != null) {
+        rep.warnings.add('${it.tag}: تعداد در این فایل (قدیمی‌تر) ${_n(q)} و در قلم ${_n(cur.quantity!)} است؛ عوض نشد');
+      }
     }
   }
 

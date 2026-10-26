@@ -50,19 +50,20 @@ class _PumpDetailPageState extends State<PumpDetailPage> with SingleTickerProvid
     final engine = pb.pumpEngine();
     final result = item == null ? null : engine.calculate(PriceBank.inputFor(item));
     final canEdit = app.canEdit('MECH');
-    final t = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: Row(children: [
-          Text(item == null ? 'پمپ جدید' : (isNotStated(item.tag) ? 'پمپ $gridNotStated' : item.tag!),
-              style: const TextStyle(fontWeight: FontWeight.w700)),
-          if (item != null) ...[
-            const SizedBox(width: 12),
-            Flexible(child: Text(item.name, overflow: TextOverflow.ellipsis, style: t.textTheme.titleSmall)),
-          ],
-        ]),
+        toolbarHeight: 68,
+        title: item == null
+            ? const Text('پمپ جدید', style: TextStyle(fontWeight: FontWeight.w700))
+            : ItemTitle(
+                tag: isNotStated(item.tag) ? gridNotStated : item.tag!,
+                muted: isNotStated(item.tag),
+                name: item.name,
+                sub:
+                    'پمپ${(item.values['sub_category'] ?? '').toString().isEmpty ? '' : ' · ${item.values['sub_category']}'}',
+              ),
         actions: [
           if (item != null && !_editing && canEdit) ...[
             OutlinedButton.icon(
@@ -129,7 +130,8 @@ class _PumpDetailPageState extends State<PumpDetailPage> with SingleTickerProvid
               onChanged: (k, v) => setState(() => _draft[k] = v),
             ),
             item == null || result == null
-                ? const EmptyState(icon: Icons.calculate_outlined, title: 'پس از ایجاد پمپ، محاسبه اینجا نمایش داده می‌شود')
+                ? const EmptyState(
+                    icon: Icons.calculate_outlined, title: 'پس از ایجاد پمپ، محاسبه اینجا نمایش داده می‌شود')
                 : _CalcTab(item: item, result: result),
             item == null
                 ? const EmptyState(icon: Icons.request_quote_outlined, title: 'پس از ایجاد پمپ در دسترس است')
@@ -186,7 +188,8 @@ class _PumpDetailPageState extends State<PumpDetailPage> with SingleTickerProvid
       _editing = false;
       _draft.clear();
     });
-    if (context.mounted) showSnack(context, n == 0 ? 'تغییری ثبت نشد (مقادیر یکسان بودند).' : '${fa(n)} فیلد ذخیره شد.');
+    if (context.mounted)
+      showSnack(context, n == 0 ? 'تغییری ثبت نشد (مقادیر یکسان بودند).' : '${fa(n)} فیلد ذخیره شد.');
   }
 
   Future<void> _archive(BuildContext context, ItemRecord item) async {
@@ -222,44 +225,43 @@ class _PriceStrip extends StatelessWidget {
     final t = Theme.of(context);
     final qty = item.quantity ?? 1;
     final flags = qaFlagsFa(result.qaFlags);
-    return Container(
-      color: t.colorScheme.surface,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-      child: Wrap(spacing: 10, runSpacing: 10, crossAxisAlignment: WrapCrossAlignment.center, children: [
-        KpiTile(
-          label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
-          value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
-          sub: !result.eurTarget.isNumber
-              ? calcMessageFa(result.eurTarget.text)
-              : (result.floorBinding ? 'کف قیمت API 610 اعمال شد' : 'روش ${result.methodCode}'),
-          icon: Icons.euro_rounded,
-          color: AppColors.eur,
-          width: 220,
-        ),
-        KpiTile(
-          label: 'قیمت واحد (${unitLabel(unit)})',
-          value: money(result.irrTarget.number, unit, withUnit: false),
-          sub: result.eurRateTarget == null ? 'نرخ یوروی سال هدف وارد نشده' : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
-          icon: Icons.payments_outlined,
-          color: AppColors.irr,
-          width: 250,
-        ),
-        KpiTile(
-          label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
-          value: money(result.irrTarget.isNumber ? result.irrTarget.number! * qty : null, unit, compact: true, withUnit: false),
-          sub: unitLabel(unit),
-          icon: Icons.functions_rounded,
-          width: 220,
-        ),
-        KpiTile(
-          label: 'ضریب هزینه (یورو/kWⁿ)',
-          value: faSmart(result.costCoef.number),
-          sub: 'ضریب پیکربندی: ${faSmart(result.allF)}',
-          icon: Icons.speed_rounded,
-          width: 200,
-        ),
-        Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: [
-          Wrap(spacing: 6, runSpacing: 6, children: [
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+      child: FadeIn(
+        child: ReadoutStrip(
+          items: [
+            Readout(
+              label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
+              value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
+              unit: '€',
+              sub: !result.eurTarget.isNumber
+                  ? calcMessageFa(result.eurTarget.text)
+                  : (result.floorBinding ? 'کف قیمت API 610 اعمال شد' : 'روش ${result.methodCode}'),
+              color: AppColors.eur,
+              primary: true,
+            ),
+            Readout(
+              label: 'قیمت واحد',
+              value: money(result.irrTarget.number, unit, withUnit: false),
+              unit: unitLabel(unit),
+              sub: result.eurRateTarget == null
+                  ? 'نرخ یوروی سال هدف وارد نشده'
+                  : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
+              color: AppColors.irr,
+            ),
+            Readout(
+              label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
+              value: money(result.irrTarget.isNumber ? result.irrTarget.number! * qty : null, unit,
+                  compact: true, withUnit: false),
+              unit: unitLabel(unit),
+            ),
+            Readout(
+              label: 'ضریب هزینه (یورو/kWⁿ)',
+              value: faSmart(result.costCoef.number),
+              sub: 'ضریب پیکربندی: ${faSmart(result.allF)}',
+            ),
+          ],
+          footer: Wrap(spacing: 6, runSpacing: 6, children: [
             if (item.projectName != null)
               isNotStated(item.projectName)
                   ? Pill('پروژه $gridNotStated', icon: Icons.folder_outlined, tooltip: item.projectName)
@@ -269,8 +271,8 @@ class _PriceStrip extends StatelessWidget {
             for (final f in flags) Pill(f, color: Tones.warn(context), icon: Icons.warning_amber_rounded),
             if (flags.isEmpty) Pill('داده‌ی کامل', color: Tones.good(context), icon: Icons.check_circle_outline),
           ]),
-        ]),
-      ]),
+        ),
+      ),
     );
   }
 }
@@ -311,25 +313,28 @@ class _SpecTab extends StatelessWidget {
             'اگر سال قیمت یا نرخ تسعیر کل یک سند اشتباه است، از صفحه‌ی «پروژه‌ها و اسناد» یک‌جا اصلاح کنید.',
           ],
         ),
-      for (final g in groups.entries) ...[
-        SectionCard(
-          title: g.key,
-          icon: _groupIcon(g.value.first.groupKey),
-          child: FieldGrid(
-            fields: arrangeCompanions(g.value, editing: editing),
-            editing: editing,
-            extraOf: _extra,
-            valueOf: (f) => draft.containsKey(f.key) ? draft[f.key] : _value(f),
-            badges: (f) => (item?.meta[f.key]?.flag == null ? 0 : 1) + (draft.containsKey(f.key) ? 1 : 0),
-            tile: (f) => FieldTile(
-              field: f,
-              categoryId: AppScope.of(context).pb.pumpCategory.id,
-              value: draft.containsKey(f.key) ? draft[f.key] : _value(f),
-              meta: item?.meta[f.key],
-              editing: editing && f.editable,
-              changed: draft.containsKey(f.key),
-              onChanged: (v) => onChanged(f.key, v),
-              extra: _extra(f),
+      for (final (gi, g) in groups.entries.indexed) ...[
+        FadeIn(
+          delay: gi,
+          child: SectionCard(
+            title: g.key,
+            icon: _groupIcon(g.value.first.groupKey),
+            child: FieldGrid(
+              fields: arrangeCompanions(g.value, editing: editing),
+              editing: editing,
+              extraOf: _extra,
+              valueOf: (f) => draft.containsKey(f.key) ? draft[f.key] : _value(f),
+              badges: (f) => (item?.meta[f.key]?.flag == null ? 0 : 1) + (draft.containsKey(f.key) ? 1 : 0),
+              tile: (f) => FieldTile(
+                field: f,
+                categoryId: AppScope.of(context).pb.pumpCategory.id,
+                value: draft.containsKey(f.key) ? draft[f.key] : _value(f),
+                meta: item?.meta[f.key],
+                editing: editing && f.editable,
+                changed: draft.containsKey(f.key),
+                onChanged: (v) => onChanged(f.key, v),
+                extra: _extra(f),
+              ),
             ),
           ),
         ),
@@ -484,7 +489,8 @@ class _StepRow extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(step.title, style: t.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
-                  Text(fa(step.detail), style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.7)),
+                  Text(fa(step.detail),
+                      style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.7)),
                 ]),
               ),
               const SizedBox(width: 12),
@@ -544,7 +550,8 @@ class _PricesTab extends StatelessWidget {
             ]),
             child: Wrap(spacing: 28, runSpacing: 10, children: [
               _kv(t, 'مبلغ', o.amount != null ? '${faNum(o.amount)} ${o.currency ?? ''}' : (o.amountText ?? '—')),
-              _kv(t, 'سال قیمت', fa(o.costYear ?? o.costYearText ?? '—') + (o.costMonth == null ? '' : '/${fa(o.costMonth)}')),
+              _kv(t, 'سال قیمت',
+                  fa(o.costYear ?? o.costYearText ?? '—') + (o.costMonth == null ? '' : '/${fa(o.costMonth)}')),
               _kv(t, 'شرط تحویل', o.incoterm ?? '—'),
               if (o.priceBasis != null) _kv(t, 'مبنای قیمت', o.priceBasis!),
               if (o.effectiveSourceFx != null) _kv(t, 'نرخ تسعیر منبع', '${faNum(o.effectiveSourceFx)} ریال/یورو'),
@@ -582,7 +589,9 @@ class _HistoryTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    final labels = {for (final f in AppScope.of(context).pb.catalog.fields(AppScope.of(context).pb.pumpCategory.id)) f.key: f.labelFa};
+    final labels = {
+      for (final f in AppScope.of(context).pb.catalog.fields(AppScope.of(context).pb.pumpCategory.id)) f.key: f.labelFa
+    };
     if (entries.isEmpty) return const EmptyState(icon: Icons.history_rounded, title: 'هنوز تغییری ثبت نشده');
     return ListView.separated(
       padding: const EdgeInsets.all(20),
@@ -601,16 +610,23 @@ class _HistoryTab extends StatelessWidget {
           subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (e.field != '*')
               Text.rich(TextSpan(children: [
-                TextSpan(text: e.oldValue ?? '(خالی)', style: TextStyle(color: Tones.bad(context), decoration: TextDecoration.lineThrough)),
+                TextSpan(
+                    text: e.oldValue ?? '(خالی)',
+                    style: TextStyle(color: Tones.bad(context), decoration: TextDecoration.lineThrough)),
                 const TextSpan(text: '  ←  '),
-                TextSpan(text: e.newValue ?? '(خالی)', style: TextStyle(color: Tones.good(context), fontWeight: FontWeight.w600)),
+                TextSpan(
+                    text: e.newValue ?? '(خالی)',
+                    style: TextStyle(color: Tones.good(context), fontWeight: FontWeight.w600)),
               ])),
             if (e.reason != null && e.reason!.isNotEmpty) Text('دلیل: ${e.reason}'),
           ]),
-          trailing: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.end, children: [
-            Text(shortTs(e.ts), style: t.textTheme.labelSmall),
-            Text(e.userName ?? '', style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-          ]),
+          trailing: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(shortTs(e.ts), style: t.textTheme.labelSmall),
+                Text(e.userName ?? '', style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+              ]),
         );
       },
     );

@@ -87,38 +87,42 @@ class FieldTile extends StatelessWidget {
   Widget _display(BuildContext context, bool inferred, bool fx, String? note) {
     final t = Theme.of(context);
     final text = fieldDisplayText(context, field, value);
-    final box = Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        color: inferred
-            ? Tones.inferredBg(context)
-            : (fx ? Tones.fxBg(context) : t.colorScheme.surfaceContainerLowest),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: t.colorScheme.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Row(children: [
-        Expanded(
-          child: Align(
-            alignment: AlignmentDirectional.centerStart,
-            child: SelectableText(
-              text,
-              textDirection: dirOf(text),
-              style: t.textTheme.bodyMedium?.copyWith(
-                fontWeight: field.storage == FieldStorage.calc ? FontWeight.w600 : null,
-                color: field.storage == FieldStorage.calc ? t.colorScheme.primary : null,
+    // کادر نرم بدون قاب؛ مقدار استنباطی/تبدیل ارزی با رنگ ملایم و خط ابتدای کادر
+    final box = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: inferred ? Tones.inferredBg(context) : (fx ? Tones.fxBg(context) : t.colorScheme.surfaceContainerLow),
+          border: inferred || fx
+              ? BorderDirectional(
+                  start: BorderSide(color: inferred ? Tones.warn(context) : Tones.info(context), width: 3))
+              : null,
+        ),
+        child: Row(children: [
+          Expanded(
+            child: Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: SelectableText(
+                text,
+                textDirection: dirOf(text),
+                style: t.textTheme.bodyMedium?.copyWith(
+                  fontWeight: field.storage == FieldStorage.calc ? FontWeight.w600 : null,
+                  color: field.storage == FieldStorage.calc ? t.colorScheme.primary : null,
+                ),
               ),
             ),
           ),
-        ),
-        if (extra != null)
-          Padding(
-            padding: const EdgeInsetsDirectional.only(start: 8),
-            child: Text(extra!,
-                textDirection: dirOf(extra!),
-                style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-          ),
-      ]),
+          if (extra != null)
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 8),
+              child: Text(extra!,
+                  textDirection: dirOf(extra!),
+                  style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            ),
+        ]),
+      ),
     );
     final v = value;
     final tip = text == gridNotStated && v is String && v.trim().isNotEmpty ? v.trim() : note;
@@ -211,7 +215,8 @@ class _EnumEditor extends StatelessWidget {
               '${r['v']}': r['n'] as int,
           };
     final hasValue = value != null && values.contains(value);
-    return DropdownButtonFormField<String?>(itemHeight: null, 
+    return DropdownButtonFormField<String?>(
+      itemHeight: null,
       value: hasValue ? value : null,
       isExpanded: true,
       hint: Text(value == null ? 'انتخاب کنید' : '$value (خارج از فهرست)'),
@@ -247,8 +252,17 @@ const fieldCompanions = {
 List<FieldDef> arrangeCompanions(List<FieldDef> fields, {required bool editing}) {
   final keys = {for (final f in fields) f.key};
   bool isComp(FieldDef f) => fieldCompanions.entries.any((e) => e.value == f.key && keys.contains(e.key));
-  final main = [for (final f in fields) if (!isComp(f)) f];
-  return editing ? [...main, for (final f in fields) if (isComp(f)) f] : main;
+  final main = [
+    for (final f in fields)
+      if (!isComp(f)) f
+  ];
+  return editing
+      ? [
+          ...main,
+          for (final f in fields)
+            if (isComp(f)) f
+        ]
+      : main;
 }
 
 /// یادداشت کوچک داخل کادر فیلد اصلی برای مقدار فیلد همراه (اگر چیزی بیش از مقدار اصلی می‌گوید).
@@ -347,7 +361,8 @@ class FieldGrid extends StatelessWidget {
         }
         final v = valueOf(f);
         final note = editing ? null : extraOf?.call(f);
-        need.add(measure(fieldDisplayText(context, f, v), valueStyle) + (editing ? 40 : 24) +
+        need.add(measure(fieldDisplayText(context, f, v), valueStyle) +
+            (editing ? 40 : 24) +
             (note == null ? 0 : measure(note, t.textTheme.labelSmall) + 8));
         var span = need.map((w) => ((w + gap) / (cw + gap)).ceil()).reduce((a, b) => a > b ? a : b);
         if (editing && f.type == FieldType.text) span = span < 2 ? 2 : span;
@@ -383,7 +398,8 @@ class HiddenPricesNote extends StatelessWidget {
         Icon(Icons.visibility_off_outlined, size: 18, color: Tones.warn(context)),
         const SizedBox(width: 8),
         Expanded(
-          child: Text('${fa(obs.length)} قیمت از اسناد پنهان ($docs) در محاسبات و این فهرست نیست؛ '
+          child: Text(
+              '${fa(obs.length)} قیمت از اسناد پنهان ($docs) در محاسبات و این فهرست نیست؛ '
               'برای برگرداندن، سند را در «پروژه‌ها و اسناد» پیدا کنید.',
               style: t.textTheme.bodySmall),
         ),

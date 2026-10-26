@@ -51,26 +51,22 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
     final engine = pb.genericEngine(categoryCode: cat.code);
     final profile = equipmentProfiles[cat.code];
     final result = engine.calculate(PriceBank.genericInputFor(item.primary));
-    final des = cat.code == 'DESALTER'
-        ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.des
-        : null;
-    final cmp = cat.code == 'COMPRESSOR'
-        ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.cmp
-        : null;
+    final des =
+        cat.code == 'DESALTER' ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.des : null;
+    final cmp =
+        cat.code == 'COMPRESSOR' ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.cmp : null;
     final canEdit = app.canEdit(cat.disciplineCode);
-    final t = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 0,
-        title: Row(children: [
-          Text(isNotStated(item.tag) ? '${cat.nameFa} $gridNotStated' : item.tag!,
-              textDirection: TextDirection.ltr, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(width: 12),
-          Flexible(child: Text(item.name, overflow: TextOverflow.ellipsis, style: t.textTheme.titleSmall)),
-          const SizedBox(width: 10),
-          Pill(cat.nameFa),
-        ]),
+        toolbarHeight: 68,
+        title: ItemTitle(
+          tag: isNotStated(item.tag) ? gridNotStated : item.tag!,
+          muted: isNotStated(item.tag),
+          name: item.name,
+          sub: cat.nameFa,
+        ),
         actions: [
           if (!_editing && canEdit) ...[
             OutlinedButton.icon(
@@ -112,7 +108,9 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
           tabAlignment: TabAlignment.start,
           tabs: [
             const Tab(icon: Icon(Icons.description_outlined), text: 'مشخصات'),
-            Tab(icon: const Icon(Icons.request_quote_outlined), text: 'قیمت‌ها و استعلام‌ها (${fa(item.observations.length)})'),
+            Tab(
+                icon: const Icon(Icons.request_quote_outlined),
+                text: 'قیمت‌ها و استعلام‌ها (${fa(item.observations.length)})'),
             const Tab(icon: Icon(Icons.calculate_outlined), text: 'محاسبه‌ی قیمت'),
             const Tab(icon: Icon(Icons.history_rounded), text: 'تاریخچه'),
           ],
@@ -141,32 +139,35 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
       (groups[f.groupFa] ??= []).add(f);
     }
     return ListView(padding: const EdgeInsets.all(20), children: [
-      for (final g in groups.entries) ...[
-        SectionCard(
-          title: g.key,
-          icon: switch (g.value.first.groupKey) {
-            'identification' => Icons.badge_outlined,
-            'mto_specs' => Icons.engineering_outlined,
-            'description' => Icons.notes_rounded,
-            'price' => Icons.payments_outlined,
-            _ => Icons.fact_check_outlined,
-          },
-          child: FieldGrid(
-            fields: arrangeCompanions(g.value, editing: _editing),
-            editing: _editing,
-            extraOf: (f) => _extra(f, item),
-            fullWidth: g.value.first.groupKey == 'description',
-            valueOf: (f) => _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
-            badges: (f) => (item.meta[f.key]?.flag == null ? 0 : 1) + (_draft.containsKey(f.key) ? 1 : 0),
-            tile: (f) => FieldTile(
-              field: f,
-              categoryId: item.categoryId,
-              value: _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
-              meta: item.meta[f.key],
-              editing: _editing && f.editable,
-              changed: _draft.containsKey(f.key),
-              onChanged: (v) => setState(() => _draft[f.key] = v),
-              extra: _extra(f, item),
+      for (final (gi, g) in groups.entries.indexed) ...[
+        FadeIn(
+          delay: gi,
+          child: SectionCard(
+            title: g.key,
+            icon: switch (g.value.first.groupKey) {
+              'identification' => Icons.badge_outlined,
+              'mto_specs' => Icons.engineering_outlined,
+              'description' => Icons.notes_rounded,
+              'price' => Icons.payments_outlined,
+              _ => Icons.fact_check_outlined,
+            },
+            child: FieldGrid(
+              fields: arrangeCompanions(g.value, editing: _editing),
+              editing: _editing,
+              extraOf: (f) => _extra(f, item),
+              fullWidth: g.value.first.groupKey == 'description',
+              valueOf: (f) => _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
+              badges: (f) => (item.meta[f.key]?.flag == null ? 0 : 1) + (_draft.containsKey(f.key) ? 1 : 0),
+              tile: (f) => FieldTile(
+                field: f,
+                categoryId: item.categoryId,
+                value: _draft.containsKey(f.key) ? _draft[f.key] : item.valueOf(f.key),
+                meta: item.meta[f.key],
+                editing: _editing && f.editable,
+                changed: _draft.containsKey(f.key),
+                onChanged: (v) => setState(() => _draft[f.key] = v),
+                extra: _extra(f, item),
+              ),
             ),
           ),
         ),
@@ -184,7 +185,8 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
       return;
     }
     final labels = {for (final f in fields) f.key: f.labelFa};
-    final reason = await askReason(context, summary: 'فیلدهای تغییرکرده: ${_draft.keys.map((k) => labels[k] ?? k).join('، ')}');
+    final reason =
+        await askReason(context, summary: 'فیلدهای تغییرکرده: ${_draft.keys.map((k) => labels[k] ?? k).join('، ')}');
     if (reason == null || !context.mounted) return;
     final app = AppScope.read(context);
     final n = app.pb.items.update(item.id, Map.of(_draft), reason: reason.isEmpty ? null : reason);
@@ -200,7 +202,8 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
     final archiving = item.status == 'active';
     final reason = await askReason(context,
         title: archiving ? 'بایگانی قلم' : 'بازگرداندن قلم',
-        summary: archiving ? 'قلم از فهرست و جمع‌ها کنار می‌رود ولی حذف نمی‌شود.' : 'قلم دوباره در فهرست قرار می‌گیرد.');
+        summary:
+            archiving ? 'قلم از فهرست و جمع‌ها کنار می‌رود ولی حذف نمی‌شود.' : 'قلم دوباره در فهرست قرار می‌گیرد.');
     if (reason == null || !context.mounted) return;
     final app = AppScope.read(context);
     app.pb.items.archive(item.id, archived: archiving, reason: reason);
@@ -220,85 +223,76 @@ class _Strip extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final unit = app.unit;
-    final t = Theme.of(context);
     final qty = item.quantity ?? 1;
     final quotes = [
       for (final o in item.observations.where((o) => o.kind == 'quote'))
         if (engine.calculate(PriceBank.genericInputFor(o)).eurTarget.number case final v?) v,
     ];
     quotes.sort();
-    return Container(
-      color: t.colorScheme.surface,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-      child: Wrap(spacing: 10, runSpacing: 10, children: [
-        KpiTile(
-          label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
-          value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
-          sub: result.eurTarget.isNumber ? 'روش ${result.methodCode} · از قیمت مبنا' : 'قیمت مبنا قابل تعدیل نیست',
-          icon: Icons.euro_rounded,
-          color: AppColors.eur,
-          width: 230,
-        ),
-        KpiTile(
-          label: 'قیمت واحد (${unitLabel(unit)})',
-          value: money(result.irrTarget.number, unit, withUnit: false),
-          sub: result.eurRateTarget == null ? 'نرخ یوروی سال هدف وارد نشده' : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
-          icon: Icons.payments_outlined,
-          color: AppColors.irr,
-          width: 260,
-        ),
-        KpiTile(
-          label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
-          value: money(result.irrTarget.isNumber ? result.irrTarget.number! * qty : null, unit, compact: true, withUnit: false),
-          sub: unitLabel(unit),
-          icon: Icons.functions_rounded,
-          width: 220,
-        ),
-        if (profile != null)
-          KpiTile(
-            label: profile!.driver.labelFa,
-            value: profile!.sizeOf(item.values) == null ? '—' : faSmart(profile!.sizeOf(item.values)),
-            sub: profile!.sizeOf(item.values) == null ? 'ابعاد/ظرفیت ثبت نشده' : '${profile!.driver.unit} · پارامتر اندازه برای تخمین',
-            icon: Icons.straighten_rounded,
-            color: AppColors.petrol,
-            width: 210,
+    final size = profile?.sizeOf(item.values);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+      child: FadeIn(
+        child: ReadoutStrip(items: [
+          Readout(
+            label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
+            value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
+            unit: '€',
+            sub: result.eurTarget.isNumber ? 'روش ${result.methodCode}، از قیمت مبنا' : 'قیمت مبنا قابل تعدیل نیست',
+            color: AppColors.eur,
+            primary: true,
           ),
-        if (profile?.weightKey != null) _weightTile(context, app),
-        KpiTile(
-          label: 'بازه‌ی استعلام‌ها (یورو، سال هدف)',
-          value: quotes.isEmpty ? '—' : '${compactNum(quotes.first)} تا ${compactNum(quotes.last)}',
-          sub: quotes.isEmpty ? 'استعلام عددی ندارد' : '${fa(quotes.length)} استعلام · میانگین ${compactNum(quotes.reduce((a, b) => a + b) / quotes.length)}',
-          icon: Icons.request_quote_outlined,
-          color: AppColors.teal,
-          width: 260,
-        ),
-      ]),
+          Readout(
+            label: 'قیمت واحد',
+            value: money(result.irrTarget.number, unit, withUnit: false),
+            unit: unitLabel(unit),
+            sub: result.eurRateTarget == null
+                ? 'نرخ یوروی سال هدف وارد نشده'
+                : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
+            color: AppColors.irr,
+          ),
+          Readout(
+            label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
+            value: money(result.irrTarget.isNumber ? result.irrTarget.number! * qty : null, unit,
+                compact: true, withUnit: false),
+            unit: unitLabel(unit),
+          ),
+          if (profile != null)
+            Readout(
+              label: profile!.driver.labelFa,
+              value: size == null ? '—' : faSmart(size),
+              unit: size == null ? null : profile!.driver.unit,
+              sub: size == null ? 'ابعاد/ظرفیت ثبت نشده' : 'پارامتر اندازه برای تخمین',
+            ),
+          if (profile?.weightKey != null) _weightReadout(context, app),
+          Readout(
+            label: 'بازه‌ی استعلام‌ها (یورو، سال هدف)',
+            value: quotes.isEmpty ? '—' : '${compactNum(quotes.first)} تا ${compactNum(quotes.last)}',
+            sub: quotes.isEmpty
+                ? 'استعلام عددی ندارد'
+                : '${fa(quotes.length)} استعلام، میانگین ${compactNum(quotes.reduce((a, b) => a + b) / quotes.length)}',
+          ),
+        ]),
+      ),
     );
   }
 }
 
 extension on _Strip {
   /// وزن خالی و ضریب وزن (بی‌اثر تا وقتی وزن ثبت نشده)
-  Widget _weightTile(BuildContext context, AppState app) {
+  Readout _weightReadout(BuildContext context, AppState app) {
     final p = profile!;
     final w = item.values[p.weightKey];
     final cat = app.pb.catalog.categories().firstWhere((c) => c.id == item.categoryId);
     final est = app.pb.genericEstimator(cat.code);
     final wf = est.weightFactor(item.values);
-    return Tooltip(
-      message: 'وزن خالی/ساخت از دیتاشیت سازنده. برای ثبت، «ویرایش» را بزنید (گروه مشخصات کلیدی).\n'
-          'ضریب وزن = (وزن ÷ ${p.driver.labelFa} ÷ میانه‌ی همین نسبت در رده)^${faSmart(est.weightExp)}؛ '
-          'تا وزن این قلم و دست‌کم دو قلم رده ثبت نشده، بی‌اثر (۱) است.',
-      child: KpiTile(
-        label: 'وزن خالی',
-        value: w is num ? '${faSmart(w)} kg' : 'ثبت نشده',
-        sub: w is! num
-            ? 'اختیاری · فعلاً بی‌اثر در محاسبه'
-            : (wf == null ? 'ضریب وزن هنوز فعال نیست (مرجع رده کافی نیست)' : 'ضریب وزن × ${faSmart(wf)}'),
-        icon: Icons.scale_rounded,
-        color: w is num ? AppColors.teal : Theme.of(context).colorScheme.outline,
-        width: 230,
-      ),
+    return Readout(
+      label: 'وزن خالی',
+      value: w is num ? faSmart(w) : 'ثبت نشده',
+      unit: w is num ? 'kg' : null,
+      sub: w is! num
+          ? 'اختیاری؛ فعلاً بی‌اثر در محاسبه'
+          : (wf == null ? 'ضریب وزن هنوز فعال نیست' : 'ضریب وزن × ${faSmart(wf)}'),
     );
   }
 }
@@ -318,7 +312,8 @@ class _PricesTab extends StatelessWidget {
       return const EmptyState(icon: Icons.request_quote_outlined, title: 'برای این قلم قیمتی ثبت نشده است');
     }
     final head = TextStyle(fontWeight: FontWeight.w800, fontSize: 12.5, color: AppColors.strong);
-    Widget c(Widget w, {int flex = 1}) => Expanded(flex: flex, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: w));
+    Widget c(Widget w, {int flex = 1}) =>
+        Expanded(flex: flex, child: Padding(padding: const EdgeInsets.symmetric(horizontal: 6), child: w));
     return ListView(padding: const EdgeInsets.all(20), children: [
       const HelpPanel(
         id: 'generic_prices',
@@ -372,7 +367,8 @@ class _PricesTab extends StatelessWidget {
                   SizedBox(
                     width: 30,
                     child: isP
-                        ? const Tooltip(message: 'قیمت مبنا', child: Icon(Icons.star_rounded, color: AppColors.amber, size: 20))
+                        ? const Tooltip(
+                            message: 'قیمت مبنا', child: Icon(Icons.star_rounded, color: AppColors.amber, size: 20))
                         : null,
                   ),
                   c(Align(alignment: AlignmentDirectional.centerStart, child: Pill(kind.$1, color: kind.$2))),
@@ -387,22 +383,30 @@ class _PricesTab extends StatelessWidget {
                   c(Text(
                       o.costYear == null
                           ? (o.costYearText ?? '—')
-                          : fa('${o.costYear}${o.costMonth == null ? '' : '/${o.costMonth.toString().padLeft(2, '0')}'}'),
+                          : fa(
+                              '${o.costYear}${o.costMonth == null ? '' : '/${o.costMonth.toString().padLeft(2, '0')}'}'),
                       style: const TextStyle(fontSize: 12.5))),
                   c(
                     Row(children: [
                       Flexible(
                         child: Text(o.amount == null ? (o.amountText ?? '—') : faNum(o.amount),
-                            overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5)),
                       ),
                       const SizedBox(width: 4),
                       if (o.currency != null)
                         Text(CurrencyBadge.faOf(o.currency!),
-                            style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w700, color: CurrencyBadge.colorOf(o.currency!))),
+                            style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: CurrencyBadge.colorOf(o.currency!))),
                     ]),
                     flex: 2,
                   ),
-                  c(Text(r.eurSource.isNumber ? faNum(r.eurSource.number) : '—', style: const TextStyle(fontSize: 12.5)), flex: 2),
+                  c(
+                      Text(r.eurSource.isNumber ? faNum(r.eurSource.number) : '—',
+                          style: const TextStyle(fontSize: 12.5)),
+                      flex: 2),
                   c(
                     Text(r.eurTarget.isNumber ? faNum(r.eurTarget.number) : '—',
                         style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppColors.eur)),
@@ -432,7 +436,8 @@ class _PricesTab extends StatelessWidget {
 
   Future<void> _makePrimary(BuildContext context, PriceObs o) async {
     final reason = await askReason(context,
-        title: 'تغییر قیمت مبنا', summary: '${o.vendorName ?? o.sourceDisplay}: ${faNum(o.amount)} ${o.currency ?? ''}');
+        title: 'تغییر قیمت مبنا',
+        summary: '${o.vendorName ?? o.sourceDisplay}: ${faNum(o.amount)} ${o.currency ?? ''}');
     if (reason == null || !context.mounted) return;
     final app = AppScope.read(context);
     app.pb.items.setPrimary(item.id, o.id, reason: reason.isEmpty ? null : reason);
@@ -481,7 +486,8 @@ class _DesalterCalcCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     String n(double? v, [String unit = '']) => v == null ? '—' : '${faSmart(v)}${unit.isEmpty ? '' : ' $unit'}';
-    String f((String?, double)? x) => x == null ? '—' : '× ${faSmart(x.$2)}${x.$1 == null ? ' (خالی)' : ' («${x.$1}»)'}';
+    String f((String?, double)? x) =>
+        x == null ? '—' : '× ${faSmart(x.$2)}${x.$1 == null ? ' (خالی)' : ' («${x.$1}»)'}';
     final p = d.factors.parts;
     final bank = d.bank;
     final rows = <(String, String)>[
@@ -537,7 +543,8 @@ class _CompressorCalcCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context);
     String n(double? v, [String unit = '']) => v == null ? '—' : '${faSmart(v)}${unit.isEmpty ? '' : ' $unit'}';
-    String f((String?, double)? x) => x == null ? '—' : '× ${faSmart(x.$2)}${x.$1 == null ? ' (خالی)' : ' («${x.$1}»)'}';
+    String f((String?, double)? x) =>
+        x == null ? '—' : '× ${faSmart(x.$2)}${x.$1 == null ? ' (خالی)' : ' («${x.$1}»)'}';
     final p = c.factors.parts;
     final bank = c.bank;
     final rows = <(String, String)>[
@@ -570,7 +577,9 @@ class _CompressorCalcCard extends StatelessWidget {
             color: i.isOdd ? AppColors.zebra : null,
             child: Row(children: [
               Expanded(child: Text(rows[i].$1, style: t.textTheme.bodySmall)),
-              Flexible(child: Text(fa(rows[i].$2), textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5))),
+              Flexible(
+                  child: Text(fa(rows[i].$2),
+                      textAlign: TextAlign.end, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5))),
             ]),
           ),
         if (c.qaFlag.isNotEmpty)
@@ -607,7 +616,8 @@ class _StepRow extends StatelessWidget {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(step.title, style: t.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700)),
             const SizedBox(height: 2),
-            Text(fa(step.detail), style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.7)),
+            Text(fa(step.detail),
+                style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.7)),
           ]),
         ),
         const SizedBox(width: 12),
@@ -646,8 +656,7 @@ class _HistoryTab extends StatelessWidget {
           ),
           title: Text(field, style: const TextStyle(fontWeight: FontWeight.w600)),
           subtitle: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            if (e.field != '*')
-              Text('${e.oldValue ?? '(خالی)'}  ←  ${e.newValue ?? '(خالی)'}'),
+            if (e.field != '*') Text('${e.oldValue ?? '(خالی)'}  ←  ${e.newValue ?? '(خالی)'}'),
             if (e.reason != null && e.reason!.isNotEmpty) Text('دلیل: ${e.reason}'),
           ]),
           trailing: Text(shortTs(e.ts), style: t.textTheme.labelSmall),

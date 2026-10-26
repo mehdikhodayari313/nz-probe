@@ -80,17 +80,24 @@ void main() {
     expect(it.primary!.amount, closeTo(p1.amount! * 1.25, 1e-6));
     expect(it.observations.where((o) => o.id == p1.id && !o.isPrimary), hasLength(1), reason: 'قیمت قبلی نگه داشته شد');
 
+    // تعداد بازنگری جدیدتر جایگزین می‌شود؛ بازنگری قدیمی‌تر تعداد را عوض نمی‌کند
+    final a4 = _analysis(docRef: 'Sample K R03', year: 1404, month: 6);
+    a4.sheets.expand((s) => s.items).firstWhere((x) => x.tag == 'V-120').quantity = 3;
+    pb.mtoImporter().run(a4, projectName: 'Sample K', oldFx: null);
+    expect(pb.items.get(id)!.quantity, 3);
+
     // بازنگری قدیمی‌تر که بعد وارد شود مبنا نمی‌شود
     final r3 = pb.mtoImporter().run(_analysis(docRef: 'Sample K R00', year: 1401, priceFactor: 0.5),
         projectName: 'Sample K', oldFx: null);
     expect(r3.revisedOlder, r1.items);
     expect(r3.revisedNewer, 0);
-    expect(pb.items.get(id)!.primary!.documentTitle, 'Sample K R02');
+    expect(pb.items.get(id)!.primary!.documentTitle, 'Sample K R03');
+    expect(pb.items.get(id)!.quantity, 3);
 
     // پنهان کردن بازنگری جدید: قیمت مبنا از سند پیدای دیگر
-    pb.docs.setHidden(docId('Sample K R02'), true);
+    pb.docs.setHidden(docId('Sample K R03'), true);
     final h = pb.items.get(id)!;
-    expect(h.primary!.documentTitle, isNot('Sample K R02'));
+    expect(h.primary!.documentTitle, isNot('Sample K R03'));
     expect(visible(), n);
   });
 

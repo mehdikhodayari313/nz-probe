@@ -210,8 +210,8 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     return Container(
       height: 48,
       decoration: BoxDecoration(
-        color: AppColors.headerBg,
-        border: Border(bottom: BorderSide(color: AppColors.petrol, width: 1.6)),
+        color: Theme.of(context).colorScheme.surfaceContainerLow,
+        border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant)),
       ),
       child: Row(children: [
         for (var i = 0; i < widget.columns.length; i++) _header(context, i, widths[i], i == widget.columns.length - 1),
@@ -223,7 +223,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     final t = Theme.of(context);
     final c = widget.columns[i];
     final active = _sortCol == i;
-    final fg = AppColors.strong;
+    final fg = active ? AppColors.strong : t.colorScheme.onSurfaceVariant;
     final w = InkWell(
       onTap: c.sortKey == null
           ? null
@@ -239,7 +239,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
         width: width,
         padding: const EdgeInsets.symmetric(horizontal: 6),
         decoration: BoxDecoration(
-          border: last ? null : BorderDirectional(end: BorderSide(color: AppColors.petrol.withValues(alpha: 0.15))),
+          border: last ? null : BorderDirectional(end: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.6))),
         ),
         alignment: Alignment.center,
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -248,7 +248,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
                 maxLines: 2,
                 textAlign: TextAlign.center,
                 overflow: TextOverflow.ellipsis,
-                style: t.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800, height: 1.3, color: fg)),
+                style: t.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w700, height: 1.3, color: fg)),
           ),
           if (active)
             Padding(
@@ -265,16 +265,13 @@ class _DataGridState<T> extends State<DataGrid<T>> {
     final t = Theme.of(context);
     final sel = widget.selected?.call(r) ?? false;
     final custom = widget.rowColor?.call(context, r);
-    final zebra = AppColors.zebra;
-    final bg = sel
-        ? t.colorScheme.primaryContainer
-        : (custom ?? (index.isOdd ? zebra : t.colorScheme.surface));
+    final bg = sel ? t.colorScheme.primaryContainer : (custom ?? t.colorScheme.surface);
     final lineC = t.colorScheme.outlineVariant;
     return Material(
       color: bg,
       child: InkWell(
         onTap: widget.onTap == null ? null : () => widget.onTap!(r),
-        hoverColor: AppColors.amber.withValues(alpha: 0.12),
+        hoverColor: t.colorScheme.primary.withValues(alpha: 0.05),
         child: Container(
           decoration: BoxDecoration(border: Border(bottom: BorderSide(color: lineC.withValues(alpha: 0.7)))),
           child: Row(children: [
@@ -282,11 +279,7 @@ class _DataGridState<T> extends State<DataGrid<T>> {
               Container(
                 width: widths[i],
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                decoration: BoxDecoration(
-                  border: i == widget.columns.length - 1
-                      ? null
-                      : BorderDirectional(end: BorderSide(color: lineC.withValues(alpha: 0.9))),
-                ),
+
                 alignment: switch (widget.columns[i].align) {
                   TextAlign.start || TextAlign.right => AlignmentDirectional.centerStart,
                   TextAlign.end || TextAlign.left => AlignmentDirectional.centerEnd,
