@@ -22,7 +22,9 @@
 7. PIPING (docs/requirements/PIPING.md): consolidated Excel bank delivered 1405/08/02 (2659 items, 31 families, PPI+FX, market sheet).
    Not in app. Calibrated 1405/08/02 (user: lowest error vs his project quotes): NIMA FX, base year 1388 (GLB 1387, TEE/TRD/CRD 1391,
    CAP 1396, FLG 1385), qty factor off. Sheets: my quotes, Gachsaran-4 project prices, calibration. Open: F52 ×1.3, TEE WPHY60 2.5 vs 2.2.
-8. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
+8. Look (v0.9.11): user may want more pages restyled in the aurora look (tables/detail pages untouched so far);
+   keep «screenshot before applying». Existing users keep their saved palette/mode until they pick «زمردی»/«شب».
+9. Possibly a web version (user asked "web app"; current app is Windows-only) — only if he confirms.
 9. SERVICES category (v0.9.2) escalates with the default PPI; a construction/labour index (Iranian or Eurostat construction
    cost) should be chosen with the user. Desalter «Internals & Transformators» rows of an estimate stay separate DESALTER items
    (user may move/merge in preview).

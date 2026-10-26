@@ -97,16 +97,16 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
   then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
   `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
-- Current released version: **0.9.10** (1405/08/05, session 3 + simpler search filters, full sub-category names, compact range filters). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Current released version: **0.9.11** (1405/08/05, aurora look, Ctrl+K search, dock, dashboard hero/KPI/squeeze). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
 - Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)
 - **No gradients anywhere** — they render white on the user's GPU (blank sidebar). Solid colors + BoxShadow only.
   Atmosphere is allowed only as **baked raster images** (`assets/images/*.jpg` from `tool/make_backdrops.py`; user 1405/08/05
   asked for a dark cinematic look like 21st.dev Velaris/Northline/Mosa AI). No BackdropFilter blur either (GPU risk).
-- Look (wip/mist-theme → «aurora», user 1405/08/05): default palette `aurora` + dark mode, image backdrop under every
+- Look (v0.9.11 «aurora», user 1405/08/05): default palette `aurora` + dark mode, image backdrop under every
   page (`AppBackdrop`, scaffolds transparent), glass sidebar/top bar/cards (`AppColors.glass`), pill buttons, lime accent
-  (`AppColors.lime`), dashboard hero (title «قیمت تجهیزات.» — user removed «دقیق و به‌روز»), squeeze category strip,
+  (`AppColors.lime`), dashboard hero (title «قیمت تجهیزات» — user removed «دقیق و به‌روز» and the period), squeeze category strip,
   Ctrl+K command palette, auto-hide Mac-style dock (`mac_dock.dart`, revealed at the bottom edge). Dot-grid background was
   rejected («افتضاحه») — never bring it back.
 - `AppColors.*` (petrol, navy, amberSoft, headerBg, zebra, strong, …) are **mutable getters** set by
@@ -140,8 +140,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   chips → methods/settings of that category (user 1405/08/05). Field-def `source_ref` 'v8 ستون X' is used by the bank importer — keep it.
 - Search filters (user 1405/08/05, all equipment): no «شمارش در جمع»/«ارز»/«سال قیمت»/«سیال سرویس» filters and no «فقط دارای…»
   toggles; ranges use `RangeFilter` (common.dart: label next to compact from/to boxes, all ranges in one row); pump
-  sub-category shown by full name (`SubCat` option label). The user rejected two visual redesigns (hero band, neon) on
-  1405/08/05 — keep the current look unless he asks again.
+  sub-category shown by full name (`SubCat` option label). Earlier hero-band/neon samples were rejected; the aurora look
+  (v0.9.11) is what he asked for — keep it unless he asks again.
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.
 - **UI libraries (added 1405/08/02, not yet used in pages):** `fl_chart` (charts), `data_table_2` (tables with fixed
   header/columns, sorting), `flex_color_scheme` (themes), `flutter_animate` + `animations` (effects, page/container

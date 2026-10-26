@@ -244,3 +244,12 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
 - Category settings dialog removed from equipment pages; reachable from methods page, estimator tabs and factors page.
 - Methods page (#25, user 1405/08/05): discipline tabs (مکانیک، ابزار دقیق، برق، پایپینگ) each listing its own equipment;
   «تنظیمات تخمین و تعدیل رده» button for every non-pump category.
+
+## v0.9.11 (1405/08/05) — new look from 21st.dev designs
+- User asked for modern components from 21st.dev rebuilt in Flutter (no React code copied). KPI Tile → `TrendKpiTile`
+  (sparkline, delta pill); Teal Mist theme + Wensity sidebar + Kbd search/Command Menu → Ctrl+K command palette.
+- Dot-grid background rejected («افتضاحه»). User's references (Mosa AI, Northline, Velaris, Glyph Portal, Squeeze Carousel)
+  → dark cinematic look: baked image backdrops (`tool/make_backdrops.py`, no live gradients/blur), palette `aurora`
+  default + dark mode, glass surfaces, pill buttons, lime accent, dashboard hero «قیمت تجهیزات» (user removed «دقیق و
+  به‌روز» and then the period), squeeze category strip, auto-hide Mac-style dock (`mac_dock.dart`).
+

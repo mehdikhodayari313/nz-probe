@@ -213,7 +213,7 @@ class DashboardPage extends StatelessWidget {
   }
 }
 
-/// نوار معرفی داشبورد (الگو: Northline و Mosa AI در 21st.dev): تصویر نور سبز، عنوان درشت با نقطه‌ی لیمویی،
+/// نوار معرفی داشبورد (الگو: Northline و Mosa AI در 21st.dev): تصویر نور سبز، عنوان درشت،
 /// دکمه‌های گرد و آمار کوتاه. همیشه تیره است (روی تصویر)، در حالت روز هم.
 class _Hero extends StatelessWidget {
   const _Hero({required this.meta, required this.stats});
@@ -260,11 +260,8 @@ class _Hero extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 26),
-          Text.rich(
-            TextSpan(children: [
-              const TextSpan(text: 'قیمت تجهیزات'),
-              TextSpan(text: '.', style: TextStyle(color: AppColors.lime.withValues(alpha: 1))),
-            ]),
+          Text(
+            'قیمت تجهیزات',
             style: t.textTheme.displaySmall?.copyWith(color: white, fontWeight: FontWeight.w700, height: 1.25),
           ),
           const SizedBox(height: 10),
