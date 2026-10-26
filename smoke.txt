@@ -1,0 +1,9 @@
+schema: 3
+fields(PUMP): 62
+series: 28
+imported items: 146, projects: 6, docs: 6, vendors: 4, quotes: 84, inferred: 470, notes: 1374
+computed: 146, with IRR target: 105, sum IRR (include=Y): 4900311586874.311
+desalters: 9, quotes: 11, corrections: 2, priced: 7, method: M7
+compressors: 10, quotes: 3 (1 priced), corrections: 1, dryer links: 2, peers: 4
+reopen users: 1, items: 146
+RESULT: OK
