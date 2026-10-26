@@ -1,0 +1,32 @@
+
+FullName                                                                                    Length
+--------                                                                                    ------
+D:\a\nz-probe\nz-probe\dist\nz_probe\data                                                   
+D:\a\nz-probe\nz-probe\dist\nz_probe\dartjni.dll                                            58368
+D:\a\nz-probe\nz-probe\dist\nz_probe\flutter_windows.dll                                    21289472
+D:\a\nz-probe\nz-probe\dist\nz_probe\msvcp140.dll                                           643512
+D:\a\nz-probe\nz-probe\dist\nz_probe\nz_probe.exe                                           91648
+D:\a\nz-probe\nz-probe\dist\nz_probe\nz_probe.exe.sha256                                    66
+D:\a\nz-probe\nz-probe\dist\nz_probe\sqlite3_flutter_libs_plugin.dll                        9728
+D:\a\nz-probe\nz-probe\dist\nz_probe\sqlite3.dll                                            1500672
+D:\a\nz-probe\nz-probe\dist\nz_probe\vcruntime140_1.dll                                     50112
+D:\a\nz-probe\nz-probe\dist\nz_probe\vcruntime140.dll                                       178616
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets                                    
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\app.so                                            6030216
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\icudtl.dat                                        864880
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\assets                             
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\fonts                              
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\shaders                            
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\AssetManifest.bin                  243
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\FontManifest.json                  278
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\NativeAssetsManifest.json          45
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\NOTICES.Z                          104445
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\assets\fonts                       
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\assets\fonts\Vazirmatn-Bold.ttf    123036
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\assets\fonts\Vazirmatn-Medium.ttf  122656
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\assets\fonts\Vazirmatn-Regular.ttf 122752
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\fonts\MaterialIcons-Regular.otf    4120
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\shaders\ink_sparkle.frag           21856
+D:\a\nz-probe\nz-probe\dist\nz_probe\data\flutter_assets\shaders\stretch_effect.frag        17616
+
+

@@ -1,0 +1,2 @@
+Building Windows application...                                   122.3s
+√ Built build\windows\x64\runner\Release\nz_probe.exe
