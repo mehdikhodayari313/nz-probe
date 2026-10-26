@@ -242,3 +242,5 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   meaning; helps rewritten without the old bank (Executive Dashboard, Factors_ROT, FX بانک, Note/سلول).
 - Generic items: tabs مشخصات، محاسبه، قیمت‌ها، تاریخچه; sections ordered like pump; source group → identification.
 - Category settings dialog removed from equipment pages; reachable from methods page, estimator tabs and factors page.
+- Methods page (#25, user 1405/08/05): discipline tabs (مکانیک، ابزار دقیق، برق، پایپینگ) each listing its own equipment;
+  «تنظیمات تخمین و تعدیل رده» button for every non-pump category.

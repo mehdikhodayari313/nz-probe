@@ -7,6 +7,7 @@ import '../../app/app_state.dart';
 import '../../core/calc/backtest.dart';
 import '../../core/calc/methods.dart';
 import '../../core/catalog/profiles.dart';
+import '../../core/repo/catalog_repo.dart' show Category;
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
@@ -29,7 +30,18 @@ class _Impact {
   final int floorCount;
 }
 
-class _MethodsPageState extends State<MethodsPage> {
+/// زبانه‌های رشته‌ها (کاربر ۱۴۰۵/۰۸/۰۵: هر رشته یک زبانه با تجهیزات خودش)
+const _disciplines = [('MECH', 'مکانیک'), ('INST', 'ابزار دقیق'), ('ELEC', 'برق'), ('PIPE', 'پایپینگ')];
+
+class _MethodsPageState extends State<MethodsPage> with SingleTickerProviderStateMixin {
+  TabController? _discTabs;
+
+  @override
+  void dispose() {
+    _discTabs?.dispose();
+    super.dispose();
+  }
+
   /// رده‌ی انتخاب‌شده (پیش‌فرض: رده‌ی باز در صفحه‌ی تجهیزات)
   late String _code = EquipmentPage.selectedCategory;
   String _cacheKey = '';
@@ -141,7 +153,7 @@ class _MethodsPageState extends State<MethodsPage> {
               icon: const Icon(Icons.restart_alt_rounded),
               label: const Text('بازگشت به M6'),
             ),
-          if (!isPump && canEdit && equipmentProfiles.containsKey(_code))
+          if (!isPump && canEdit)
             OutlinedButton.icon(
               key: const ValueKey('cat-settings'),
               onPressed: () => showDialog<void>(context: context, builder: (_) => CategorySettingsDialog(code: _code)),
@@ -158,18 +170,46 @@ class _MethodsPageState extends State<MethodsPage> {
       ),
       SectionCard(
         title: 'تجهیز',
-        subtitle: 'هر تجهیز روش‌ها، صحت‌سنجی و روش انتخابی خودش را دارد · عدد = تعداد اقلام بانک',
+        subtitle: 'هر رشته یک زبانه؛ هر تجهیز روش‌ها، صحت‌سنجی، تنظیمات و روش انتخابی خودش را دارد · عدد = تعداد اقلام بانک',
         icon: Icons.category_outlined,
-        child: Wrap(spacing: 8, runSpacing: 8, children: [
-          for (final c in cats)
-            CategoryChip(
-              key: ValueKey('method-cat-${c.code}'),
-              label: '${c.nameFa} · ${s.methodFor(c.code)}',
-              count: counts[c.id] ?? 0,
-              selected: c.code == _code,
-              onTap: () => setState(() => _code = c.code),
+        child: Builder(builder: (context) {
+          final disc = _disciplines.indexWhere((d) => d.$1 == cat.disciplineCode);
+          final tabs = _discTabs ??= TabController(length: _disciplines.length, vsync: this, initialIndex: disc < 0 ? 0 : disc);
+          final shown = _disciplines[tabs.index].$1;
+          List<Category> catsOf(String d) => [for (final c in cats) if (c.disciplineCode == d) c];
+          return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            TabBar(
+              controller: tabs,
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              onTap: (i) => setState(() {
+                // اولین تجهیزِ دارای قلم در همان رشته
+                final list = catsOf(_disciplines[i].$1);
+                if (list.isEmpty) return;
+                final withItems = list.where((c) => (counts[c.id] ?? 0) > 0);
+                _code = (withItems.isNotEmpty ? withItems.first : list.first).code;
+              }),
+              tabs: [
+                for (final d in _disciplines)
+                  Tab(key: ValueKey('method-disc-${d.$1}'), text: '${d.$2} (${fa(catsOf(d.$1).length)})'),
+              ],
             ),
-        ]),
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              for (final c in catsOf(shown))
+                CategoryChip(
+                  key: ValueKey('method-cat-${c.code}'),
+                  label: '${c.nameFa} · ${s.methodFor(c.code)}',
+                  count: counts[c.id] ?? 0,
+                  selected: c.code == _code,
+                  onTap: () => setState(() => _code = c.code),
+                ),
+              if (catsOf(shown).isEmpty)
+                Text('هنوز تجهیزی در این رشته تعریف نشده است.',
+                    style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            ]),
+          ]);
+        }),
       ),
       const SizedBox(height: 12),
       HelpPanel(

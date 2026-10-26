@@ -129,7 +129,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   sorts, helps without old-bank refs); `source` group → identification for all; `supply_origin` (ORIGIN list) and calc
   `cost_year_g` (= Shamsi + 621, `ItemRecord.valueOf`); Incoterm option labels = Persian meaning; generic item page tabs and
   section order like pump; «تجهیز جدید» (`_newItem`) + column picker on generic pages; `CategorySettingsDialog` only
-  from methods page / estimator tabs / factors page. Field-def `source_ref` 'v8 ستون X' is used by the bank importer — keep it.
+  from methods page / estimator tabs / factors page. Methods page = discipline tabs (MECH, INST, ELEC, PIPE) → category
+  chips → methods/settings of that category (user 1405/08/05). Field-def `source_ref` 'v8 ستون X' is used by the bank importer — keep it.
 - Search filters (user 1405/08/05, all equipment): no «شمارش در جمع»/«ارز»/«سال قیمت»/«سیال سرویس» filters and no «فقط دارای…»
   toggles; ranges use `RangeFilter` (common.dart: label next to compact from/to boxes, all ranges in one row); pump
   sub-category shown by full name (`SubCat` option label). The user rejected two visual redesigns (hero band, neon) on
