@@ -1,0 +1,317 @@
+00:00 +0: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart
+00:00 +0: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx (setUpAll)
+00:00 +0: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx همه‌ی اقلام، سال سند و شیت‌های غیرقلم
+00:00 +1: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx قیمت خام از ستون‌های گوناگون
+00:00 +2: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx رده‌ی هر قلم در شیت‌های چندرده‌ای
+00:00 +3: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx ورود به بانک: همه‌ی اقلام، رده‌ی خدمات، گزارش در یادداشت سند
+00:00 +4: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx گزارش کنترل: جمع شیت‌ها و ضرایب
+00:00 +5: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K.xlsx (tearDownAll)
+00:00 +5: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx (setUpAll)
+00:00 +5: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx همه‌ی اقلام، سال سند و شیت‌های غیرقلم
+00:00 +6: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx قیمت خام از ستون‌های گوناگون
+00:00 +7: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx رده‌ی هر قلم در شیت‌های چندرده‌ای
+00:00 +8: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx ورود به بانک: همه‌ی اقلام، رده‌ی خدمات، گزارش در یادداشت سند
+00:01 +9: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx گزارش کنترل: جمع شیت‌ها و ضرایب
+00:01 +10: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: Estimate_sample_K_values.xlsx (tearDownAll)
+00:01 +10: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_estimate_test.dart: هد پمپ به متر: ft و bar معادل‌سازی می‌شود
+00:01 +11: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart
+00:01 +11: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: (setUpAll)
+00:02 +11: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: هر ۱۴۶ رکورد v8: همه‌ی ستون‌های محاسباتی برابر اکسل
+00:02 +12: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: تخمین‌گر v8: نتیجه برابر شیت Estimator
+00:02 +13: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: ماشین‌حساب M6 (فایل صحت‌سنجی) (setUpAll)
+00:02 +13: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: ماشین‌حساب M6 (فایل صحت‌سنجی) محاسبه‌ی گام‌به‌گام تک‌قلم
+00:02 +14: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: ماشین‌حساب M6 (فایل صحت‌سنجی) جدول چندقلمی (KPL یورویی، گچساران ریالی با نرخ منبع، پازنان ریالی)
+00:02 +15: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: ماشین‌حساب M6 (فایل صحت‌سنجی) (tearDownAll)
+00:02 +15: /home/runner/work/nz-probe/nz-probe/price_bank/test/engine_v8_golden_test.dart: (tearDownAll)
+00:02 +15: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_full_test.dart
+00:03 +15: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_full_test.dart: MTO چاپی کامل (KPL)
+### 99999-SMP-ME-RE-476_R03_MTO_full.xlsx: 1338 ms · قالب generic · سند 99999-SMP-ME-RE-476-R03 · تاریخ 1394/10 · پروژه Sample (North & South) · وزن 136 تگ
+  DESALTERS-A                      DESALTER       1 قلم · انتخاب · سال 1394 · PK-111=Desalting Package
+  DESALTERS-B                      DESALTER       1 قلم · انتخاب · سال 1394 · PK-121=Desalting Package
+  HEATERS-A                        HEATER         2 قلم · انتخاب · سال 1394 · H-111 A/B=Oil Indirect Fired Heater Packages | H-112=Water Indirect Fired Heater Packages
+  HEATERS-B                        HEATER         2 قلم · انتخاب · سال 1394 · H-121 A/B=Oil Indirect Fired Heater Packages | H-122=Water Indirect Fired Heater Packages
+  VESSELS-A                        VESSEL         2 قلم · انتخاب · سال 1394 · V-171=Flare K.O. Drum | V-231=Closed Drain Drum
+  VESSELS-B                        VESSEL         2 قلم · انتخاب · سال 1394 · V-181=Flare K.O. Drum | V-241=Closed Drain Drum
+  VESSELS-C                        VESSEL         3 قلم · انتخاب · سال 1394 · V-191=Fuel Gas K.O. Drum | V-201=Fuel Oil Storage Drum | V-211=Air Receiver
+  VESSELS-C (2)                    VESSEL         1 قلم · انتخاب · سال 1394 · V-153=Recycle Water Vessel
+  TANKS-A (1)                      TANK           4 قلم · انتخاب · سال 1394 · TK-111=Gunbarrel Tank (Settling Tank) | TK-112=Surge Tank | TK-131=Dirty Oil Tank
+  TANKS-A (2)                      TANK           2 قلم · انتخاب · سال 1394 · TK-133=Disposal Water Tank | TK-151=Dilution Water Tank
+  TANKS-B                          TANK           3 قلم · انتخاب · سال 1394 · TK-121=Gunbarrel Tank | TK-122=Surge Tank | TK-123=Off Spec. Tank
+  TANKS-B (2)                      TANK           4 قلم · انتخاب · سال 1394 · TK-141=Dirty Oil Tank | TK-142=Skimmer Tank | TK-143=Disposal Water Tank
+  TANKS-C › TANK                   TANK           2 قلم · انتخاب · سال 1394 · TK-152=Elevated Potable Water Tank | TK-270 A/B=Fire Water Tank
+  TANKS-C › PUMP                   PUMP           1 قلم · انتخاب · سال 1394 · TK-154=Cooling Water (Pumps Sealing System)
+  PLATE H.E.-A                     HEX            2 قلم · انتخاب · سال 1394 · E-111=Salty Crude / Desalted Crude H.E. | E-112=Dilution Water / Waste Water H.E.
+  PLATE H.E.-B                     HEX            2 قلم · انتخاب · سال 1394 · E-121=Salty Crude / Desalted Crude H.E. | E-122=Dilution Water / Waste Water H.E.
+  PUMPS-A (1)                      PUMP           4 قلم · انتخاب · سال 1394 · P-111 A/B/C=Salty Crude Transfer Pumps | P-114 A/B/C=Salty Crude Booster Pumps | P-135 A/B=Dirty Oil Pumps
+  PUMPS-A (2)                      PUMP           4 قلم · انتخاب · سال 1394 · P-137 A/B=Disposal Water InjectionPumps | P-139 A/B=Disposal Water InjectionPumps | P-151 A/B=Dilution Water Pumps
+  PUMPS-A (3)                      PUMP           4 قلم · انتخاب · سال 1394 · P-171 A/B=Flare K.O. Drum Pumps | P-231 A/B=O.W.S. Oil Pumps | P-232 A/B=O.W.S. Water Pumps
+  PUMPS-A (4)                      PUMP           1 قلم · انتخاب · سال 1394 · P-236=Evaporation Pond Portable Pump
+  PUMPS-B                          PUMP           3 قلم · انتخاب · سال 1394 · P-121 A/B/C=Salty Crude Transfer Pumps | P-122 A/B=Off Spec. Crude Pumps | P-124 A/B/C=Salty Crude Booster Pumps
+  PUMPS-B (2)                      PUMP           3 قلم · انتخاب · سال 1394 · P-145 A/B=Dirty Oil Pumps | P-146 A/B=Free Water Transfer Pumps | P-147 A/B=Disposal Water InjectionPumps
+  PUMPS-B (3)                      PUMP           3 قلم · انتخاب · سال 1394 · P-149 A/B=Disposal Water InjectionPumps | P-161 A/B=Dilution Water Pumps | P-162=Dilution Water Pump
+  PUMPS-B (4)                      PUMP           3 قلم · انتخاب · سال 1394 · P-181 A/B=Flare K.O. Drum Pumps | P-241 A/B=O.W.S. Oil Pumps | P-242 A/B=O.W.S. Water Pumps
+  PUMPS-B (5)                      PUMP           2 قلم · انتخاب · سال 1394 · P-244 A/B=Closed Drain Drum Pumps | P-246=Evaporation Pond Portable Pump
+  PUMPS-C                          PUMP           4 قلم · انتخاب · سال 1394 · P-153 A/B=Deaerated Water Pumps | P-158=Potable Water Loading Pump | P-172=Flare K.O. Drums Sump Pump
+  PUMPS-C (2)                      PUMP           3 قلم · انتخاب · سال 1394 · P-235=Closed Drain Drums Sump Pump | P-270=Fire Water Pump-Elect. Motor Driven | P-271=Fire Water Pump-Diesel Engine Driven
+  PUMPS-C (3)                      PUMP           4 قلم · انتخاب · سال 1394 · P-272 A/B=Fire Water Jockey Pumps | P-273=Fire Water Loading Pump | P-220 A/B/C/D/E=Chemical Loading Pumps
+  PUMPS-C (4)                      PUMP           2 قلم · انتخاب · سال 1394 · P-157 A/B=Water Liquid Return Pumps | P-116=Water Glycol Loading Pump
+  C.I.P.-A (1)                     CIP            2 قلم · انتخاب · سال 1394 · PK-250=Anti Scale Injection Package | PK-251=Demulsifier Injection Package
+  C.I.P.-A (2)                     CIP            2 قلم · انتخاب · سال 1394 · PK-252=Reverse Demulsifier Injection Package | PK-253=Biocide Injection Package
+  C.I.P.-A (3)                     CIP            2 قلم · انتخاب · سال 1394 · PK-254=Corrosion Inhibitor Injection Package | PK-255=Oxygen Scavenger Injection Package
+  C.I.P.-A (4)                     CIP            2 قلم · انتخاب · سال 1394 · PK-256=Anti Scale Injection Package | PK-257=Anti Scale Injection Package
+  C.I.P.-A (5)                     CIP            2 قلم · انتخاب · سال 1394 · PK-259=Oxygen Scavenger Injection Package | PK-221=Demulsifier Injection Package
+  C.I.P.-A (6)                     CIP            1 قلم · انتخاب · سال 1394 · PK-222=Corrosion Inhibitor Injection Package
+  C.I.P.-B (1)                     CIP            2 قلم · انتخاب · سال 1394 · PK-261=Demulsifier Injection Package | PK-262=Reverse Demulsifier Injection Package
+  C.I.P.-B (2)                     CIP            2 قلم · انتخاب · سال 1394 · PK-263=Biocide Injection Package | PK-264=Corrosion Inhibitor Injection Package
+  C.I.P.-B (3)                     CIP            2 قلم · انتخاب · سال 1394 · PK-265=Oxygen Scavenger Injection Package | PK-266=Anti Scale Injection Package
+  C.I.P.-B (4)                     CIP            2 قلم · انتخاب · سال 1394 · PK-267=Anti Scale Injection Package | PK-223=Demulsifier Injection Package
+  C.I.P.-B (5)                     CIP            1 قلم · انتخاب · سال 1394 · PK-224=Corrosion Inhibitor Injection Package
+  STRIPPER-B                       MISC_PKG       1 قلم · انتخاب · سال 1394 · PK-143=Stripping Package
+  CHILLING UNIT (DEAERATOR)        DEAERATOR      1 قلم · انتخاب · سال 1394 · E-151=Chilling Unit (Deaeration System)
+  IWWTP-A (1)                      IGF            1 قلم · انتخاب · سال 1394 · PK-131=IGF Package
+  IWWTP-B (1)                      IGF            1 قلم · انتخاب · سال 1394 · PK-141=IGF Package
+  FILTERS-A                        FILTER         2 قلم · انتخاب · سال 1394 · PK-132=Nutshell Filter Package | F-151=Sealing Water Filter
+  FILTERS-B                        FILTER         2 قلم · انتخاب · سال 1394 · PK-142=Nutshell Filter Package | F-161=Sealing Water Filter
+  FLARE-A                          FLARE          1 قلم · انتخاب · سال 1394 · PK-171=Flare Package
+  FLARE-B                          FLARE          1 قلم · انتخاب · سال 1394 · PK-181=Flare Package
+  STACK-A                          FLARE          1 قلم · انتخاب · سال 1394 · ST-172=Cold Vent Stack
+  STACK-B                          FLARE          1 قلم · انتخاب · سال 1394 · ST-182=Cold Vent Stack
+  BURN PIT IGNITION-A              FLARE          1 قلم · انتخاب · سال 1394 · PK-231=Burn Pit Ignition Package
+  BURN PIT IGNITION-B              FLARE          1 قلم · انتخاب · سال 1394 · PK-241=Burn Pit Ignition Package
+  AIR COMP.                        COMPRESSOR     1 قلم · انتخاب · سال 1394 · PK-211 A/B=Air Compressor Packages
+  AIR DRYER                        AIR_DRYER      1 قلم · انتخاب · سال 1394 · PK-212=Air Dryer Packages
+  CRANES (1)                       CRANE          4 قلم · انتخاب · سال 1394 · CN-114 / CN-124=Main Pumps Shelter Cranes | CN-151=Utility Building Crane | CN-231=O.W.S. Pumps Shelter Crane
+  CRANES (2)                       CRANE          4 قلم · انتخاب · سال 1394 · CN-252 / CN-262=Chemical Inj. Package Shelter Cranes | CN-131 / CN-141=IGF Pumps Shelter Shelter Cranes | CN-271=Fire Water Pumps Shelter Crane
+  CRANES (3)                       CRANE          1 قلم · انتخاب · سال 1394 · CN-111 / CN-121=Transfer Pumps & Chemical Inj. Packages
+  R.O.                             WATER_TREAT    1 قلم · انتخاب · سال 1394 · PK-152=Reverse Osmosis Packages
+  رد/نصب: Cover، Record Sheet، PROC-TITLE، IWWTP-A (2)، IWWTP-B (2)، TOTAL، TOTAL (2)، INSTALL-TITLE، INS-HEAT-A، INS-HEAT-B، INS-VESSEL-A، INS-VESSEL-B، INS-VESSEL-C، INS-TANK-A (1)، INS-TANK-A (2)، INS-TANK-A (3)، INS-TANK-A (4)، INS-TANK-A (5)، INS-TANK-A (6)، INS-TANK-A (7)، INS-TANK-A (8)، INS-TANK-B (1)، INS-TANK-B (2)، INS-TANK-B (3)، INS-TANK-B (4)، INS-TANK-B (5)، INS-TANK-B (6)، INS-TANK-B (7)، INS-TANK-B (8)، INS-TANK-B (9)، INS-TANK-C (1)، INS-TANK-C (2)، INS-TANK-C (3)، INS-TANK-C (4)، INS-HE-A، INS-HE-B، INS-HE-C، INS-PUMP-A (1)، INS-PUMP-A (2)، INS-PUMP-B (1)، INS-PUMP-B (2)، INS-PUMP-C، INS-PACK-A (1)، INS-PACK-A (2)، INS-PACK-B، INS-PACK-C، INS-FLARE-A، INS-FLARE-B، INS-CRANE، INS-FILTER-A، INS-FILTER-B، INS-TOTAL
+  ورود: 120 قلم · 0 استعلام · 120 برآورد · وزن 29 · تکراری 0 · {DESALTER: 2, HEATER: 4, VESSEL: 8, TANK: 15, PUMP: 41, HEX: 4, CIP: 20, MISC_PKG: 1, DEAERATOR: 1, IGF: 2, FILTER: 4, FLARE: 6, COMPRESSOR: 1, AIR_DRYER: 1, CRANE: 9, WATER_TREAT: 1}
+00:04 +16: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_full_test.dart: PEP کامل (گچساران ۴)
+### PEP-Rev.140205_Sample_4_full.xlsx: 874 ms · قالب generic · سند null · تاریخ 1402/5 · پروژه Sample 4 · وزن 63 تگ
+  P.ME › DESALTER                  DESALTER       2 قلم · انتخاب · سال 1402 · DE-001-A/B=1at  TRAIN DESALTER | DE-002-A/B=2nd TRAIN DESALTER
+  P.ME › HEX                       HEX            4 قلم · انتخاب · سال 1402 · E-001-A/B=SALTY CRUDE / DESALTED CRUDE HEAT EXCHANGER | E-002-A/B=WATER / WATER HEAT EXCHANGER | P.ME#114=CLEANING IN PLATE FOR EXCHANGER
+  P.ME › HEATER                    HEATER         3 قلم · انتخاب · سال 1402 · H-001-A1/A2=CRUDE OIL INDIRECT FIRED HEATER | H-001-B1/B2=CRUDE OIL INDIRECT FIRED HEATER | P.ME#127=كوره ها و ادوات مربوطه
+  P.ME › TANK                      TANK          11 قلم · انتخاب · سال 1402 · TK-003=OFF-SPEC TANK | TK-101=DILUTION  WATER TANK | TK-102=POTABLE WATER TANK
+  P.ME › PUMP                      PUMP          26 قلم · انتخاب · سال 1402 · P-001-A/B=MAIN TRANSFER PUMPS | P-002-A/B=AUXILLIARY TRANSFER PUMPS | P-003-A/B=OFF-SPEC PUMPS
+  P.ME › VESSEL                    VESSEL         5 قلم · انتخاب · سال 1402 · V-001-A/B=FREE WATER K.O DRUM | V-301=FUEL GAS K.O. DRUM | V-401=AIR RECIEVER
+  P.ME › DEAERATOR                 DEAERATOR      2 قلم · انتخاب · سال 1402 · PK-101=VACUUM DEAERATOR PACKAGE | P.ME#137=Vacuum Deaerator Package
+  P.ME › IGF                       IGF            1 قلم · انتخاب · سال 1402 · PK-201-A/B=IGF PACKAGE
+  P.ME › FILTER                    FILTER         1 قلم · انتخاب · سال 1402 · PK-202=NUTSHELL FILTER PACKAGE
+  P.ME › COMPRESSOR                COMPRESSOR     3 قلم · انتخاب · سال 1402 · PK-401-A/B=AIR COMPRESSOR PACKAGE | PK-002-A/B=AIR COMPRESSOR PACKAGE | P.ME#134=کمپرسور و خشک کن هوا
+  P.ME › AIR_DRYER                 AIR_DRYER      2 قلم · انتخاب · سال 1402 · PK-402=AIR DRYER PACKAGE | PK-003=AIR DRYER PACKAGE
+  P.ME › CIP                       CIP            9 قلم · انتخاب · سال 1402 · PK-501=DEMULSIFIER INJECTION PACKAGE | PK-502-A/B=DEMULSIFIER INJECTION PACKAGE | PK-503=OXYGEN SCAVENGER INJECTION PACKAGE
+  P.ME › FLARE                     FLARE          4 قلم · انتخاب · سال 1402 · PK-602=FLARE PACKAGE | PK-603=COLD FLARE PACKAGE | PK-701=BURN PIT IGNITION PACKAGE
+  P.ME › CRANE                     CRANE         14 قلم · انتخاب · سال 1402 · CR-001=AIR COMPRESSOR ROOM CRANE | CR-002=CHEMICAL STORAGE SHELTER CRANE (ex) | CR-003=CHEMICAL STORAGE SHELTER CRANE (ex)
+  P.ME › HVAC                      HVAC           9 قلم · انتخاب · سال 1402 · P.ME#84=HVAC  FOR ACCOMMODATION | P.ME#85=HVAC  FOR DE4 SWITCHGERA ROOM | P.ME#86=HVAC  FOR DE4 CONTROL ROOM
+  P.ME › WATER_TREAT               WATER_TREAT    2 قلم · انتخاب · سال 1402 · P.ME#92=Waste water treatment package | P.ME#93=Water treatment package
+  P.ME › FIRE_SAFETY               FIRE_SAFETY   19 قلم · انتخاب · سال 1402 · P.ME#95=WATER HYDRANT | P.ME#96=WATER HYDRANT WITH MONITOR | P.ME#97=DELUGE VALVE
+  P.ME › MISC_PKG                  MISC_PKG       6 قلم · انتخاب · سال 1402 · P.ME#113=Pig Launcher & Receiver | P.ME#126=الكترواستاتيك ها و ادوات مربوطه | P.ME#129=تلمبه ها
+  P.ME › VALVE                     VALVE          1 قلم · انتخاب · سال 1402 · P.ME#130=شيرآلات و اتصالات ، رنگها و لوله های داخل سایت
+  P.ME › PIPE_BULK                 PIPE_BULK      1 قلم · انتخاب · سال 1402 · P.ME#131=خرید لوله های بیرون سایت
+  P.EL › ELEC_EQ                   ELEC_EQ      147 قلم · انتخاب · سال 1402 · P.EL#1.1=MV Switchgear, 33KV, 630A | P.EL#1.2=MV Switchgear, 3.3KV, 1250A | P.EL#1.3=MV Switchgear, 3.3KV, 630A
+  P.EL › SERVICES                  SERVICES       2 قلم · انتخاب · سال 1402 · P.EL#9.2.4=WELDING SOCKET OUTLET, INDUSTRIAL | P.EL#9.2.6=WELDING SOCKET OUTLET, EXPLPSION PROOF,WEATHER PROOF
+  P.IN                             INST_EQ      115 قلم · انتخاب · سال 1402 · P.IN#1.1=BS&W ANALYZER TRANSMITTER / ELEMENT | P.IN#1.2=DISSOLVED OXYGEN ANALYZER | P.IN#2.1=CORROSION COUPON
+  P.PI                             PIPE_BULK    809 قلم · انتخاب · سال 1402 · P.PI#1=StudBolt&nuts 5/8" 85 AX01 For flange:2"150# | P.PI#2=StudBolt&nuts 5/8" 90 AX01 For flange:3"150# | P.PI#3=StudBolt&nuts 5/8" 90 AX01 For flange:4"150#
+  P.PL                             PIPE_BULK     15 قلم · انتخاب · سال 1402 · P.PL#1=احداث خط لوله انتقال نفت نمکی  از واحد بهره برداری نمونه 4 به واحد نمک زدایی نمونه  4 ب… | P.PL#2=احداث خط لوله انتقال نفت نمک زدایی شده 20 اینچ روزمینی با جنس API 5L GR.X52/SCH.30/NACE … | P.PL#6=ساپورت فلزی و فونداسیون (بر اساس تناژ)
+  P.LAB                            LAB           33 قلم · انتخاب · سال 1402 · P.LAB#4=Microwave Digestion System | P.LAB#5=Ion Meter | P.LAB#6=Oxygen  Meter
+  رد/نصب: عملكرد كلي، EPC Summary، PEP، basic data، Engineering، Procurement، Construction، C.CONTENT، C.Note، C.foundation-2، C.Shelters-2، C.ROAD-2، C.OTHERS-2، C.SITE-2، C.SITE-3، C.UG CIVIL-2، C.STEEL STRUCTURE (2)، C.Buildings، C.RETAINING WAL، C.PIPING، C.mECHANICAL، C.PIPELINE، C.ELECTRICAL، C.INSTRUMENT، C.tashilat، C.tashilat (2)، C.HSE(1)، C.HSE(2)، C.Foundation-1، C.Shelters-1، C.Shelters-1  (2)، C.ROAD-1، C.OTHERS-1، C.SITE-1، C.UG CIVIL-1، C.STEEL STRUCTURE-1، E.Endorsement، E.Process، E.Mechanic، E.HVAC، E.HSE، E.Piping&Pipeline، E.Instrument، E.Electrical، E.TELECOM، E.Civil، E.Arichitectural، E.Structure، E.Project Control
+  ورود: 1246 قلم · 0 استعلام · 1235 برآورد · وزن 20 · تکراری 0 · {DESALTER: 2, HEX: 4, HEATER: 3, TANK: 11, PUMP: 26, VESSEL: 5, DEAERATOR: 2, IGF: 1, FILTER: 1, COMPRESSOR: 3, AIR_DRYER: 2, CIP: 9, FLARE: 4, CRANE: 14, HVAC: 9, WATER_TREAT: 2, FIRE_SAFETY: 19, MISC_PKG: 6, VALVE: 1, PIPE_BULK: 825, ELEC_EQ: 147, SERVICES: 2, INST_EQ: 115, LAB: 33}
+00:06 +17: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_full_test.dart: برآورد به‌روزرسانی (مارون ۳)
+### Sample_M3_14050310.xlsx: 78 ms · قالب generic · سند null · تاریخ 1405/3 · پروژه پروژه گودال نمک نمونه3 · وزن 0 تگ
+  p.lab.1392                       LAB           23 قلم · انتخاب · سال 1392 · p.lab.1392#8=Microwave Digestion System | p.lab.1392#9=Ion Meter | p.lab.1392#10=Oxygen  Meter
+  EL.p.1392                        ELEC_EQ       18 قلم · بدون تیک · سال 1402 · EL.p.1392#1=تابلو ها(نمکزدایی و بهره برداری) | EL.p.1392#2=اتصالات برق( شامل : گلندها‏ | EL.p.1392#3=كابلهاي قدرت
+  IN.p&C.1392 › INST_EQ            INST_EQ        8 قلم · بدون تیک · سال 1392 · IN.p&C.1392#1=ادوات ابزار دقیق شامل : ترانسمیترها ، سوئیچ ها ، گیج ها و ... | IN.p&C.1392#2=شیرآلات ابزار شامل : شیر ON/OFF ، شیرهای کنترلی ، PSV ، PCV | IN.p&C.1392#3=سيستم كنترل ( DCS )، ESD
+  IN.p&C.1392 › SERVICES           SERVICES       3 قلم · بدون تیک · سال 1392 · IN.p&C.1392#7=نصب دستگاههاي ابزاردقيق داخل واحد | IN.p&C.1392#8=نصب سيستم كنترل و دستگاههاي ابزاردقيق داخل اتاق كنترل | IN.p&C.1392#15=اجرا
+  ME.p.1392 › رده نامشخص           ?              5 قلم · بدون تیک · سال 1392 · ME.p.1392#1=الكترواستاتيك و ادوات مربوطه | ME.p.1392#4=تلمبه ها | ME.p.1392#8=سيستم پساب
+  ME.p.1392 › HEATER               HEATER         1 قلم · بدون تیک · سال 1392 · ME.p.1392#2=كوره ها و ادوات مربوطه
+  ME.p.1392 › HEX                  HEX            1 قلم · بدون تیک · سال 1392 · ME.p.1392#3=مبدل نفت/نفت و مبدل آب/آب
+  ME.p.1392 › VALVE                VALVE          1 قلم · بدون تیک · سال 1392 · ME.p.1392#5=شيرآلات و اتصالات، رنگ ها و لوله هاي داخل سايت و مواد شيميايي
+  ME.p.1392 › PIPE_BULK            PIPE_BULK      1 قلم · بدون تیک · سال 1392 · ME.p.1392#6=خريد لوله هاي بيرون سايت
+  ME.p.1392 › TANK                 TANK           1 قلم · بدون تیک · سال 1392 · ME.p.1392#7=مخزن هاي اتمسفريك و تحت فشار
+  ME.p.1392 › COMPRESSOR           COMPRESSOR     1 قلم · بدون تیک · سال 1392 · ME.p.1392#9=chemical injection and air compressor package
+  ME.p.1392 › FLARE                FLARE          1 قلم · بدون تیک · سال 1392 · ME.p.1392#10=Flares
+  ME.p.1392 › HVAC                 HVAC           1 قلم · بدون تیک · سال 1392 · ME.p.1392#13=سيستم HVAC
+  ME.p.1392 › CRANE                CRANE          1 قلم · بدون تیک · سال 1392 · ME.p.1392#14=جرثقيل هاي سقفي
+  SEFTY.p.1392                     FIRE_SAFETY   27 قلم · انتخاب · سال 1392 · SEFTY.p.1392#8=WATER HYDRANT | SEFTY.p.1392#9=WATER HYDRANT WITH MONITOR | SEFTY.p.1392#10=OS&Y GATE VALVE-ISOLATING VALVE
+  EL.P.1405                        ELEC_EQ        6 قلم · بدون تیک · سال 1405 · EL.P.1405#1=تابلو ها(نمکزدایی و بهره برداری) | EL.P.1405#2=اتصالات برق( شامل : گلندها‏ | EL.P.1405#3=كابلهاي قدرت
+  رد/نصب: EPC 1402 (2)، E.1392، p.summary1392، CV1392، c.cefty.1392، c.summary1392، E.p.c summary 1392، Inflation، E.1405، IN.P&C 1405، ME.P.1405، CV1405، Sheet1، Extra.1405، c.summary1405، p.summary1405، Summary_M3 1405، EPC 1405، FR1405، RFCS LEVEL 2
+  ورود: 50 قلم · 0 استعلام · 29 برآورد · وزن 0 · تکراری 0 · {LAB: 23, FIRE_SAFETY: 27}
+00:06 +18: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart
+00:06 +18: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart: (setUpAll)
+00:06 +18: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart: تشخیص خودکار ستون‌ها، بخش‌ها و رده‌ها
+00:06 +19: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart: ورود به بانک: مشخصات در فیلدهای قالب هر رده، قیمت‌ها و استعلام‌ها
+00:07 +20: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart: اصلاح نقش ستون در پیش‌نمایش و خواندن دوباره
+00:07 +21: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart: تشخیص رده از متن و مشخصات پمپ
+00:07 +22: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_generic_test.dart: (tearDownAll)
+00:07 +22: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart
+00:07 +22: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: شاخص ترکیبی M7 دیسالتر و سری‌های یوروستات در دیتابیس تازه
+00:08 +23: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: استخراج مشخصات دیسالتر از شرح MTO
+00:08 +24: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بخش تجهیزات دیسالتر: بدون Scope و مرحله‌ی پروژه؛ فیلترها فقط مشخصات انتخاب
+00:08 +25: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بانک دیسالتر v8.1 (setUpAll)
+00:08 +25: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بانک دیسالتر v8.1 ستون‌های فرمولی Master برابر Test_Cases (بدون اصلاح)
+00:08 +26: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بانک دیسالتر v8.1 Estimator: سناریوی پیش‌فرض
+00:08 +27: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بانک دیسالتر v8.1 Estimator: سناریوی kVA فعال + n_B برازش‌شده + سال هدف ۱۴۰۵
+00:09 +28: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بانک دیسالتر v8.1 ورود فایل: اصلاح سال KPL، استعلام‌ها، بایگانی تکراری MTO، جلوگیری از ورود دوباره
+00:10 +29: /home/runner/work/nz-probe/nz-probe/price_bank/test/desalter_test.dart: بانک دیسالتر v8.1 (tearDownAll)
+00:10 +29: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/bank_flex_test.dart
+00:11 +29: /home/runner/work/nz-probe/nz-probe/price_bank/test/bank_flex_test.dart: تطبیق سرستون: عین، بدون واحد، هم‌معنی، شامل واژه‌ها
+00:11 +30: /home/runner/work/nz-probe/nz-probe/price_bank/test/bank_flex_test.dart: بانک کمپرسور به‌هم‌ریخته = بانک مرجع
+00:17 +31: /home/runner/work/nz-probe/nz-probe/price_bank/test/bank_flex_test.dart: بانک دیسالتر به‌هم‌ریخته = بانک مرجع
+00:23 +32: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart
+00:23 +32: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: (setUpAll)
+00:23 +32: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: تحلیل فایل: سند، پروژه، شیت‌ها، اقلام و استعلام‌ها
+00:23 +33: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: ورود به دیتابیس، جلوگیری از ورود تکراری و محاسبه‌ی قیمت
+00:24 +34: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: اقلام قدیمی: استخراج قالب از شرح MTO در باز شدن برنامه
+00:24 +35: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: وزن ظرف: خالی = بی‌اثر؛ با وزن دو قلم، ضریب وزن جای ضریب فشار را می‌گیرد
+00:24 +36: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: صحت‌سنجی روش‌ها با داده‌های بانک (قیمت قدیمی در برابر استعلام جدید)
+00:24 +37: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: نام پروژه از عنوان
+00:24 +38: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_import_test.dart: (tearDownAll)
+00:24 +38: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_libs_test.dart
+00:26 +38: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_libs_test.dart: کتابخانه‌های UI در چیدمان راست‌به‌چپ رسم می‌شوند
+DataTable2 built: 4ms
+00:27 +39: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/xlsx_meta_test.dart
+00:27 +39: /home/runner/work/nz-probe/nz-probe/price_bank/test/xlsx_meta_test.dart: خواندن یادداشت سلول و رنگ پس‌زمینه از v8
+00:28 +40: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart
+00:33 +40: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: (setUpAll)
+00:33 +40: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: همه‌ی صفحه‌ها با داده‌ی v8 بدون خطا باز می‌شوند
+✓ صفحه‌ی داشبورد
+✓ صفحه‌ی شاخص‌ها و ارز
+✓ صفحه‌ی روش‌های تعدیل
+✓ صفحه‌ی تجهیزات
+✓ صفحه‌ی تخمین و تعدیل
+✓ صفحه‌ی ضرایب
+✓ صفحه‌ی پروژه‌ها و اسناد
+✓ صفحه‌ی تاریخچه
+✓ صفحه‌ی کاربران
+✓ صفحه‌ی تنظیمات
+00:41 +41: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: همه‌ی صفحه‌ها در پنجره‌ی کوچک (۹۸۰×۷۲۰، نوار کناری باریک با نام منوها)
+✓ صفحه‌ی داشبورد (پنجره‌ی کوچک)
+✓ صفحه‌ی شاخص‌ها و ارز (پنجره‌ی کوچک)
+✓ صفحه‌ی روش‌های تعدیل (پنجره‌ی کوچک)
+✓ صفحه‌ی تجهیزات (پنجره‌ی کوچک)
+✓ صفحه‌ی تخمین و تعدیل (پنجره‌ی کوچک)
+✓ صفحه‌ی ضرایب (پنجره‌ی کوچک)
+✓ صفحه‌ی پروژه‌ها و اسناد (پنجره‌ی کوچک)
+✓ صفحه‌ی تاریخچه (پنجره‌ی کوچک)
+✓ صفحه‌ی کاربران (پنجره‌ی کوچک)
+✓ صفحه‌ی تنظیمات (پنجره‌ی کوچک)
+00:45 +42: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: حالت شب و پالت سبز: همه‌ی صفحه‌ها
+✓ صفحه‌ی داشبورد (شب)
+✓ صفحه‌ی شاخص‌ها و ارز (شب)
+✓ صفحه‌ی روش‌های تعدیل (شب)
+✓ صفحه‌ی تجهیزات (شب)
+✓ صفحه‌ی تخمین و تعدیل (شب)
+✓ صفحه‌ی ضرایب (شب)
+✓ صفحه‌ی پروژه‌ها و اسناد (شب)
+✓ صفحه‌ی تاریخچه (شب)
+✓ صفحه‌ی کاربران (شب)
+✓ صفحه‌ی تنظیمات (شب)
+00:51 +43: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: صفحه‌ها با دیتابیس خالی هم باز می‌شوند
+✓ صفحه‌ی داشبورد (خالی)
+✓ صفحه‌ی شاخص‌ها و ارز (خالی)
+✓ صفحه‌ی روش‌های تعدیل (خالی)
+✓ صفحه‌ی تجهیزات (خالی)
+✓ صفحه‌ی تخمین و تعدیل (خالی)
+✓ صفحه‌ی ضرایب (خالی)
+✓ صفحه‌ی پروژه‌ها و اسناد (خالی)
+✓ صفحه‌ی تاریخچه (خالی)
+✓ صفحه‌ی کاربران (خالی)
+✓ صفحه‌ی تنظیمات (خالی)
+00:53 +44: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: انتخاب روش تعدیل از صفحه‌ی روش‌ها
+✓ تغییر روش به M4 و نمایش صفحه‌ها
+00:56 +45: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: تخمین: ویرایش ضریب موردی
+✓ ضریب موردی در تخمین
+00:59 +46: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: تجهیزات: فیلتر آب‌بند همه‌ی گزینه‌ها را دارد
+✓ گزینه‌های فیلتر آب‌بند
+01:02 +47: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: ساخت و حذف جدول نرخ ارز در صفحه‌ی شاخص‌ها
+✓ ساخت و حذف جدول نرخ ارز
+01:05 +48: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: ورود نرخ تورم به درصد
+✓ نرخ ۳۵٪ به صورت ۰٫۳۵ ذخیره شد
+01:07 +49: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: حذف پروژه با تأیید
+✓ حذف پروژه
+01:10 +50: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: ورود MTO از پیش‌نمایش، فهرست رده‌ی ظرف و صفحه‌ی قلم
+✓ ورود MTO از پیش‌نمایش
+✓ فهرست ظرف‌ها
+✓ رده‌ی DESALTER
+✓ رده‌ی CIP
+✓ رده‌ی CRANE
+✓ رده‌ی HEX
+✓ رده‌ی TANK
+✓ فیلترهای پارامتریک و افزودن دستی تجهیز
+✓ تخمین تجهیزات (ظرف) با فیلد وزن و تنظیمات رده
+✓ انتقال قیمت برای ظرف
+✓ ضرایب رده و بازگشت به همان جا
+✓ روش‌های تعدیل رده‌ی ظرف
+✓ قلم V-141 — زبانه‌ی مشخصات
+✓ قلم V-141 — زبانه‌ی قیمت‌ها و استعلام‌ها
+✓ قلم V-141 — زبانه‌ی محاسبه‌ی قیمت
+✓ قلم V-141 — زبانه‌ی تاریخچه
+✓ مبنا شدن استعلام و حالت ویرایش
+01:21 +51: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: ورود MTO با قالب دیگر: ستون‌ها، مشاهده‌ی اقلام و ورود
+✓ ورود MTO قالب دیگر
+01:22 +52: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: تخمین دیسالتر: جدول سه روش در پنجره‌ی باریک و پهن بدون شکستن متن
+✓ تخمین دیسالتر Size(980.0, 720.0)
+✓ تخمین دیسالتر Size(1600.0, 1000.0)
+01:28 +53: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: جزئیات پمپ: همه‌ی زبانه‌ها و حالت ویرایش
+✓ زبانه‌ی مشخصات
+✓ زبانه‌ی محاسبه‌ی قیمت
+✓ زبانه‌ی قیمت‌ها و استعلام‌ها
+✓ زبانه‌ی تاریخچه
+✓ حالت ویرایش
+✓ پمپ جدید
+01:32 +54: /home/runner/work/nz-probe/nz-probe/price_bank/test/ui_smoke_test.dart: (tearDownAll)
+01:32 +54: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart
+01:32 +54: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: شاخص BLS 333912، روش M5 کمپرسور و ضرایب Factors_CMP در دیتابیس تازه
+01:32 +55: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: استخراج مشخصات کمپرسور از شرح MTO
+01:32 +56: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 (setUpAll)
+01:32 +56: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 ستون‌های فرمولی Master برابر اکسل (ضرایب اکسل، بدون اصلاح)
+01:33 +57: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 Estimator TC1 برابر Test_Cases (ضرایب اکسل)
+01:33 +58: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 Estimator TC2 برابر Test_Cases (ضرایب اکسل)
+01:34 +59: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 Estimator TC3 برابر Test_Cases (ضرایب اکسل)
+01:34 +60: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 ورود فایل: سال KPL ۱۳۹۴/۱۰، همه‌ی استعلام‌ها، قلم خشک‌کن، تخمین با ضریب ۱٫۵۳
+01:37 +61: /home/runner/work/nz-probe/nz-probe/price_bank/test/compressor_test.dart: بانک کمپرسور هوا v8 (tearDownAll)
+01:37 +61: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/doc_hide_revision_test.dart
+01:37 +61: /home/runner/work/nz-probe/nz-probe/price_bank/test/doc_hide_revision_test.dart: سند پنهان: اقلام و قیمت‌هایش از جدول، شمارش و محاسبات کنار می‌روند و با پیدا کردن برمی‌گردند
+01:38 +62: /home/runner/work/nz-probe/nz-probe/price_bank/test/doc_hide_revision_test.dart: بازنگری جدیدتر همان پروژه: قلم تکراری نمی‌شود و قیمت جدید مبنا می‌شود؛ قیمت قبلی می‌ماند
+01:39 +63: /home/runner/work/nz-probe/nz-probe/price_bank/test/doc_hide_revision_test.dart: حذف سند: قلمی که فقط از همان سند آمده (حتی بی‌قیمت) حذف می‌شود؛ قلم دارای بازنگری دیگر می‌ماند
+01:39 +64: /home/runner/work/nz-probe/nz-probe/price_bank/test/doc_hide_revision_test.dart: مهاجرت ۳: سند مبدأ اقلام موجود از قیمت‌ها و تاریخچه‌ی ورود پر می‌شود
+01:40 +65: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart
+01:40 +65: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: گزارش چاپی MTO (قالب KPL) (setUpAll)
+01:40 +65: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: گزارش چاپی MTO (قالب KPL) سند، تاریخ بازنگری و پروژه
+01:40 +66: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: گزارش چاپی MTO (قالب KPL) اقلام چندسطری با مشخصات کامل
+01:40 +67: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: گزارش چاپی MTO (قالب KPL) ورود به بانک: فیلدهای قالب، وزن از شیت نصب
+01:41 +68: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: گزارش چاپی MTO (قالب KPL) (tearDownAll)
+01:41 +68: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: PEP کارفرما (قالب گچساران ۴) (setUpAll)
+01:41 +68: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: PEP کارفرما (قالب گچساران ۴) سند و شیت‌ها
+01:41 +69: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: PEP کارفرما (قالب گچساران ۴) تگ دوتکه، واحد Kg، رده از نام و بخش
+01:41 +70: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: PEP کارفرما (قالب گچساران ۴) ورود به بانک: مشخصات متن آزاد، وزن، رده‌های عمومی
+01:41 +71: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: PEP کارفرما (قالب گچساران ۴) تغییر رده‌ی یک قلم در پیش‌نمایش
+01:41 +72: /home/runner/work/nz-probe/nz-probe/price_bank/test/mto_formats_test.dart: PEP کارفرما (قالب گچساران ۴) (tearDownAll)
+01:41 +72: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart
+01:42 +72: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: دیتابیس تازه: ساختار و داده‌های پایه
+01:42 +73: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: مهاجرت ۲: نام جدول پیش‌فرض و روش تعدیل M6
+01:42 +74: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: جدول نرخ ارز جدید: ساخت با کپی، انتخاب در محاسبه، تغییر نام و حذف
+01:42 +75: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: ضرایب روش‌های تعدیل ۱۳۹۳ → ۱۴۰۴ برابر فایل صحت‌سنجی
+01:42 +76: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه (setUpAll)
+01:43 +76: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه انتقال: ۱۴۶ پمپ، پروژه‌ها، اسناد، برچسب‌های استنباطی
+01:45 +77: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه محاسبه از دیتابیس = عددهای اکسل (یورو و ریال تعدیل‌شده و ضریب هزینه)
+01:45 +78: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه ویرایش قلم: تاریخچه ثبت و محاسبه به‌روز می‌شود
+01:45 +79: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه نرخ تسعیر سند روی همه‌ی اقلام ریالی همان سند اثر می‌گذارد
+01:45 +80: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه شاخص‌ها: ویرایش، ورود گروهی و جستجوی ماه ← فصل ← سال
+01:45 +81: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه دوره به شکل ماه-سال و چسباندن نرخ به درصد
+01:45 +82: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه تفکیک عنوان سند از محل داخل سند
+01:45 +83: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه روش‌های تعدیل روی محاسبه اثر دارند (M0 بدون تعدیل، M4 بدون کف)
+01:45 +84: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه بایگانی و بازگرداندن قلم
+01:45 +85: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه حذف پروژه: اقلام، اسناد و تاریخچه
+01:45 +86: /home/runner/work/nz-probe/nz-probe/price_bank/test/db_integration_test.dart: انتقال v8 و محاسبه (tearDownAll)
+01:45 +86: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/price_bank_import_test.dart
+01:46 +86: /home/runner/work/nz-probe/nz-probe/price_bank/test/price_bank_import_test.dart: تشخیص نوع فایل: بانک تجمیعی در برابر بانک‌های جدا
+01:52 +87: /home/runner/work/nz-probe/nz-probe/price_bank/test/price_bank_import_test.dart: ورود: همه‌ی رکوردها، مشخصات در فیلدهای رده، استعلام‌ها، بدون تکرار در ورود دوباره
+01:56 +88: /home/runner/work/nz-probe/nz-probe/price_bank/test/price_bank_import_test.dart: قلم تکراری MTO (همان رده، تگ و قیمت) بایگانی می‌شود؛ بانک مرجع است
+01:58 +89: /home/runner/work/nz-probe/nz-probe/price_bank/test/price_bank_import_test.dart: بانک «به‌هم‌ریخته» (نام شیت و سرستون متفاوت، ردیف عنوان پایین‌تر، ستون حذف‌شده) = بانک مرجع
+02:02 +90: loading /home/runner/work/nz-probe/nz-probe/price_bank/test/docs_counts_test.dart
+02:02 +90: /home/runner/work/nz-probe/nz-probe/price_bank/test/docs_counts_test.dart: یک سند با عنوان‌های کمی متفاوت
+02:02 +91: /home/runner/work/nz-probe/nz-probe/price_bank/test/docs_counts_test.dart: ثبت سند تکراری یکی می‌شود؛ ادغام دیتابیس قبلی؛ شمارش بدون سند کمکی و تکرار در پروژه‌ها
+02:03 +92: /home/runner/work/nz-probe/nz-probe/price_bank/test/docs_counts_test.dart: حذف سند: قیمت‌های آن و سند کمکی حذف؛ قلم بی‌قیمت حذف، قلم با قیمت دیگر می‌ماند؛ ورود دوباره ممکن
+02:03 +93: /home/runner/work/nz-probe/nz-probe/price_bank/test/docs_counts_test.dart: 2f: در هر رده و هر فیلتر، جمع گزینه‌ها و «خالی» برابر «همه» است
+02:04 +94: All tests passed!
