@@ -138,6 +138,14 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - The indices page series list is lazy; adding series pushes others off-screen → UI tests must `scrollUntilVisible`.
 - `_reparseExisting` fills new template fields only once per template change (app_meta `profile_fields_<CODE>`).
 
+## Design skills (user 1405/08/05: «use them for look and layout»)
+- Project skills in `.claude/skills/` from github.com/nextlevelbuilder/ui-ux-pro-max-skill v2.15.0 (MIT): `ui-ux-pro-max`
+  (searchable styles/palettes/fonts/UX rules/Flutter stack: `python3 -E -s .claude/skills/ui-ux-pro-max/scripts/search.py
+  "<query>" --design-system` or `--stack flutter`; `-I` breaks its local imports), `design-system`, `ui-styling`, `brand`,
+  `design`, `banner-design`, `slides`. Also installed by the user: frontend-design, vectorlab-ux-skills, Magic Patterns,
+  Mobbin (Figma connector failed to connect from this environment). For UI work use them, but the no-gradient rule and
+  «screenshot before applying» still hold; fonts stay Vazirmatn (bundled, offline).
+
 ## Code map → `price_bank/docs/claude/CODE_MAP.md` (read the part you need)
 
 ## Domain essentials → `price_bank/docs/claude/DOMAIN.md` (escalation methods, settings keys, desalter/compressor decisions, price flow)
