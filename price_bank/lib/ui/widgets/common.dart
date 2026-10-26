@@ -77,12 +77,12 @@ class SectionCard extends StatelessWidget {
     final c = accent ?? t.colorScheme.primary;
     // Material (نه Container رنگی) تا ListTile و افکت‌های لمس درون کارت درست نمایش داده شوند.
     return DecoratedBox(
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), boxShadow: softShadow(context)),
+      decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: softShadow(context)),
       child: Material(
-        color: t.colorScheme.surface,
+        color: AppColors.glass,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: t.colorScheme.outlineVariant.withValues(alpha: 0.8)),
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: AppColors.glassLine),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(

@@ -13,6 +13,8 @@ import '../shell.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/mto_import_dialog.dart';
+import '../widgets/backdrop.dart';
+import '../widgets/command_palette.dart' show Kbd;
 import '../widgets/trend_kpi_tile.dart';
 import 'equipment_page.dart';
 
@@ -73,11 +75,16 @@ class DashboardPage extends StatelessWidget {
             0;
 
     return ListView(padding: const EdgeInsets.fromLTRB(24, 20, 24, 28), children: [
-      PageHeader(
-        icon: Icons.space_dashboard_rounded,
-        title: 'داشبورد',
-        subtitle: 'سال هدف ${fa(s.targetYear)} · نرخ ارز «${_fxName(app)}» · روش تعدیل ${method.code}',
+      _Hero(
+        meta: 'سال هدف ${fa(s.targetYear)} · نرخ ارز «${_fxName(app)}» · روش تعدیل ${method.code}',
+        stats: [
+          (fa(rows.length), 'قلم تجهیز'),
+          (fa(projects.length), 'پروژه'),
+          (fa(catsUsed), 'رده'),
+          (fa(quotes), 'استعلام'),
+        ],
       ),
+      const SizedBox(height: 16),
       if (app.pumps.isEmpty || !hasDesBank || !hasCmpBank)
         _ImportCard(pumps: app.pumps.isNotEmpty, desalters: hasDesBank, compressors: hasCmpBank),
       if (app.pumps.isEmpty) const SizedBox(height: 16),
@@ -156,6 +163,8 @@ class DashboardPage extends StatelessWidget {
         ]);
       }),
       const SizedBox(height: 16),
+      _CategorySqueeze(rows: rows, unit: unit),
+      const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
       LayoutBuilder(builder: (context, cons) {
@@ -201,6 +210,283 @@ class DashboardPage extends StatelessWidget {
       if (f.code == app.settings.fxRateType) return f.nameFa;
     }
     return app.settings.fxRateType;
+  }
+}
+
+/// نوار معرفی داشبورد (الگو: Northline و Mosa AI در 21st.dev): تصویر نور سبز، عنوان درشت با نقطه‌ی لیمویی،
+/// دکمه‌های گرد و آمار کوتاه. همیشه تیره است (روی تصویر)، در حالت روز هم.
+class _Hero extends StatelessWidget {
+  const _Hero({required this.meta, required this.stats});
+  final String meta;
+  final List<(String, String)> stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    const white = Colors.white;
+    final dim = white.withValues(alpha: 0.68);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF040A08),
+          border: Border.all(color: white.withValues(alpha: 0.08)),
+          borderRadius: BorderRadius.circular(24),
+          image: const DecorationImage(image: AppBackdrop.heroImage, fit: BoxFit.cover),
+        ),
+        padding: const EdgeInsets.fromLTRB(32, 24, 32, 22),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+              decoration: BoxDecoration(
+                color: white.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(99),
+                border: Border.all(color: white.withValues(alpha: 0.16)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Container(width: 7, height: 7, decoration: const BoxDecoration(color: AppColors.lime, shape: BoxShape.circle)),
+                const SizedBox(width: 8),
+                Text('بانک قیمت تجهیزات نمک‌زدایی',
+                    style: t.textTheme.labelMedium?.copyWith(color: white, fontWeight: FontWeight.w600)),
+              ]),
+            ),
+            const Spacer(),
+            Flexible(
+              child: Text(meta,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.textTheme.labelMedium?.copyWith(color: dim, letterSpacing: 0.3)),
+            ),
+          ]),
+          const SizedBox(height: 26),
+          Text.rich(
+            TextSpan(children: [
+              const TextSpan(text: 'قیمت تجهیزات'),
+              TextSpan(text: '.', style: TextStyle(color: AppColors.lime.withValues(alpha: 1))),
+            ]),
+            style: t.textTheme.displaySmall?.copyWith(color: white, fontWeight: FontWeight.w700, height: 1.25),
+          ),
+          const SizedBox(height: 10),
+          Text('هر قیمت مشاور و فروشنده، تعدیل‌شده به سال هدف؛ جست‌وجو، مقایسه و تخمین تجهیز تازه از هم‌رده‌ها.',
+              style: t.textTheme.bodyMedium?.copyWith(color: dim, height: 1.8)),
+          const SizedBox(height: 22),
+          Container(height: 1, color: white.withValues(alpha: 0.12)),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 28,
+            runSpacing: 12,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              for (final (v, l) in stats)
+                Row(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  Text(v, style: t.textTheme.titleLarge?.copyWith(color: white, fontWeight: FontWeight.w700, height: 1)),
+                  const SizedBox(width: 6),
+                  Text(l, style: t.textTheme.labelMedium?.copyWith(color: dim)),
+                ]),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                _HeroButton(
+                  key: const Key('hero-equipment'),
+                  label: 'تجهیزات',
+                  icon: Icons.north_west_rounded,
+                  filled: true,
+                  onTap: () => AppShell.go(context, AppShell.equipment),
+                ),
+                const SizedBox(width: 10),
+                _HeroButton(
+                  label: 'جست‌وجو',
+                  trailing: const Directionality(textDirection: TextDirection.ltr, child: Kbd('Ctrl K')),
+                  onTap: () => AppShell.search(context),
+                ),
+              ]),
+            ],
+          ),
+        ]),
+      ),
+    );
+  }
+}
+
+/// دکمه‌ی گرد نوار معرفی: لیمویی پر (اصلی) یا شیشه‌ای.
+class _HeroButton extends StatelessWidget {
+  const _HeroButton({super.key, required this.label, required this.onTap, this.icon, this.trailing, this.filled = false});
+  final String label;
+  final IconData? icon;
+  final Widget? trailing;
+  final bool filled;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fg = filled ? const Color(0xFF0B1A10) : Colors.white;
+    return Material(
+      color: filled ? AppColors.lime : Colors.white.withValues(alpha: 0.06),
+      shape: StadiumBorder(side: BorderSide(color: filled ? AppColors.lime : Colors.white.withValues(alpha: 0.22))),
+      child: InkWell(
+        customBorder: const StadiumBorder(),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w700, fontSize: 13.5)),
+            if (icon != null) ...[const SizedBox(width: 6), Icon(icon, size: 16, color: fg)],
+            if (trailing != null) ...[const SizedBox(width: 8), trailing!],
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// نوار رده‌ها به سبک Squeeze Carousel (21st.dev): هر رده یک باریکه روی تصویر نور سبز؛ رده‌ی زیر نشانگر
+/// (یا پرقلم‌ترین رده) پهن می‌شود و نام، شمار اقلام و جمع قیمتش را نشان می‌دهد. زدن روی آن فهرست رده را باز می‌کند.
+class _CategorySqueeze extends StatefulWidget {
+  const _CategorySqueeze({required this.rows, required this.unit});
+  final List<EquipRow> rows;
+  final MoneyUnit unit;
+
+  @override
+  State<_CategorySqueeze> createState() => _CategorySqueezeState();
+}
+
+class _CategorySqueezeState extends State<_CategorySqueeze> {
+  int _open = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = Theme.of(context);
+    final agg = <int, (int, double)>{};
+    for (final r in widget.rows) {
+      final e = agg[r.categoryId] ?? (0, 0.0);
+      agg[r.categoryId] = (e.$1 + 1, e.$2 + (r.item.include && r.irrTarget != null ? r.irrTarget! * r.qty : 0));
+    }
+    final cats = [
+      for (final c in app.pb.bankCategories())
+        if ((agg[c.id]?.$1 ?? 0) > 0) c,
+    ]..sort((a, b) => agg[b.id]!.$1.compareTo(agg[a.id]!.$1));
+    if (cats.isEmpty) return const SizedBox.shrink();
+    final shown = cats.take(8).toList();
+    if (_open >= shown.length) _open = 0;
+    final still = MediaQuery.of(context).disableAnimations;
+    return SizedBox(
+      height: 220,
+      child: LayoutBuilder(builder: (context, c) {
+        const gap = 8.0, narrow = 58.0;
+        final wide = c.maxWidth - (shown.length - 1) * (narrow + gap);
+        // هنگام پویانمایی (یا وقتی رده‌ی تازه اضافه می‌شود) جمع پهناها لحظه‌ای بیشتر می‌شود: بریده شود، نه خطا
+        return ClipRect(
+            child: OverflowBox(
+          maxWidth: double.infinity,
+          alignment: AlignmentDirectional.centerStart,
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+          for (var i = 0; i < shown.length; i++) ...[
+            if (i > 0) const SizedBox(width: gap),
+            AnimatedContainer(
+              key: ValueKey('squeeze-${shown[i].code}'),
+              duration: still ? Duration.zero : const Duration(milliseconds: 420),
+              curve: Curves.easeOutCubic,
+              width: i == _open ? wide : narrow,
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                onEnter: (_) => setState(() => _open = i),
+                child: GestureDetector(
+                  onTap: () {
+                    EquipmentPage.selectedCategory = shown[i].code;
+                    AppShell.go(context, AppShell.equipment);
+                  },
+                  child: _Slat(
+                    open: i == _open,
+                    index: i,
+                    title: shown[i].nameFa,
+                    count: agg[shown[i].id]!.$1,
+                    total: agg[shown[i].id]!.$2 <= 0 ? null : money(agg[shown[i].id]!.$2, widget.unit, compact: true),
+                    style: t.textTheme,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ])));
+      }),
+    );
+  }
+}
+
+class _Slat extends StatelessWidget {
+  const _Slat({required this.open, required this.index, required this.title, required this.count, required this.total, required this.style});
+  final bool open;
+  final int index;
+  final String title;
+  final int count;
+  final String? total;
+  final TextTheme style;
+
+  @override
+  Widget build(BuildContext context) {
+    const white = Colors.white;
+    // هر باریکه بخش دیگری از تصویر نور را نشان می‌دهد
+    final ax = -1.0 + (index % 4) * 0.66;
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF040A08),
+          image: DecorationImage(image: AppBackdrop.heroImage, fit: BoxFit.cover, alignment: Alignment(ax, 0.6)),
+          border: Border.all(color: white.withValues(alpha: open ? 0.18 : 0.08)),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: LayoutBuilder(builder: (context, c) {
+          if (!open || c.maxWidth < 180) {
+            return Stack(children: [
+              Positioned.fill(child: ColoredBox(color: Colors.black.withValues(alpha: 0.35))),
+              Center(
+                child: RotatedBox(
+                  quarterTurns: 3,
+                  child: Text(title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style.labelLarge?.copyWith(color: white.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ]);
+          }
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.35), borderRadius: BorderRadius.circular(99)),
+                child: Text('${fa(count)} قلم', style: style.labelMedium?.copyWith(color: white, fontWeight: FontWeight.w600)),
+              ),
+              const Spacer(),
+              Text(title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: style.headlineSmall?.copyWith(color: white, fontWeight: FontWeight.w700, height: 1.3)),
+              const SizedBox(height: 6),
+              Row(children: [
+                Expanded(
+                  child: Text(total == null ? 'بدون قیمت تعدیل‌شده' : 'جمع سال هدف: $total',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: style.bodySmall?.copyWith(color: white.withValues(alpha: 0.75))),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(color: AppColors.lime, borderRadius: BorderRadius.circular(99)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Text('فهرست', style: style.labelMedium?.copyWith(color: const Color(0xFF0B1A10), fontWeight: FontWeight.w700)),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.north_west_rounded, size: 14, color: Color(0xFF0B1A10)),
+                  ]),
+                ),
+              ]),
+            ]),
+          );
+        }),
+      ),
+    );
   }
 }
 

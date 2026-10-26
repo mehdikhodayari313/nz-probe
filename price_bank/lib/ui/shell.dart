@@ -5,9 +5,9 @@ import 'package:flutter/services.dart';
 import '../app/app_state.dart';
 import '../core/calc/methods.dart';
 import 'format.dart';
-import 'widgets/backdrop.dart';
 import 'widgets/data_grid.dart' show isNotStated;
 import 'widgets/command_palette.dart';
+import 'widgets/mac_dock.dart';
 import 'widgets/common.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/documents_page.dart';
@@ -61,6 +61,9 @@ class AppShell extends StatefulWidget {
 
   /// تغییر صفحه از داخل صفحه‌های دیگر.
   static void go(BuildContext context, int index) => context.findAncestorStateOfType<_AppShellState>()?._go(index);
+
+  /// باز کردن جست‌وجوی سراسری (همان Ctrl+K) از داخل صفحه‌ها.
+  static void search(BuildContext context) => context.findAncestorStateOfType<_AppShellState>()?._search();
 
   static const dashboard = 0,
       indices = 1,
@@ -171,8 +174,7 @@ class _AppShellState extends State<AppShell> {
                       onSearch: _search,
                     ),
                     Expanded(
-                      child: DotGridBackdrop(
-                          child: Stack(fit: StackFit.expand, children: [
+                      child: Stack(fit: StackFit.expand, children: [
                         for (final v in alive)
                           KeyedSubtree(
                             key: ValueKey('page-${v.gen}'),
@@ -188,7 +190,14 @@ class _AppShellState extends State<AppShell> {
                               ),
                             ),
                           ),
-                      ])),
+                        // Dock شناور پایین صفحه (پنهان؛ با بردن نشانگر به لبه‌ی پایین ظاهر می‌شود)
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          child: _DockHost(current: _cur.index, onPage: _go, onSearch: _search),
+                        ),
+                      ]),
                     ),
                   ]),
                 ),
@@ -197,6 +206,91 @@ class _AppShellState extends State<AppShell> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// میزبان Dock: در حالت عادی فقط یک دستگیره‌ی کوچک در لبه‌ی پایین دیده می‌شود تا روی جدول‌ها را نپوشاند؛
+/// با رسیدن نشانگر به لبه‌ی پایین (یا زدن دستگیره) Dock بالا می‌آید و با دور شدن نشانگر پنهان می‌شود.
+class _DockHost extends StatefulWidget {
+  const _DockHost({required this.current, required this.onPage, required this.onSearch});
+  final int current;
+  final ValueChanged<int> onPage;
+  final VoidCallback onSearch;
+
+  @override
+  State<_DockHost> createState() => _DockHostState();
+}
+
+class _DockHostState extends State<_DockHost> {
+  bool _shown = false;
+
+  static const _pages = [
+    (AppShell.dashboard, Icons.space_dashboard_rounded, Color(0xFF10B981)),
+    (AppShell.indices, Icons.query_stats_rounded, Color(0xFF0EA5E9)),
+    (AppShell.methods, Icons.science_rounded, Color(0xFF8B5CF6)),
+    (AppShell.equipment, Icons.precision_manufacturing_rounded, Color(0xFFF59E0B)),
+    (AppShell.estimator, Icons.calculate_rounded, Color(0xFFF43F5E)),
+    (AppShell.factors, Icons.tune_rounded, Color(0xFF14B8A6)),
+    (AppShell.documents, Icons.folder_rounded, Color(0xFFCA8A04)),
+    (AppShell.settings, Icons.settings_rounded, Color(0xFF64748B)),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final items = [
+      for (final (i, icon, color) in _pages) DockItem(id: '$i', label: _destinations[i].label, icon: icon, color: color),
+      const DockItem(id: 'search', label: 'جست‌وجو (Ctrl+K)', icon: Icons.search_rounded, color: Color(0xFF6366F1)),
+    ];
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    final still = MediaQuery.of(context).disableAnimations;
+    return MouseRegion(
+      onExit: (_) => setState(() => _shown = false),
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        AnimatedSwitcher(
+          duration: still ? Duration.zero : const Duration(milliseconds: 220),
+          transitionBuilder: (child, a) => FadeTransition(
+            opacity: a,
+            child: SlideTransition(position: Tween(begin: const Offset(0, 0.35), end: Offset.zero).animate(a), child: child),
+          ),
+          child: _shown
+              ? Padding(
+                  key: const Key('mac-dock'),
+                  padding: const EdgeInsets.only(bottom: 22),
+                  child: MacDock(
+                    // هندسه‌ی Dock چپ‌به‌راست است؛ برعکس تا «داشبورد» سمت راست باشد
+                    items: items.reversed.toList(),
+                    active: '${widget.current}',
+                    onSelect: (id) => id == 'search' ? widget.onSearch() : widget.onPage(int.parse(id)),
+                  ),
+                )
+              : const SizedBox(key: Key('dock-hidden'), width: double.infinity),
+        ),
+        if (!_shown)
+          // لبه‌ی حساس پایین + دستگیره
+          MouseRegion(
+            onEnter: (_) => setState(() => _shown = true),
+            child: GestureDetector(
+              key: const Key('dock-handle'),
+              behavior: HitTestBehavior.opaque,
+              onTap: () => setState(() => _shown = true),
+              child: SizedBox(
+                height: 12,
+                width: double.infinity,
+                child: Center(
+                  child: Container(
+                    width: 64,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: (dark ? Colors.white : Colors.black).withValues(alpha: 0.22),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ]),
     );
   }
 }
@@ -221,7 +315,7 @@ class _Sidebar extends StatelessWidget {
       width: w,
       decoration: BoxDecoration(
         color: AppColors.sidebar,
-        border: BorderDirectional(end: BorderSide(color: cs.outlineVariant)),
+        border: BorderDirectional(end: BorderSide(color: AppColors.glassLine)),
       ),
       child: Column(children: [
         // نشان برنامه
@@ -251,7 +345,7 @@ class _Sidebar extends StatelessWidget {
             ]),
           ),
         ),
-        Divider(height: 1, color: cs.outlineVariant),
+        Divider(height: 1, color: AppColors.glassLine),
         Expanded(
           child: ListView(padding: const EdgeInsets.fromLTRB(8, 6, 8, 8), children: [
             for (var i = 0; i < _destinations.length; i++) ...[
@@ -277,7 +371,7 @@ class _Sidebar extends StatelessWidget {
         // کاربر جاری
         Container(
           padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 16, vertical: 12),
-          decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: AppColors.glassLine))),
           child: Row(mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
             CircleAvatar(
               radius: 15,
@@ -415,8 +509,8 @@ class _TopBar extends StatelessWidget {
       height: 62,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: t.colorScheme.surface,
-        border: Border(bottom: BorderSide(color: t.colorScheme.outlineVariant)),
+        color: AppColors.sidebar,
+        border: Border(bottom: BorderSide(color: AppColors.glassLine)),
       ),
       child: Row(children: [
         // دکمه‌ی بازگشت: همیشه در همین جای ثابت (هم‌جای دکمه‌ی بازگشت صفحه‌های جزئیات)
@@ -532,11 +626,11 @@ class _Control extends StatelessWidget {
     final t = Theme.of(context);
     Widget w = Container(
       height: 44,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: AppColors.isDark ? t.colorScheme.surfaceContainerLow : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: t.colorScheme.outlineVariant),
+        color: AppColors.isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white.withValues(alpha: 0.75),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.isDark ? Colors.white.withValues(alpha: 0.12) : t.colorScheme.outlineVariant),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -554,7 +648,7 @@ class _Control extends StatelessWidget {
     if (onTap != null) {
       w = Material(
         type: MaterialType.transparency,
-        child: InkWell(borderRadius: BorderRadius.circular(8), onTap: onTap, child: w),
+        child: InkWell(borderRadius: BorderRadius.circular(22), onTap: onTap, child: w),
       );
     }
     return tooltip == null ? w : Tooltip(message: tooltip!, child: w);

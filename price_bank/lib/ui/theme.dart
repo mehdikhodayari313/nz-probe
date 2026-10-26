@@ -18,6 +18,8 @@ class AppPalette {
 }
 
 const appPalettes = <AppPalette>[
+  // الگو: Velaris «Living gradients» و Northline در 21st.dev (زمردی روی زمینه‌ی تیره، تأکید لیمویی)
+  AppPalette('aurora', 'زمردی', Color(0xFF138A5B), Color(0xFF0A4A31), Color(0xFF04100C), Color(0xFF2FBF85)),
   // الگو: تم «Teal Mist» از 21st.dev (فیروزه‌ای روشن، خنثی‌های سرد)
   AppPalette('mist', 'فیروزه‌ای', Color(0xFF0D8077), Color(0xFF0B4F4A), Color(0xFF0E262A), Color(0xFF14B8A6)),
   AppPalette('petrol', 'نفتی', Color(0xFF0F5C6E), Color(0xFF0A3D4A), Color(0xFF0B2B36), Color(0xFF1C8C9E)),
@@ -50,16 +52,23 @@ class AppColors {
   static const usd = Color(0xFF1E8A4C);
   static const irr = Color(0xFFB5651D);
 
-  /// رنگ‌های وابسته به حالت روز/شب (خنثی‌های سرد تم Teal Mist)
-  static Color get bg => isDark ? const Color(0xFF071112) : const Color(0xFFF4F8F9);
-  static Color get surface => isDark ? const Color(0xFF0C1A1C) : Colors.white;
-  static Color get ink => isDark ? const Color(0xFFE4EDEE) : const Color(0xFF0E262A);
-  static Color get line => isDark ? const Color(0xFF1C2D2F) : const Color(0xFFDAE3E4);
+  /// تأکید لیمویی (دکمه‌ی اصلی نوار معرفی، نقطه‌ی پایان عنوان؛ الگوی Northline)
+  static const lime = Color(0xFFC6F24E);
 
-  /// نوار کناری روشن (الگوی Sidebar مجموعه‌ی Wensity در 21st.dev)
-  static Color get sidebar => isDark ? const Color(0xFF061314) : const Color(0xFFF7FAFB);
+  /// رنگ‌های وابسته به حالت روز/شب
+  static Color get bg => isDark ? const Color(0xFF050B09) : const Color(0xFFEEF4F1);
+  static Color get surface => isDark ? const Color(0xFF0B1512) : Colors.white;
+  static Color get ink => isDark ? const Color(0xFFE6EFEA) : const Color(0xFF0D221A);
+  static Color get line => isDark ? const Color(0xFF1B2823) : const Color(0xFFD7E2DC);
+
+  /// سطح شیشه‌ای روی تصویر زمینه (رنگ یکدست نیمه‌شفاف؛ بدون محوسازی و گرادیان)
+  static Color get glass => isDark ? const Color(0xFF0A1310).withValues(alpha: 0.80) : Colors.white.withValues(alpha: 0.84);
+  static Color get glassLine => isDark ? Colors.white.withValues(alpha: 0.08) : const Color(0xFF0D221A).withValues(alpha: 0.08);
+
+  /// نوار کناری و نوار بالا: شیشه‌ای روی زمینه
+  static Color get sidebar => isDark ? Colors.black.withValues(alpha: 0.38) : Colors.white.withValues(alpha: 0.62);
   static Color get sidebarActive =>
-      isDark ? _p.accent2.withValues(alpha: 0.16) : Color.lerp(_p.accent2, Colors.white, 0.80)!;
+      isDark ? _p.accent2.withValues(alpha: 0.18) : Color.lerp(_p.accent2, Colors.white, 0.80)!;
   static Color get muted => isDark ? const Color(0xFF7A9596) : const Color(0xFF50686D);
   static Color get amberSoft => isDark ? const Color(0xFF3A2E17) : const Color(0xFFFFF3DE);
   static Color get amberText => isDark ? const Color(0xFFF2C46B) : const Color(0xFF8A5A00);
@@ -90,41 +99,42 @@ ThemeData buildTheme(Brightness b) {
           onSecondaryContainer: const Color(0xFF5A3A00),
           tertiary: AppColors.teal,
           surface: Colors.white,
-          onSurface: const Color(0xFF0E262A),
-          onSurfaceVariant: const Color(0xFF50686D),
-          surfaceContainerLowest: const Color(0xFFFBFDFD),
-          surfaceContainerLow: const Color(0xFFF5F9FA),
-          surfaceContainer: const Color(0xFFEDF4F4),
-          surfaceContainerHigh: const Color(0xFFE5EFEF),
-          surfaceContainerHighest: const Color(0xFFDCE7E8),
-          outline: const Color(0xFF8A9EA2),
-          outlineVariant: const Color(0xFFDAE3E4),
+          onSurface: const Color(0xFF0D221A),
+          onSurfaceVariant: const Color(0xFF4E665C),
+          surfaceContainerLowest: const Color(0xFFFBFDFC),
+          surfaceContainerLow: const Color(0xFFF4F8F6),
+          surfaceContainer: const Color(0xFFECF3EF),
+          surfaceContainerHigh: const Color(0xFFE4EEE8),
+          surfaceContainerHighest: const Color(0xFFDAE6DF),
+          outline: const Color(0xFF889E94),
+          outlineVariant: const Color(0xFFD7E2DC),
           error: const Color(0xFFCE514D),
         )
       : scheme.copyWith(
-          primary: Color.lerp(p, Colors.white, 0.45),
-          onPrimary: const Color(0xFF0B1418),
+          primary: Color.lerp(AppColors.teal, Colors.white, 0.15),
+          onPrimary: const Color(0xFF04100C),
           primaryContainer: Color.lerp(p, Colors.black, 0.35),
           onPrimaryContainer: Color.lerp(p, Colors.white, 0.8),
           secondary: AppColors.amber,
           tertiary: AppColors.teal,
-          surface: const Color(0xFF0C1A1C),
-          onSurface: const Color(0xFFE4EDEE),
-          onSurfaceVariant: const Color(0xFF9DB3B4),
-          surfaceContainerLowest: const Color(0xFF081315),
-          surfaceContainerLow: const Color(0xFF0F1F21),
-          surfaceContainer: const Color(0xFF132527),
-          surfaceContainerHigh: const Color(0xFF182C2E),
-          surfaceContainerHighest: const Color(0xFF1E3436),
-          outline: const Color(0xFF6F8A8C),
-          outlineVariant: const Color(0xFF1C2D2F),
+          surface: const Color(0xFF0B1512),
+          onSurface: const Color(0xFFE6EFEA),
+          onSurfaceVariant: const Color(0xFF9FB4AB),
+          surfaceContainerLowest: const Color(0xFF07100D),
+          surfaceContainerLow: const Color(0xFF0E1A16),
+          surfaceContainer: const Color(0xFF12211C),
+          surfaceContainerHigh: const Color(0xFF172822),
+          surfaceContainerHighest: const Color(0xFF1D3029),
+          outline: const Color(0xFF6E8A7F),
+          outlineVariant: const Color(0xFF1B2823),
         );
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, fontFamily: 'Vazirmatn', brightness: b);
   final tt = base.textTheme.apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
   // گوشه‌ی ۸ برای دکمه و ورودی (shadcn/Teal Mist: radius 0.5rem)
   final radius = BorderRadius.circular(8);
   return base.copyWith(
-    scaffoldBackgroundColor: AppColors.bg,
+    // زمینه‌ی تصویری زیر همه‌ی صفحه‌ها (AppBackdrop در main.dart)؛ Scaffoldها شفاف‌اند
+    scaffoldBackgroundColor: Colors.transparent,
     dividerColor: scheme.outlineVariant,
     visualDensity: VisualDensity.compact,
     textTheme: tt.copyWith(
@@ -147,7 +157,7 @@ ThemeData buildTheme(Brightness b) {
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: radius),
+        shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         elevation: 0,
         textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600, fontSize: 13.5),
@@ -155,10 +165,10 @@ ThemeData buildTheme(Brightness b) {
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(borderRadius: radius),
+        shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         side: BorderSide(color: scheme.outlineVariant),
-        backgroundColor: light ? Colors.white : scheme.surfaceContainerLow,
+        backgroundColor: light ? Colors.white.withValues(alpha: 0.7) : Colors.white.withValues(alpha: 0.04),
         foregroundColor: scheme.onSurface,
         textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600, fontSize: 13.5),
       ),
@@ -172,7 +182,7 @@ ThemeData buildTheme(Brightness b) {
     segmentedButtonTheme: SegmentedButtonThemeData(
       style: ButtonStyle(
         visualDensity: VisualDensity.compact,
-        shape: WidgetStatePropertyAll(RoundedRectangleBorder(borderRadius: radius)),
+        shape: const WidgetStatePropertyAll(StadiumBorder()),
         side: WidgetStatePropertyAll(BorderSide(color: scheme.outlineVariant)),
         backgroundColor: WidgetStateProperty.resolveWith(
             (s) => s.contains(WidgetState.selected) ? scheme.primary : scheme.surface),
@@ -202,12 +212,12 @@ ThemeData buildTheme(Brightness b) {
     ),
     tooltipTheme: TooltipThemeData(
       waitDuration: const Duration(milliseconds: 300),
-      decoration: BoxDecoration(color: const Color(0xFF0E262A).withValues(alpha: 0.96), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: const Color(0xFF0D221A).withValues(alpha: 0.96), borderRadius: BorderRadius.circular(8)),
       textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 12.5, color: Colors.white, height: 1.7),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: const Color(0xFF0E262A),
+      backgroundColor: const Color(0xFF0D221A),
       contentTextStyle: const TextStyle(fontFamily: 'Vazirmatn', color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),

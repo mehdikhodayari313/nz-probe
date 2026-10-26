@@ -1,5 +1,6 @@
 // جست‌وجوی سراسری (Ctrl+K): صفحه‌ها و اقلام پیدا می‌شوند؛ Enter صفحه یا قلم را باز می‌کند.
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -51,5 +52,29 @@ void main() {
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await tester.pumpAndSettle();
     expect(find.byType(PumpDetailPage), findsOneWidget);
+  });
+
+  testWidgets('Dock: با رسیدن نشانگر به لبه‌ی پایین ظاهر می‌شود و صفحه را عوض می‌کند', (tester) async {
+    tester.view.physicalSize = const Size(1600, 1000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(PriceBankApp(state: AppState(PriceBank.memory(loadSeed()))));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mac-dock')), findsNothing);
+    final g = await tester.createGesture(kind: PointerDeviceKind.mouse);
+    await g.addPointer(location: const Offset(700, 500));
+    await tester.pump();
+    await g.moveTo(tester.getCenter(find.byKey(const Key('dock-handle'))));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mac-dock')), findsOneWidget);
+    await g.moveTo(tester.getCenter(find.byKey(const ValueKey('dock-5'))));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('dock-5')));
+    await tester.pumpAndSettle();
+    expect(find.text('ضرایب'), findsWidgets);
+    await g.moveTo(const Offset(700, 300));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('mac-dock')), findsNothing);
+    await g.removePointer();
   });
 }

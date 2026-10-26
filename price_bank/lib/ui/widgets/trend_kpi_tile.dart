@@ -134,13 +134,13 @@ class _TrendKpiTileState extends State<TrendKpiTile> {
     );
 
     return HoverLift(
-      radius: 12,
+      radius: 16,
       child: Container(
         width: widget.width,
         decoration: BoxDecoration(
-          color: cs.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: cs.outlineVariant),
+          color: AppColors.glass,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.glassLine),
           boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 2, offset: const Offset(0, 1))],
         ),
         clipBehavior: Clip.antiAlias,

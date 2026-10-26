@@ -9,6 +9,7 @@ import 'core/price_bank.dart';
 import 'core/xlsx/xlsx_reader.dart';
 import 'ui/shell.dart';
 import 'ui/theme.dart';
+import 'ui/widgets/backdrop.dart';
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,18 +63,19 @@ class PriceBankApp extends StatelessWidget {
         ],
         theme: theme,
         darkTheme: theme,
+        builder: (context, child) => AppBackdrop(child: child ?? const SizedBox()),
         themeMode: dark ? ThemeMode.dark : ThemeMode.light,
         home: state == null ? _StartupError(error: startupError) : const AppShell(),
       );
     }
 
-    if (state == null) return app('light', 'mist');
+    if (state == null) return app('dark', 'aurora');
     return AppScope(
       state: state!,
       child: ListenableBuilder(
         listenable: state!,
         builder: (context, _) =>
-            app(state!.settings.str('theme_mode', 'light'), state!.settings.str('theme_palette', 'mist')),
+            app(state!.settings.str('theme_mode', 'dark'), state!.settings.str('theme_palette', 'aurora')),
       ),
     );
   }

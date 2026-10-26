@@ -46,12 +46,12 @@ class SearchLauncher extends StatelessWidget {
     return Tooltip(
       message: 'جست‌وجوی صفحه‌ها و تجهیزات (Ctrl+K)',
       child: Material(
-        color: AppColors.isDark ? cs.surfaceContainerLow : Colors.white,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8), side: BorderSide(color: cs.outlineVariant)),
+        color: AppColors.isDark ? Colors.white.withValues(alpha: 0.04) : Colors.white.withValues(alpha: 0.75),
+        shape: StadiumBorder(
+            side: BorderSide(color: AppColors.isDark ? Colors.white.withValues(alpha: 0.12) : cs.outlineVariant)),
         child: InkWell(
           key: const Key('global-search'),
-          borderRadius: BorderRadius.circular(8),
+          customBorder: const StadiumBorder(),
           onTap: onTap,
           child: SizedBox(
             height: 38,
@@ -59,7 +59,7 @@ class SearchLauncher extends StatelessWidget {
             child: compact
                 ? Icon(Icons.search_rounded, size: 19, color: cs.onSurfaceVariant)
                 : Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 11, end: 7),
+                    padding: const EdgeInsetsDirectional.only(start: 14, end: 9),
                     child: Row(children: [
                       Icon(Icons.search_rounded, size: 18, color: cs.onSurfaceVariant),
                       const SizedBox(width: 8),

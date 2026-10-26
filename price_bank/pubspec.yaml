@@ -36,6 +36,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/seed/
+    - assets/images/
   fonts:
     - family: Vazirmatn
       fonts:

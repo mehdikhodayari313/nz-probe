@@ -102,6 +102,13 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 
 ## Hard-won rules (breaking these caused real bugs)
 - **No gradients anywhere** — they render white on the user's GPU (blank sidebar). Solid colors + BoxShadow only.
+  Atmosphere is allowed only as **baked raster images** (`assets/images/*.jpg` from `tool/make_backdrops.py`; user 1405/08/05
+  asked for a dark cinematic look like 21st.dev Velaris/Northline/Mosa AI). No BackdropFilter blur either (GPU risk).
+- Look (wip/mist-theme → «aurora», user 1405/08/05): default palette `aurora` + dark mode, image backdrop under every
+  page (`AppBackdrop`, scaffolds transparent), glass sidebar/top bar/cards (`AppColors.glass`), pill buttons, lime accent
+  (`AppColors.lime`), dashboard hero (title «قیمت تجهیزات.» — user removed «دقیق و به‌روز»), squeeze category strip,
+  Ctrl+K command palette, auto-hide Mac-style dock (`mac_dock.dart`, revealed at the bottom edge). Dot-grid background was
+  rejected («افتضاحه») — never bring it back.
 - `AppColors.*` (petrol, navy, amberSoft, headerBg, zebra, strong, …) are **mutable getters** set by
   `AppColors.apply(palette, dark:)`; never use them in `const` expressions. Const-safe: amber, eur, usd, irr.
 - Dropdown items use `DdText` / `CountedLabel` (common.dart) + `itemHeight: null` + `isExpanded: true`:
