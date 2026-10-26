@@ -38,8 +38,11 @@ const _baseFields = <(String, String, String, String, String, String, String?, S
   ('project', 'پروژه', 'identification', 'شناسایی', 'core', 'text', null, null, 2),
   ('tag', 'شماره تگ', 'identification', 'شناسایی', 'core', 'text', null, null, 3),
   ('quantity', 'تعداد', 'identification', 'شناسایی', 'core', 'number', null, 'دستگاه', 4),
+  // ساخت داخل / خارج (بند ۱۰): انتخاب روش تعدیل متناسب در جلسه‌ی ۵
+  ('supply_origin', 'ساخت داخل / خارج', 'identification', 'شناسایی', 'spec', 'enum', 'ORIGIN', null, 5),
   ('mto_description', 'شرح کامل (از MTO)', 'description', 'شرح', 'spec', 'text', null, null, 10),
   ('cost_year', 'سال قیمت (شمسی)', 'price', 'قیمت اصلی', 'price', 'enum', 'Year', null, 900),
+  ('cost_year_g', 'سال قیمت (میلادی)', 'price', 'قیمت اصلی', 'calc', 'number', null, null, 900),
   ('currency', 'ارز مرجع', 'price', 'قیمت اصلی', 'price', 'enum', 'Currency', null, 901),
   ('unit_price', 'قیمت واحد (ارز مرجع)', 'price', 'قیمت اصلی', 'price', 'number', null, null, 902),
   ('remarks', 'ملاحظات', 'control', 'کنترل', 'core', 'text', null, null, 950),
@@ -67,6 +70,17 @@ void ensureGenericTemplates(Db db) {
         [pumpId, 'اختلاف فشار پمپ طبق منبع (Differential Pressure). اگر منبع هد ندارد، هد = ΔP × ۱۰٫۲ با فرض SG = ۱ (زرد، استنباطی).'],
       );
     }
+    if (pumpId != null) _pumpLayout(db, pumpId);
+    // «منبع و سازنده» جزو «شناسایی» (بند ۲ج)؛ «مرحله/فاز پروژه» = «فاز برآورد»
+    db.execute("UPDATE field_defs SET group_key = 'identification', group_fa = 'شناسایی' WHERE group_key = 'source'");
+    db.execute("UPDATE field_defs SET label_fa = 'فاز برآورد' WHERE key = 'project_phase'");
+    for (final (v, label) in _origins) {
+      db.execute('INSERT OR IGNORE INTO enum_options(list_key, value, label_fa, sort) VALUES (?,?,?,?)',
+          ['ORIGIN', v, label, _origins.indexOf((v, label))]);
+    }
+    // معنی فارسی شرط‌های تحویل (بند ۲ب)
+    _incotermFa.forEach((v, label) =>
+        db.execute("UPDATE enum_options SET label_fa = ? WHERE list_key = 'Incoterm' AND value = ?", [label, v]));
     for (final code in genericCategoryCodes) {
       final id = db.scalar('SELECT id FROM categories WHERE code = ?', [code]) as int?;
       if (id == null) continue;
@@ -115,6 +129,83 @@ void ensureGenericTemplates(Db db) {
   _backfillPumpDiffPressure(db);
   _mergeDuplicateDocsOnce(db);
 }
+
+const _origins = [('Domestic', 'ساخت داخل'), ('Import', 'ساخت خارج'), ('Domestic (Licensed)', 'ساخت داخل با لایسنس')];
+
+const _incotermFa = {
+  'EXW': 'تحویل درب کارخانه',
+  'FCA': 'تحویل به حمل‌کننده‌ی خریدار',
+  'FOB': 'تحویل روی کشتی در بندر مبدأ',
+  'CFR': 'با کرایه‌ی حمل تا بندر مقصد',
+  'CIF': 'با کرایه‌ی حمل و بیمه تا بندر مقصد',
+  'DAP': 'تحویل در مقصد، بدون ترخیص',
+  'DDP': 'تحویل در مقصد با پرداخت عوارض',
+  'Domestic Delivered (IRR)': 'خرید داخلی ریالی، تحویل در سایت',
+  'Not stated': 'ذکر نشده',
+};
+
+/// چیدمان بخش مشخصات پمپ (جلسه‌ی ۳، بندهای ۲الف، ۲ج، ۲د، ۱۰): هر بار باز شدن برنامه، بی‌اثر اگر قبلاً اعمال شده.
+/// شناسایی: نام، پروژه، تگ، زیرگروه، خانواده، سازنده، فاز برآورد، ساخت داخل/خارج؛
+/// کلیدی: … هد، فشار رانش کنار هد؛ توان، مبنای توان کنار توان؛ قیمت: سال شمسی و میلادی کنار هم.
+void _pumpLayout(Db db, int pumpId) {
+  void put(String key, String group, String groupFa, int sort) => db.execute(
+      'UPDATE field_defs SET group_key = ?, group_fa = ?, sort = ? WHERE category_id = ? AND key = ?',
+      [group, groupFa, sort, pumpId, key]);
+  const id = ('identification', 'شناسایی');
+  const ks = ('key_specs', 'مشخصات کلیدی');
+  const pr = ('price', 'قیمت');
+  db.execute(
+      'INSERT OR IGNORE INTO field_defs(category_id, key, label_fa, group_key, group_fa, storage, data_type, list_key, '
+      "sort) VALUES (?,'supply_origin','ساخت داخل / خارج','identification','شناسایی','spec','enum','ORIGIN',8)",
+      [pumpId]);
+  db.execute(
+      'INSERT OR IGNORE INTO field_defs(category_id, key, label_fa, group_key, group_fa, storage, data_type, sort) '
+      "VALUES (?,'cost_year_g','سال قیمت (میلادی)','price','قیمت','calc','number',30)",
+      [pumpId]);
+  final order = <(String, (String, String))>[
+    ('name', id), ('project', id), ('tag', id), ('sub_category', id), ('pump_family', id), ('manufacturer', id),
+    ('project_phase', id), ('supply_origin', id),
+    ('api610_type', ks), ('material_class', ks), ('capacity_m3h', ks), ('diff_head_m', ks), ('diff_pressure_bar', ks),
+    ('discharge_pressure_barg', ks), ('power_kw', ks), ('power_basis', ks), ('size_kw', ks), ('standards', ks),
+    ('pump_standard', ks), ('ips_standard', ks), ('nace', ks), ('seal_arrangement', ks), ('api682_category', ks),
+    ('api682_plan', ks), ('driver_type', ks), ('service_fluid', ks), ('quantity', ks),
+    ('cost_year', pr), ('cost_year_g', pr), ('currency', pr), ('unit_price', pr), ('incoterm', pr),
+    ('eur_source', pr), ('usd_source', pr), ('irr_source', pr), ('eur_target', pr), ('usd_target', pr),
+    ('irr_target', pr),
+  ];
+  for (var i = 0; i < order.length; i++) {
+    put(order[i].$1, order[i].$2.$1, order[i].$2.$2, i + 1);
+  }
+  db.execute("UPDATE field_defs SET label_fa = 'شناسه‌ی رکورد' WHERE category_id = ? AND key = 'v8_row'", [pumpId]);
+  // راهنماها بدون ارجاع به فایل بانک قدیم (بند ۳۰)
+  _pumpHelp.forEach((k, h) =>
+      db.execute('UPDATE field_defs SET help_fa = ? WHERE category_id = ? AND key = ?', [h, pumpId, k]));
+  db.execute("UPDATE field_defs SET help_fa = replace(help_fa, 'جدول FX بانک', 'جدول ارز انتخاب‌شده') "
+      "WHERE help_fa LIKE '%جدول FX بانک%'");
+  db.execute("UPDATE index_series SET name_en = replace(name_en, 'v8 reference table', 'default table'), "
+      "source = 'جدول پیش‌فرض نرخ ارز بانک قیمت' WHERE code IN ('FX_USD_V8', 'FX_EUR_V8')");
+  db.execute("UPDATE categories SET description_fa = replace(description_fa, ' — ساختار ۵۹ فیلدی مطابق بانک قیمت v8', '') "
+      "WHERE description_fa LIKE '%v8%'");
+}
+
+const _pumpHelp = {
+  'sub_category': 'زیرگروه پمپ بر اساس سرویس (نفت خام، آب فرآیندی، تزریق، درین، جانبی، آتش‌نشانی)؛ نام کامل در فهرست انتخاب.',
+  'api610_type': 'نوع پیکربندی طبق API 610 (OH / BB / VS). N/A یعنی پمپ API 610 نیست.',
+  'material_class': 'کلاس متریال طبق جدول H.1 استاندارد API 610؛ شرح هر کلاس در فهرست انتخاب.',
+  'diff_head_m': 'هد دیفرانسیل. اگر منبع فقط اختلاف فشار دارد، هد = ΔP × ۱۰٫۲ با فرض SG = ۱ (زرد، استنباطی).',
+  'power_kw': 'توان طبق منبع (موتور یا محور؛ نوع آن در «مبنای توان»).',
+  'standards': 'همه‌ی استانداردهای قلم (استاندارد پمپ، IPS و NACE) در یک کادر؛ خودکار.',
+  'nace': 'الزام NACE MR0175 / ISO 15156 برای سرویس ترش. زرد = استنباطی.',
+  'pump_family': 'اصل کارکرد پمپ (گریز از مرکز یا جابه‌جایی مثبت). زرد = فرض‌شده.',
+  'irr_source': 'معادل ریالی قیمت مرجع در سال منبع با نرخ جدول ارز انتخاب‌شده؛ آبی = نرخ تسعیر خود سند منبع به کار رفته.',
+  'incoterm': 'شرط تحویل قیمت: چه هزینه‌هایی (حمل، بیمه، گمرک) در قیمت هست و چه هزینه‌هایی نیست. زرد = استنباطی.',
+  'mat_f': 'ضریب متریال از جدول ضرایب پمپ (صفحه‌ی «ضرایب»).',
+  'cost_coef': 'مبنای تخمین پمپ جدید در صفحه‌ی «تخمین و تعدیل».',
+  'source_document': 'سند منبع قیمت: فایل، شیت و ردیف.',
+  'v8_row': 'شناسه‌ی یکتای قلم در بانک قیمت منبع؛ استعلام‌ها با همین شناسه به قلم وصل‌اند.',
+  'cost_year_g': 'سال میلادی معادل سال شمسی قیمت (سالی که بیشتر ماه‌های سال شمسی در آن است).',
+  'supply_origin': 'ساخت داخل یا خارج؛ روش تعدیل متناسب با آن در به‌روزرسانی بعدی انتخاب می‌شود.',
+};
 
 /// فیلدهای Scope و مرحله‌ی پروژه از بخش تجهیزات دیسالتر برداشته شدند (فقط ورودی تخمین‌اند).
 /// تعریف فیلد حذف می‌شود؛ مقدارهای ذخیره‌شده (همه پایه = ضریب ۱) دست نمی‌خورند.

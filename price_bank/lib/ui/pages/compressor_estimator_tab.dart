@@ -13,6 +13,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
+import 'generic_equipment.dart' show CategorySettingsDialog;
 import 'estimator_page.dart';
 
 class CompressorEstimatorTab extends StatefulWidget {
@@ -142,15 +143,20 @@ class _CompressorEstimatorTabState extends State<CompressorEstimatorTab> {
 
     final inputs = SectionCard(
       title: 'مشخصات کمپرسور / پکیج هوای جدید',
-      subtitle: 'پیش‌فرض‌ها همان نمونه‌ی شیت Estimator بانک کمپرسور است',
+      subtitle: 'پیش‌فرض‌ها یک کمپرسور نمونه است؛ مشخصات مورد نظر را جایگزین کنید',
       icon: Icons.tune_rounded,
-      trailing: _overrides.isEmpty
-          ? null
-          : TextButton.icon(
+      trailing: Wrap(spacing: 4, children: [
+        TextButton.icon(
+          onPressed: () => showDialog<void>(context: context, builder: (_) => const CategorySettingsDialog(code: 'COMPRESSOR')),
+          icon: const Icon(Icons.settings_suggest_outlined, size: 18),
+          label: const Text('تنظیمات تخمین و تعدیل رده'),
+        ),
+        if (_overrides.isNotEmpty)
+          TextButton.icon(
               onPressed: () => setState(_overrides.clear),
               icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: Text('حذف ${fa(_overrides.length)} ضریب موردی'),
-            ),
+              label: Text('حذف ${fa(_overrides.length)} ضریب موردی')),
+      ]),
       child: Column(children: [
         _row(context, 'رده‌ی تجهیز', widget.picker),
         _row(
@@ -264,7 +270,7 @@ class _CompressorEstimatorTabState extends State<CompressorEstimatorTab> {
       results = SectionCard(
         title: 'نتیجه‌ی تخمین',
         icon: Icons.insights_rounded,
-        child: Text('هنوز کمپرسوری در بانک نیست. ابتدا فایل Air_Compressor_Price_Bank_v8.xlsx را از داشبورد وارد کنید.',
+        child: Text('هنوز کمپرسوری در بانک نیست. ابتدا فایل بانک قیمت کمپرسور را از داشبورد وارد کنید.',
             style: TextStyle(color: Tones.warn(context), height: 1.8)),
       );
     } else {
@@ -313,7 +319,7 @@ class _CompressorEstimatorTabState extends State<CompressorEstimatorTab> {
           'روش B (وزن): میانگین یورو بر کیلوگرم همتاها × وزن × ALL_F × تعداد کمپرسور.',
           'روش C (نزدیک‌ترین مرجع): یورو نرمال‌شده‌ی قلم مرجع × (اندازه‌ی جدید ÷ مرجع)^n × ALL_F × تعداد کمپرسور.',
           'روش E (فقط کنترل): رابطه‌ی Seider برای اسکرو با موتور برقی × شاخص BLS 333912 × ضریب پکیج نفتی؛ در نتیجه‌ی نهایی نیست.',
-          'نتیجه‌ی نهایی = میانگین وزنی: وزن A و B = تعداد همتا، A2 = تعداد نقاط برازش، C = ۱ (قابل تغییر در «تنظیمات رده»).',
+          'نتیجه‌ی نهایی = میانگین وزنی: وزن A و B = تعداد همتا، A2 = تعداد نقاط برازش، C = ۱ (قابل تغییر در «تنظیمات تخمین و تعدیل رده»).',
           'ALL_F = نوع × استاندارد × مبدأ × محرک × ۸ ضریب Scope. خشک‌کن × مخزن × فیلتر = ۱٫۵۳ (تصمیم ۱۴۰۵/۰۷/۲۳).',
           'همتاها: «شمارش در جمع‌ها = بله» و «همتای تخمین = بله» با دبی و قیمت. کوپال (پرت) و رکوردهای تاریخی و یکجا همتا نیستند.',
         ],

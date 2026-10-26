@@ -30,7 +30,7 @@ const _disciplines = [
 const _categories = [
   ('MECH_ROT', 'MECH', null, 'تجهیزات دوار', 'Rotating Equipment', true, null),
   ('PUMP', 'MECH', 'MECH_ROT', 'پمپ', 'Pumps', true,
-      'پمپ‌های فرآیندی، آب، تزریق، درین، جانبی و آتش‌نشانی — ساختار ۵۹ فیلدی مطابق بانک قیمت v8'),
+      'پمپ‌های فرآیندی، آب، تزریق، درین، جانبی و آتش‌نشانی'),
   ('COMPRESSOR', 'MECH', 'MECH_ROT', 'کمپرسور و پکیج هوا', 'Compressors', false, null),
   ('MECH_STAT', 'MECH', null, 'تجهیزات ثابت', 'Static Equipment', true, null),
   ('DESALTER', 'MECH', 'MECH_STAT', 'پکیج نمک‌زدایی (دیسالتر)', 'Desalting Packages', false, null),

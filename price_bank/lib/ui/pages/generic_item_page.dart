@@ -20,8 +20,11 @@ import '../widgets/data_grid.dart' show gridNotStated, isNotStated;
 import '../widgets/field_editor.dart';
 
 class GenericItemPage extends StatefulWidget {
-  const GenericItemPage({super.key, required this.itemId});
+  const GenericItemPage({super.key, required this.itemId, this.startEditing = false});
   final int itemId;
+
+  /// قلم تازه‌ساز: صفحه در حالت ویرایش باز شود
+  final bool startEditing;
 
   @override
   State<GenericItemPage> createState() => _GenericItemPageState();
@@ -29,7 +32,7 @@ class GenericItemPage extends StatefulWidget {
 
 class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProviderStateMixin {
   late final TabController _tabs = TabController(length: 4, vsync: this);
-  bool _editing = false;
+  late bool _editing = widget.startEditing;
   final Map<String, Object?> _draft = {};
 
   @override
@@ -110,10 +113,11 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
           controller: _tabs,
           isScrollable: true,
           tabAlignment: TabAlignment.start,
+          // ترتیب زبانه‌ها مثل پمپ (بند ۲۷)
           tabs: [
             const Tab(icon: Icon(Icons.description_outlined), text: 'مشخصات'),
-            Tab(icon: const Icon(Icons.request_quote_outlined), text: 'قیمت‌ها و استعلام‌ها (${fa(item.observations.length)})'),
             const Tab(icon: Icon(Icons.calculate_outlined), text: 'محاسبه‌ی قیمت'),
+            Tab(icon: const Icon(Icons.request_quote_outlined), text: 'قیمت‌ها و استعلام‌ها (${fa(item.observations.length)})'),
             const Tab(icon: Icon(Icons.history_rounded), text: 'تاریخچه'),
           ],
         ),
@@ -123,8 +127,8 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
         Expanded(
           child: TabBarView(controller: _tabs, children: [
             _specTab(context, fields, item),
-            _PricesTab(item: item, engine: engine, canEdit: canEdit),
             _CalcTab(result: result, des: des, cmp: cmp),
+            _PricesTab(item: item, engine: engine, canEdit: canEdit),
             _HistoryTab(entries: pb.audit.history('item', item.id), fields: fields),
           ]),
         ),
@@ -133,9 +137,20 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
   }
 
   Widget _specTab(BuildContext context, List<FieldDef> fields, ItemRecord item) {
+    // ترتیب بخش‌ها مثل پمپ (بند ۳): شناسایی، مشخصات کلیدی، طراحی، جنس، پکیج، دامنه، مشخصات MTO، شرح، قیمت، کنترل
+    const order = ['identification', 'key_specs', 'design', 'material', 'package', 'scope', 'mto_specs', 'description',
+      'price', 'control'];
+    int rank(String g) => order.contains(g) ? order.indexOf(g) : order.length;
+    final pos = {for (var i = 0; i < fields.length; i++) fields[i].key: i};
+    fields = [...fields]
+      ..sort((a, b) {
+        final r = rank(a.groupKey).compareTo(rank(b.groupKey));
+        return r != 0 ? r : pos[a.key]!.compareTo(pos[b.key]!);
+      });
     final groups = <String, List<FieldDef>>{};
     for (final f in fields) {
-      if (f.storage == FieldStorage.calc) continue;
+      if (f.storage == FieldStorage.calc && f.key != 'cost_year_g') continue;
+      if (_editing && f.storage == FieldStorage.calc) continue;
       // در حالت نمایش، فیلدهای مشخصاتِ خالی نشان داده نمی‌شوند
       if (!_editing && f.groupKey == 'mto_specs' && item.valueOf(f.key) == null) continue;
       (groups[f.groupFa] ??= []).add(f);

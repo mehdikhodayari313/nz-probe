@@ -161,7 +161,7 @@ class DesalterImporter {
 
   static List<String> headerNotes(XlsxWorkbook wb) {
     final h = masterHeaders(wb);
-    return h == null ? const [] : headerReport(h, what: 'بانک دیسالتر v8');
+    return h == null ? const [] : headerReport(h, what: 'بانک دیسالتر');
   }
 
   /// خواندن رکوردهای Master (فقط سلول‌های ورودی؛ بدون اصلاح‌ها) — برای ورود و آزمون طلایی.

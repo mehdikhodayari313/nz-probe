@@ -248,7 +248,7 @@ class _FactorsPageState extends State<FactorsPage> {
       );
 }
 
-/// پارامترهای تخمین رده: پارامتر اندازه، توان n و توان وزن (با دکمه‌ی ویرایش در «تنظیمات رده»).
+/// پارامترهای تخمین رده: پارامتر اندازه، توان n و توان وزن (با دکمه‌ی ویرایش در «تنظیمات تخمین و تعدیل رده»).
 class _EstimationParams extends StatelessWidget {
   const _EstimationParams({required this.code, required this.profile});
   final String code;
@@ -283,11 +283,11 @@ class _EstimationParams extends StatelessWidget {
       trailing: TextButton.icon(
         onPressed: () => showDialog<void>(context: context, builder: (_) => CategorySettingsDialog(code: code)),
         icon: const Icon(Icons.edit_rounded, size: 18),
-        label: const Text('تغییر در تنظیمات رده'),
+        label: const Text('تنظیمات تخمین و تعدیل'),
       ),
       child: code == 'DESALTER' ? _desalter(app, item) : code == 'COMPRESSOR' ? _compressor(app, item) : Wrap(spacing: 10, runSpacing: 10, children: [
         item('پارامتر اندازه', '${profile.driver.labelFa} (${profile.driver.unit})', 'از مشخصات هر قلم محاسبه می‌شود'),
-        item('توان اندازه n', faSmart(n), custom ? 'تعیین‌شده در تنظیمات رده' : 'پیش‌فرض قالب رده'),
+        item('توان اندازه n', faSmart(n), custom ? 'تعیین‌شده در تنظیمات تخمین و تعدیل' : 'پیش‌فرض قالب رده'),
         if (profile.weightKey != null)
           item(
             'توان وزن m',
@@ -314,7 +314,7 @@ Widget _desalter(AppState app, Widget Function(String, String, String) item) {
     item('روش B — حجم پوسته', 'm³^${faSmart(bank?.nB ?? p.nB)}',
         '${p.useFittedB ? 'نمای برازش‌شده' : 'Provisional'} · ${fit(bank?.fittedB, bank?.pointsB ?? 0)}'),
     item('محرک kVA', p.kvaActive ? 'فعال (m = ${faSmart(p.kvaExponent)})' : 'خاموش', 'مبنا ${faSmart(p.kvaBase)} kVA · KVA_F = (kVA ÷ مبنا)^m'),
-    item('نتیجه‌ی نهایی', DesalterParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات رده» قابل تغییر'),
+    item('نتیجه‌ی نهایی', DesalterParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات تخمین و تعدیل رده» قابل تغییر'),
   ]);
 }
 
@@ -332,7 +332,7 @@ Widget _compressor(AppState app, Widget Function(String, String, String) item) {
     item('توان ویژه', '${faSmart(p.specificPower)} kW per Nm³/h', 'برای kW تخمینی و روش E'),
     item('روش E — ضریب پکیج نفتی', faSmart(p.benchmarkFactor), 'Seider (اسکرو، موتور برقی) × BLS 333912 — فقط کنترل'),
     item('حداقل همتا', fa(p.minPeers), 'کمتر از این = هشدار'),
-    item('نتیجه‌ی نهایی', CompressorParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات رده» قابل تغییر'),
+    item('نتیجه‌ی نهایی', CompressorParams.finalBasesFa[p.finalBasis] ?? p.finalBasis, 'در «تنظیمات تخمین و تعدیل رده» قابل تغییر'),
   ]);
 }
 

@@ -149,6 +149,10 @@ class ItemRecord {
         return legacyRef == null ? null : (double.tryParse(legacyRef!) ?? legacyRef);
       case 'cost_year':
         return primary?.costYearValue;
+      case 'cost_year_g':
+        // معادل میلادی سال شمسی قیمت (سال میلادی که بیشتر سال شمسی در آن است)
+        final y = primary?.costYear;
+        return y == null ? null : y + 621;
       case 'currency':
         return primary?.currency;
       case 'unit_price':

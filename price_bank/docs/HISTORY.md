@@ -233,3 +233,12 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   sub-category full name (#11); range labels next to their boxes, boxes small, equal gaps, one row; same for all equipment
   (generic page also lost «فقط دارای استعلام»). `RangeFilter` widget in common.dart.
 - Newer MTO revision replaces the item quantity (older one only reported). lottie and rive packages added (unused yet).
+
+## v0.9.10 (cont.) — session 3 (#2a–d, #3, #10, #13, #27, #28, #30)
+- User: «آیتم‌های بالای برگه تجهیزات یکسان نشده» → equipment pages now share the pump header (ستون‌ها، CSV، ورود MTO،
+  + جدید) and summary (N از M قلم · K با قیمت تعدیل‌شده · جمع). Manual add per category opens the new item in edit mode.
+- Pump: pump_family/manufacturer/«فاز برآورد»/supply origin in identification; discharge pressure after head, power basis
+  after power; cost year shown without thousands separator + Gregorian year box; price_basis hidden; Incoterm with Persian
+  meaning; helps rewritten without the old bank (Executive Dashboard, Factors_ROT, FX بانک, Note/سلول).
+- Generic items: tabs مشخصات، محاسبه، قیمت‌ها، تاریخچه; sections ordered like pump; source group → identification.
+- Category settings dialog removed from equipment pages; reachable from methods page, estimator tabs and factors page.

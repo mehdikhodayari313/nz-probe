@@ -295,7 +295,7 @@ class _SpecTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final groups = <String, List<FieldDef>>{};
     for (final f in fields) {
-      if (f.key == 'v8_row') continue;
+      if (f.key == 'v8_row' || f.key == 'price_basis') continue;
       if (editing && f.storage == FieldStorage.calc) continue;
       (groups[f.groupFa] ??= []).add(f);
     }
@@ -347,6 +347,7 @@ class _SpecTab extends StatelessWidget {
     if (r == null) return null;
     Object? cell(CalcCell c) => c.isNumber ? c.number : (c.text == null ? null : calcMessageFa(c.text));
     return switch (f.key) {
+      'cost_year_g' => item?.valueOf('cost_year_g'),
       'size_kw' => cell(r.sizeKw),
       'standards' => r.standards,
       'eur_source' => cell(r.eurSource),

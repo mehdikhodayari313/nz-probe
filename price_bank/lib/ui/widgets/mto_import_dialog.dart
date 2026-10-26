@@ -397,7 +397,7 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                       Padding(
                         padding: const EdgeInsetsDirectional.only(start: 6),
                         child: Tooltip(
-                          message: 'پمپ‌هایی که همان تگ را در همان پروژه دارند (مثلاً از v8) دوباره وارد نمی‌شوند.',
+                          message: 'پمپ‌هایی که همان تگ را در همان پروژه دارند (مثلاً از بانک قیمت) دوباره وارد نمی‌شوند.',
                           child: Icon(Icons.info_outline_rounded, size: 18, color: t.colorScheme.outline),
                         ),
                       ),

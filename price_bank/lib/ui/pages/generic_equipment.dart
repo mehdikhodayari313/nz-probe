@@ -137,23 +137,25 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                 icon: const Icon(Icons.account_tree_outlined),
                 label: const Text('رده‌ها'),
               ),
-            if (_profile != null)
-              OutlinedButton.icon(
-                onPressed: () => showDialog<void>(context: context, builder: (_) => CategorySettingsDialog(code: cat.code)),
-                icon: const Icon(Icons.settings_suggest_outlined),
-                label: const Text('تنظیمات رده'),
-              ),
+            _columnsMenu(context, cat.code, keySpecs, unit),
             OutlinedButton.icon(
               onPressed: rows.isEmpty ? null : () => _exportCsv(context, cat, rows, keySpecs, unit),
               icon: const Icon(Icons.download_rounded),
               label: const Text('خروجی CSV'),
             ),
-            if (app.canEdit(cat.disciplineCode))
-              FilledButton.icon(
+            if (app.canEdit(cat.disciplineCode)) ...[
+              OutlinedButton.icon(
                 onPressed: () => showMtoImportDialog(context),
                 icon: const Icon(Icons.upload_file_rounded),
                 label: const Text('ورود MTO'),
               ),
+              FilledButton.icon(
+                key: const ValueKey('generic-new'),
+                onPressed: () => _newItem(context, cat),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('تجهیز جدید'),
+              ),
+            ],
           ],
         ),
         HelpPanel(
@@ -188,10 +190,11 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                 child: Text.rich(
                   TextSpan(children: [
                     TextSpan(text: fa(rows.length), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.strong)),
-                    TextSpan(text: ' از ${fa(all.length)} قلم · جمع (× تعداد): '),
+                    TextSpan(text: ' از ${fa(all.length)} قلم · '),
                     TextSpan(
-                        text: money(totalIrr, unit, compact: true),
+                        text: fa(rows.where((r) => r.result.eurTarget.isNumber).length),
                         style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.strong)),
+                    TextSpan(text: ' با قیمت تعدیل‌شده · جمع: ${money(totalIrr, unit, compact: true)}'),
                   ]),
                   style: t.textTheme.bodySmall,
                 ),
@@ -284,7 +287,10 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                         .push(MaterialPageRoute<void>(builder: (_) => GenericItemPage(itemId: r.item.id))),
                     rowColor: (c, r) =>
                         r.item.include ? null : (AppColors.isDark ? const Color(0xFF2E2620) : const Color(0xFFF6EFE6)),
-                    columns: _columns(keySpecs, unit),
+                    columns: [
+                      for (final c in _columns(keySpecs, unit))
+                        if (!(_hiddenCols[cat.code] ?? const {}).contains(c.label)) c,
+                    ],
                   ),
           ),
         ),
@@ -447,6 +453,74 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         onChanged: (v) => setState(() => _enumF[key] = v),
       ),
     );
+  }
+
+  /// ستون‌های پنهان هر رده (بین اجراهای صفحه حفظ می‌شود)
+  static final Map<String, Set<String>> _hiddenCols = {};
+
+  /// انتخاب ستون‌های جدول (مثل پمپ‌ها)؛ تگ و نام همیشه دیده می‌شوند
+  Widget _columnsMenu(BuildContext context, String code, List<FieldDef> keySpecs, MoneyUnit unit) => MenuAnchor(
+        menuChildren: [
+          for (final c in _columns(keySpecs, unit).skip(2))
+            CheckboxMenuButton(
+              value: !(_hiddenCols[code] ?? const {}).contains(c.label),
+              onChanged: (v) => setState(() {
+                final h = _hiddenCols.putIfAbsent(code, () => <String>{});
+                v == true ? h.remove(c.label) : h.add(c.label);
+              }),
+              child: Text(c.label.replaceAll('\n', ' ')),
+            ),
+        ],
+        builder: (context, ctl, _) => OutlinedButton.icon(
+          onPressed: () => ctl.isOpen ? ctl.close() : ctl.open(),
+          icon: const Icon(Icons.view_column_outlined),
+          label: const Text('ستون‌ها'),
+        ),
+      );
+
+  /// افزودن دستی تجهیز در همین رده (بند ۱۳): نام، تگ و پروژه؛ سپس صفحه‌ی قلم در حالت ویرایش
+  Future<void> _newItem(BuildContext context, Category cat) async {
+    final name = TextEditingController(), tag = TextEditingController(), project = TextEditingController();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('${cat.nameFa} جدید'),
+        content: SizedBox(
+          width: 420,
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            TextField(
+                key: const ValueKey('new-name'),
+                controller: name,
+                autofocus: true,
+                decoration: const InputDecoration(labelText: 'نام تجهیز / سرویس')),
+            const SizedBox(height: 10),
+            TextField(controller: tag, textDirection: TextDirection.ltr, decoration: const InputDecoration(labelText: 'شماره تگ')),
+            const SizedBox(height: 10),
+            TextField(controller: project, decoration: const InputDecoration(labelText: 'پروژه')),
+            const SizedBox(height: 8),
+            Text('بقیه‌ی مشخصات و قیمت را پس از ایجاد در صفحه‌ی همین قلم وارد کنید.',
+                style: Theme.of(ctx).textTheme.bodySmall),
+          ]),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('انصراف')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, name.text.trim().isNotEmpty), child: const Text('ایجاد')),
+        ],
+      ),
+    );
+    if (ok != true || !context.mounted) return;
+    final app = AppScope.read(context);
+    final p = project.text.trim();
+    final id = app.pb.items.create(
+      categoryId: cat.id,
+      values: {'name': name.text.trim(), if (tag.text.trim().isNotEmpty) 'tag': tag.text.trim()},
+      projectId: p.isEmpty ? null : app.pb.docs.ensureProject(p),
+      reason: 'افزودن دستی',
+    );
+    app.dataChanged();
+    if (!context.mounted) return;
+    await Navigator.of(context)
+        .push(MaterialPageRoute<void>(builder: (_) => GenericItemPage(itemId: id, startEditing: true)));
   }
 
   Widget _rangeFilter(BuildContext context, String key, String label) {
@@ -642,7 +716,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
     app.pb.settingsRepo.set('cat_n_${widget.code}', n == null ? null : '$n', reason: reason);
     app.dataChanged(calcInputs: true);
     Navigator.pop(context);
-    showSnack(context, 'تنظیمات رده ذخیره شد؛ قیمت‌ها دوباره محاسبه شدند.');
+    showSnack(context, 'تنظیمات ذخیره شد؛ قیمت‌ها دوباره محاسبه شدند.');
   }
 
   @override
@@ -676,7 +750,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
       title: Row(children: [
         const Icon(Icons.settings_suggest_outlined),
         const SizedBox(width: 8),
-        Expanded(child: Text('تنظیمات رده: ${cat.nameFa}')),
+        Expanded(child: Text('تنظیمات تخمین و تعدیل: ${cat.nameFa}')),
       ]),
       content: SizedBox(
         width: 560,

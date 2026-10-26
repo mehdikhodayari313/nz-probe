@@ -62,6 +62,7 @@ class ProfileField {
 }
 
 const profileGroupFa = {
+  'identification': 'شناسایی',
   'key_specs': 'مشخصات کلیدی',
   'design': 'شرایط طراحی',
   'material': 'جنس، کد و استاندارد',
@@ -70,7 +71,7 @@ const profileGroupFa = {
   'source': 'منبع و مبنای قیمت',
 };
 
-const _groupSort = {'key_specs': 100, 'design': 200, 'material': 300, 'package': 400, 'scope': 500, 'source': 550};
+const _groupSort = {'identification': 6, 'key_specs': 100, 'design': 200, 'material': 300, 'package': 400, 'scope': 500, 'source': 550};
 int profileGroupSort(String g) => _groupSort[g] ?? 600;
 
 /// قاعده‌ی تبدیل یک خط شرح MTO به فیلد(های) قالب.
@@ -487,8 +488,8 @@ final equipmentProfiles = <String, EquipmentProfile>{
       _fScope,
       // Scope (ترانس، پمپ Recycle، لوله‌کشی، ابزار دقیق، گمرک و حمل) و مرحله‌ی پروژه مشخصه‌ی تجهیز نیستند و
       // در منابع یا نیامده‌اند یا برای همه یکسان‌اند؛ فقط در «تخمین تجهیزات» به عنوان ضریب قیمت انتخاب می‌شوند.
-      ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'source'),
-      ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'source'),
+      ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'identification'),
+      ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'identification'),
     ],
     rules: [
       _text(r'^type', 'desalter_type'),
@@ -731,12 +732,12 @@ final equipmentProfiles = <String, EquipmentProfile>{
       ProfileField('scope_spares', 'Scope: قطعات یدکی', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
       ProfileField('scope_vendor_services', 'Scope: خدمات سازنده در سایت', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
       ProfileField('scope_transport', 'Scope: حمل تا سایت', 'scope', type: 'enum', list: 'YNS', help: 'پایه = خیر'),
-      ProfileField('supply_origin', 'مبدأ ساخت', 'source', type: 'enum', list: 'CMP_ORIGIN'),
-      ProfileField('project_phase', 'مرحله‌ی پروژه', 'source', type: 'enum', list: 'Phase'),
-      ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'source'),
-      ProfileField('use_as_peer', 'همتای تخمین', 'source', type: 'enum', list: 'YN',
+      ProfileField('supply_origin', 'مبدأ ساخت', 'identification', type: 'enum', list: 'CMP_ORIGIN'),
+      ProfileField('project_phase', 'فاز برآورد', 'identification', type: 'enum', list: 'Phase'),
+      ProfileField('manufacturer', 'سازنده / پیشنهاددهنده (متن منبع)', 'identification'),
+      ProfileField('use_as_peer', 'همتای تخمین', 'identification', type: 'enum', list: 'YN',
           help: 'N = در تخمین به کار نمی‌رود (مثلاً داده‌ی پرت)؛ قلم همچنان در بانک می‌ماند.'),
-      ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'source'),
+      ProfileField('source_document', 'سند منبع (فایل، شیت، سلول)', 'identification'),
     ],
     rules: [
       MtoRule(r'^type', (v, o) {

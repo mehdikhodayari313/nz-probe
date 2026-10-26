@@ -32,6 +32,7 @@ class PageHeader extends StatelessWidget {
             const SizedBox(width: 14),
           ],
           Expanded(
+            flex: 2,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text(title, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
               if (subtitle != null)
@@ -42,7 +43,8 @@ class PageHeader extends StatelessWidget {
             ]),
           ),
           if (actions.isNotEmpty)
-            Flexible(child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.end, children: actions)),
+            // دکمه‌ها جای بیشتری می‌گیرند تا در یک سطر بمانند
+            Flexible(flex: 3, child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.end, children: actions)),
         ],
       ),
     );

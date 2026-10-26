@@ -1,6 +1,7 @@
 // روش‌های تعدیل: مشاهده، مقایسه‌ی دقت (صحت‌سنجی پازنان ۲)، اثر روی بانک فعلی و انتخاب روش فعال.
 
 import 'package:flutter/material.dart';
+import 'generic_equipment.dart' show CategorySettingsDialog;
 
 import '../../app/app_state.dart';
 import '../../core/calc/backtest.dart';
@@ -140,6 +141,13 @@ class _MethodsPageState extends State<MethodsPage> {
               icon: const Icon(Icons.restart_alt_rounded),
               label: const Text('بازگشت به M6'),
             ),
+          if (!isPump && canEdit && equipmentProfiles.containsKey(_code))
+            OutlinedButton.icon(
+              key: const ValueKey('cat-settings'),
+              onPressed: () => showDialog<void>(context: context, builder: (_) => CategorySettingsDialog(code: _code)),
+              icon: const Icon(Icons.settings_suggest_outlined),
+              label: const Text('تنظیمات تخمین و تعدیل رده'),
+            ),
           if (!isPump && own != null && own != catDefault && canEdit)
             OutlinedButton.icon(
               onPressed: () => app.setSetting('cat_method_$_code', null, reason: 'بازگشت به روش پیش‌فرض رده'),
@@ -176,10 +184,10 @@ class _MethodsPageState extends State<MethodsPage> {
           ] else ...[
             'صحت‌سنجی «${cat.nameFa}» خودکار از داده‌های همین بانک است: هر قلمی که هم قیمت قدیمی (مثلاً بازنگری ۱۳۹۳) و هم استعلام جدید دارد، یک آزمون است؛ قیمت قدیمی با هر روش به سال استعلام برده و با میانگین استعلام‌ها مقایسه می‌شود.',
             'با ورود MTO پروژه‌های بیشتر، تعداد آزمون‌ها و اعتبار این مقایسه خودکار بیشتر می‌شود.',
-            'M4 در این رده با شاخص PPI انتخاب‌شده در «تنظیمات رده» ($ppiName) محاسبه می‌شود؛ کف قیمت M6 فقط برای پمپ است، پس M6 در این رده همان M4 است.',
+            'M4 در این رده با شاخص PPI انتخاب‌شده در «تنظیمات تخمین و تعدیل رده» ($ppiName) محاسبه می‌شود؛ کف قیمت M6 فقط برای پمپ است، پس M6 در این رده همان M4 است.',
             if (s.catMix(_code).isNotEmpty)
               'M7 (شاخص ترکیبی) سبدی از چند شاخص PPI با وزن اجزای تجهیز است: ${fa(mixLabel(s.catMix(_code)))}. '
-                  'وزن‌ها در «تنظیمات رده» صفحه‌ی تجهیزات قابل تغییرند. پیش‌فرض این رده: $catDefault.',
+                  'وزن‌ها در «تنظیمات تخمین و تعدیل رده» (صفحه‌ی روش‌های تعدیل یا تخمین) قابل تغییرند. پیش‌فرض این رده: $catDefault.',
           ],
           '«خطای میانه» هرچه کمتر بهتر؛ «سوگیری» منفی یعنی کم‌برآورد؛ «در بازه‌ی ±۲۵٪» یعنی چند قلم خطای کمتر از ۲۵٪ داشته‌اند.',
           'انتخاب روش در پایین صفحه، روی همه‌ی صفحه‌ها (تجهیزات، داشبورد، تخمین و انتقال قیمت) اثر دارد و در تاریخچه ثبت می‌شود.',
@@ -226,7 +234,7 @@ class _MethodsPageState extends State<MethodsPage> {
                 method: m,
                 title: title(m),
                 summary: !isPump && m.code == 'M4'
-                    ? 'شاخص قیمت تولیدکننده‌ی انتخاب‌شده برای این رده: $ppiName (در «تنظیمات رده» قابل تغییر).'
+                    ? 'شاخص قیمت تولیدکننده‌ی انتخاب‌شده برای این رده: $ppiName (در «تنظیمات تخمین و تعدیل رده» قابل تغییر).'
                     : (m.code == 'M7'
                         ? 'سبد شاخص این رده: ${fa(mixLabel(s.catMix(_code)))}'
                             '${s.catMixStrict(_code) ? ' · شاخص ناموجود = بدون تعدیل' : ' · شاخص ناموجود = بازتوزیع وزن‌ها'}'

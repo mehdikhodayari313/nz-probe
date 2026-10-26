@@ -13,6 +13,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_grid.dart';
+import '../widgets/mto_import_dialog.dart';
 import 'generic_equipment.dart';
 import 'pump_detail_page.dart';
 
@@ -176,12 +177,18 @@ class _EquipmentPageState extends State<EquipmentPage> {
                   icon: const Icon(Icons.download_rounded),
                   label: const Text('خروجی CSV'),
                 ),
-                if (canEdit)
+                if (canEdit) ...[
+                  OutlinedButton.icon(
+                    onPressed: () => showMtoImportDialog(context),
+                    icon: const Icon(Icons.upload_file_rounded),
+                    label: const Text('ورود MTO'),
+                  ),
                   FilledButton.icon(
                     onPressed: () => _open(context, null),
                     icon: const Icon(Icons.add_rounded),
                     label: const Text('پمپ جدید'),
                   ),
+                ],
               ],
             ),
             HelpPanel(
@@ -212,7 +219,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
                         icon: all.isEmpty ? Icons.inventory_2_outlined : Icons.filter_alt_off_outlined,
                         title: all.isEmpty ? 'هنوز پمپی ثبت نشده' : 'هیچ پمپی با این فیلترها پیدا نشد',
                         message: all.isEmpty
-                            ? 'از داشبورد، داده‌های فایل v8 را وارد کنید یا پمپ جدید بسازید.'
+                            ? 'از داشبورد، فایل بانک قیمت یا MTO را وارد کنید یا پمپ جدید بسازید.'
                             : 'فیلترها را کم کنید یا پاک کنید.',
                         action: all.isEmpty ? null : TextButton(onPressed: _clear, child: const Text('پاک کردن فیلترها')),
                       )
@@ -457,9 +464,10 @@ class _EquipmentPageState extends State<EquipmentPage> {
             child: Text.rich(
               TextSpan(children: [
                 TextSpan(text: fa(rows.length), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
-                TextSpan(text: ' از ${fa(all.length)} پمپ · '),
+                TextSpan(text: ' از ${fa(all.length)} قلم · '),
                 TextSpan(text: fa(priced), style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.petrolDark)),
-                const TextSpan(text: ' با قیمت تعدیل‌شده'),
+                TextSpan(
+                    text: ' با قیمت تعدیل‌شده · جمع: ${money(rows.where((r) => r.item.include && r.result.irrTarget.isNumber).fold<double>(0, (a, r) => a + r.result.irrTarget.number! * (r.item.quantity ?? 1)), AppScope.of(context).unit, compact: true)}'),
               ]),
               style: t.textTheme.bodySmall,
             ),

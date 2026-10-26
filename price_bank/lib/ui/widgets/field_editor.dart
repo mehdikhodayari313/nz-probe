@@ -44,7 +44,8 @@ class FieldTile extends StatelessWidget {
     final help = [
       if (field.helpFa != null) field.helpFa!,
       if (field.labelEn != null) '(${field.labelEn})',
-      if (field.sourceRef != null) 'مرجع: ${field.sourceRef}',
+      // ستون فایل بانک قدیم فقط برای ورود داده است، نه راهنما
+      if (field.sourceRef != null && !field.sourceRef!.startsWith('v8')) 'مرجع: ${field.sourceRef}',
     ].join('\n');
 
     final label = Row(children: [
@@ -274,15 +275,20 @@ String fieldDisplayText(BuildContext context, FieldDef field, Object? v) {
     return gridNotStated;
   }
   if (v == null || (v is String && v.isEmpty)) return '—';
+  // سال بدون جداکننده‌ی هزار (۱۴۰۳، نه ۱٬۴۰۳)
+  if (v is num && (field.key == 'cost_year' || field.key == 'cost_year_g')) return fa(v.round());
   if (v is num) {
     return _isMoney(field)
         ? (field.unit == 'IRR' ? money(v.toDouble(), unit) : faNum(v, decimals: v.abs() < 100 ? 3 : 0))
         : faSmart(v);
   }
   final s = v.toString();
-  if (field.listKey == null || (field.listKey != 'YN' && field.listKey != 'YNS')) return s;
+  const labelled = {'YN', 'YNS', 'ORIGIN', 'CMP_ORIGIN'};
+  if (field.listKey == null || (!labelled.contains(field.listKey) && field.listKey != 'Incoterm')) return s;
   for (final o in AppScope.of(context).pb.catalog.options(field.listKey!)) {
-    if (o.value == s) return o.labelFa ?? s;
+    if (o.value != s || o.labelFa == null) continue;
+    // شرط تحویل: کد با معنی فارسی (FOB — تحویل روی کشتی در بندر مبدأ)
+    return field.listKey == 'Incoterm' ? '$s — ${o.labelFa}' : o.labelFa!;
   }
   return s;
 }

@@ -1,6 +1,7 @@
 // تخمین قیمت تجهیزات غیرپمپ: انتخاب رده ← مشخصات (پارامتر اندازه و پیکربندی) ← روش تخمین ← نتیجه و همتاها.
 
 import 'package:flutter/material.dart';
+import 'generic_equipment.dart' show CategorySettingsDialog;
 
 import '../../app/app_state.dart';
 import '../../core/calc/generic_estimator.dart';
@@ -196,6 +197,11 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
     final methodCard = SectionCard(
       title: 'روش تخمین',
       icon: Icons.alt_route_rounded,
+      trailing: TextButton.icon(
+        onPressed: () => showDialog<void>(context: context, builder: (_) => CategorySettingsDialog(code: cat.code)),
+        icon: const Icon(Icons.settings_suggest_outlined, size: 18),
+        label: const Text('تنظیمات تخمین و تعدیل رده'),
+      ),
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         for (final m in GenEstMethod.values)
           _MethodOption(
@@ -277,7 +283,7 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
         initiallyOpen: false,
         lines: [
           'هر رده یک «پارامتر اندازه» دارد: ظرف و دیسالتر حجم (از قطر و طول TL-TL با دو عدسی ۲:۱)، مخزن حجم، مبدل و گرم‌کن توان حرارتی، دی‌اریتور/IGF/فیلتر/کمپرسور/خشک‌کن دبی، تزریق مواد نرخ تزریق، فلر ظرفیت، جرثقیل ظرفیت.',
-          'قیمت ∝ اندازه^n (قانون توانی؛ n پیش‌فرض هر رده در «تنظیمات رده» صفحه‌ی تجهیزات قابل تغییر است).',
+          'قیمت ∝ اندازه^n (قانون توانی؛ n پیش‌فرض هر رده در «تنظیمات تخمین و تعدیل رده» (صفحه‌ی روش‌های تعدیل یا تخمین) قابل تغییر است).',
           'ضرایب جنس، NACE، فشار و روغن‌کاری قیمت همتاها را به پیکربندی پایه برمی‌گردانند و برای تجهیز جدید اعمال می‌شوند. روی «× ضریب» هر ردیف بزنید تا ویرایش شود.',
           'ظرف‌ها و مخازن (و دیسالتر، دی‌اریتور، IGF، فیلتر) فیلد اختیاری «وزن خالی» دارند. تا خالی است اثری ندارد؛ وقتی وزن این تجهیز و دست‌کم دو قلم بانک ثبت شود، «ضریب وزن» = (وزن ÷ اندازه ÷ میانه‌ی رده)^۰٫۸ اعمال می‌شود و جای ضریب فشار را می‌گیرد.',
           'سه روش: ضریب هزینه‌ی همتاها (میانگین همه)، نزدیک‌ترین همتا (شبیه‌ترین اندازه، بازه از سه همتای نزدیک)، ضریب دستی (وقتی همتا ندارید).',
@@ -307,7 +313,7 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
             ? 'وزن اختیاری است؛ تا خالی است ضریب وزن ۱ (بی‌اثر) است.\n'
                 'وقتی وزن وارد شود و دست‌کم دو قلم این رده در بانک وزن داشته باشند:\n'
                 'ضریب وزن = (وزن ÷ ${_p.driver.labelFa} ÷ میانه‌ی همین نسبت در رده)^m و جای ضریب فشار را می‌گیرد.'
-            : 'ضریب وزن = (وزن ویژه ÷ میانه‌ی رده)^m — توان m در «تنظیمات رده» یا صفحه‌ی «ضرایب»',
+            : 'ضریب وزن = (وزن ویژه ÷ میانه‌ی رده)^m — توان m در «تنظیمات تخمین و تعدیل رده» یا صفحه‌ی «ضرایب»',
         child: Container(
           height: 34,
           alignment: Alignment.center,

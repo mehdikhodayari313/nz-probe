@@ -130,7 +130,7 @@ class CompressorImporter {
   /// ستون‌هایی که پیدا نشدند یا با عنوان دیگری پیدا شدند (برای گزارش ورود)
   static List<String> headerNotes(XlsxWorkbook wb) {
     final h = masterHeaders(wb);
-    return h == null ? const [] : headerReport(h, what: 'بانک کمپرسور v8');
+    return h == null ? const [] : headerReport(h, what: 'بانک کمپرسور');
   }
 
   /// خواندن رکوردهای Master (فقط سلول‌های ورودی؛ بدون اصلاح‌ها) — برای ورود و آزمون طلایی.

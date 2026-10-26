@@ -223,11 +223,21 @@ void main() {
     await go(tester, nEquipment);
     expect(find.text('جهت نصب'), findsWidgets);
     expect(find.text('کلاس جنس'), findsWidgets);
-    await tester.tap(find.text('تنظیمات رده'));
+    expect(find.text('تنظیمات رده'), findsNothing); // به صفحه‌ی روش‌ها و تخمین منتقل شد (بند ۲۸)
+    // افزودن دستی تجهیز در همین رده (بند ۱۳)
+    final before = app.pb.items.count(app.pb.catalog.categoryByCode('VESSEL')!.id);
+    await tester.tap(find.byKey(const ValueKey('generic-new')));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('ذخیره'));
+    await tester.enterText(find.byKey(const ValueKey('new-name')), 'TEST VESSEL');
+    await tester.tap(find.text('ایجاد'));
     await tester.pumpAndSettle();
-    debugPrint('✓ ' 'فیلترهای پارامتریک و تنظیمات رده');
+    expect(find.text('ذخیره‌ی تغییرات'), findsOneWidget, reason: 'صفحه‌ی قلم تازه در حالت ویرایش');
+    await tester.tap(find.text('انصراف'));
+    await tester.pumpAndSettle();
+    Navigator.of(tester.element(find.text('TEST VESSEL').first)).pop();
+    await tester.pumpAndSettle();
+    expect(app.pb.items.count(app.pb.catalog.categoryByCode('VESSEL')!.id), before + 1);
+    debugPrint('✓ ' 'فیلترهای پارامتریک و افزودن دستی تجهیز');
     EquipmentPage.selectedCategory = 'PUMP';
 
     // تخمین تجهیزات: انتخاب رده‌ی ظرف از همان فهرست (پمپ هم در آن است)
@@ -243,7 +253,11 @@ void main() {
     expect(find.textContaining('حجم ظرف'), findsWidgets);
     expect(find.text('وزن خالی (ساخت) (kg)'), findsOneWidget);
     expect(find.text('بی‌اثر'), findsOneWidget);
-    debugPrint('✓ ' 'تخمین تجهیزات (ظرف) با فیلد وزن');
+    await tester.tap(find.text('تنظیمات تخمین و تعدیل رده'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('ذخیره'));
+    await tester.pumpAndSettle();
+    debugPrint('✓ ' 'تخمین تجهیزات (ظرف) با فیلد وزن و تنظیمات رده');
 
     // انتقال قیمت قدیم: رده‌ی ظرف، بدون کف قیمت
     await tester.tap(find.text('انتقال قیمت قدیم به سال هدف'));

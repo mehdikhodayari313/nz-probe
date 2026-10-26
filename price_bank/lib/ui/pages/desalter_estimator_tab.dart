@@ -12,6 +12,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
+import 'generic_equipment.dart' show CategorySettingsDialog;
 import 'estimator_page.dart';
 
 class DesalterEstimatorTab extends StatefulWidget {
@@ -144,15 +145,20 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
 
     final inputs = SectionCard(
       title: 'مشخصات پکیج دیسالتر جدید',
-      subtitle: 'پیش‌فرض‌ها همان نمونه‌ی شیت Estimator بانک دیسالتر است',
+      subtitle: 'پیش‌فرض‌ها یک دیسالتر نمونه است؛ مشخصات مورد نظر را جایگزین کنید',
       icon: Icons.tune_rounded,
-      trailing: _overrides.isEmpty
-          ? null
-          : TextButton.icon(
+      trailing: Wrap(spacing: 4, children: [
+        TextButton.icon(
+          onPressed: () => showDialog<void>(context: context, builder: (_) => const CategorySettingsDialog(code: 'DESALTER')),
+          icon: const Icon(Icons.settings_suggest_outlined, size: 18),
+          label: const Text('تنظیمات تخمین و تعدیل رده'),
+        ),
+        if (_overrides.isNotEmpty)
+          TextButton.icon(
               onPressed: () => setState(_overrides.clear),
               icon: const Icon(Icons.restart_alt_rounded, size: 18),
-              label: Text('حذف ${fa(_overrides.length)} ضریب موردی'),
-            ),
+              label: Text('حذف ${fa(_overrides.length)} ضریب موردی')),
+      ]),
       child: Column(children: [
         _row(context, 'رده‌ی تجهیز', widget.picker),
         _row(
@@ -250,7 +256,7 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
             onChanged: (_) => setState(() {}),
           ),
           trailing: e == null ? null : _plainChip(context, e.factors.kvaF),
-          help: 'KVA_F = (kVA ÷ ${faSmart(params.kvaBase)})^${faSmart(params.kvaExponent)}؛ در «تنظیمات رده» فعال می‌شود.',
+          help: 'KVA_F = (kVA ÷ ${faSmart(params.kvaBase)})^${faSmart(params.kvaExponent)}؛ در «تنظیمات تخمین و تعدیل رده» فعال می‌شود.',
         ),
         const Divider(height: 20),
         _row(
@@ -304,7 +310,7 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
       results = SectionCard(
         title: 'نتیجه‌ی تخمین',
         icon: Icons.insights_rounded,
-        child: Text('هنوز دیسالتری در بانک نیست. ابتدا فایل Desalters_Price_Bank_v8.xlsx را از داشبورد وارد کنید.',
+        child: Text('هنوز دیسالتری در بانک نیست. ابتدا فایل بانک قیمت دیسالتر را از داشبورد وارد کنید.',
             style: TextStyle(color: Tones.warn(context), height: 1.8)),
       );
     } else {
@@ -351,7 +357,7 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
           'روش A (ظرفیت‌محور): میانگین Coef A همتاها × BPD^n_A × ALL_F × STAGE_F. Coef A = یورو نرمال‌شده‌ی تعدیل‌شده ÷ STAGE_F ÷ BPD^n_A.',
           'روش B (حجم‌محور): میانگین Coef B همتاها × حجم کل پوسته^n_B × ALL_F. حجم = π/4 × ID² × T/T × تعداد وسل (فقط استوانه).',
           'روش C (نزدیک‌ترین مرجع): یورو نرمال‌شده‌ی قلم مرجع × (اندازه‌ی جدید ÷ اندازه‌ی مرجع)^n × ALL_F (برای مبنای ظرفیت × نسبت STAGE_F).',
-          'نتیجه‌ی نهایی = میانگین وزنی روش‌های موجود؛ وزن A و B = تعداد همتا، وزن C = ۱ (یا میانگین ساده / یک روش، در «تنظیمات رده»).',
+          'نتیجه‌ی نهایی = میانگین وزنی روش‌های موجود؛ وزن A و B = تعداد همتا، وزن C = ۱ (یا میانگین ساده / یک روش، در «تنظیمات تخمین و تعدیل رده»).',
           'ALL_F = فناوری × متریال × NACE × پنج ضریب Scope × ضریب kVA. ضرایب «اولیه» هستند و در صفحه‌ی «ضرایب» کالیبره می‌شوند.',
           'همتاها: دیسالترهای «شمارش در جمع‌ها = بله» با قیمت تعدیل‌شده. اقلام تجمیعی و تکراری بانک (Include = N) همتا نیستند.',
         ],

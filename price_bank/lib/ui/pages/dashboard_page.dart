@@ -132,7 +132,7 @@ class DashboardPage extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             custom.isEmpty
-                ? 'این روش پمپ‌هاست؛ هر تجهیز دیگر روش تعدیل خودش را دارد («تنظیمات رده» صفحه‌ی تجهیزات).'
+                ? 'این روش پمپ‌هاست؛ هر تجهیز دیگر روش تعدیل خودش را دارد («تنظیمات تخمین و تعدیل رده» در صفحه‌ی روش‌های تعدیل یا تخمین).'
                 : 'روش پمپ‌ها؛ روش سایر تجهیزات: ${custom.join('، ')}',
             style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant, height: 1.9),
           ),

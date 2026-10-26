@@ -97,7 +97,7 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Local first: `cd price_bank && flutter pub get && flutter analyze --no-fatal-infos --no-fatal-warnings && flutter test`;
   then `git checkout analysis_options.yaml` and delete `pubspec.lock`. Push to `main` → CI (`ci-pb-test`, `ci-pb-windows`,
   `ci-pb-dist`; check `commit.txt` == pushed SHA). Zip → branch `price-bank-releases` + README row, and SendUserFile in chat.
-- Current released version: **0.9.10** (1405/08/05, simpler search filters for all equipment, full sub-category names, compact range filters). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
+- Current released version: **0.9.10** (1405/08/05, session 3 + simpler search filters, full sub-category names, compact range filters). Bump `pubspec.yaml`, `lib/ui/shell.dart` label and README header per release.
 - Commit trailer (always): `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` + `Claude-Session: <session url>`.
 
 ## Hard-won rules (breaking these caused real bugs)
@@ -125,6 +125,11 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
   user 1405/08/05).
 - Missing tag/project («Not stated…», «(نام پروژه در فایل قید نشده است) – …», empty) → «(قید نشده)» (`isNotStated`,
   `notStatedCell`, `GridColumn.notStated`) in tables, detail fields and headers (user 1405/08/04, all equipment).
+- Session 3 (v0.9.10): pump field layout is applied at every startup by `_pumpLayout` (generic_templates.dart: groups,
+  sorts, helps without old-bank refs); `source` group → identification for all; `supply_origin` (ORIGIN list) and calc
+  `cost_year_g` (= Shamsi + 621, `ItemRecord.valueOf`); Incoterm option labels = Persian meaning; generic item page tabs and
+  section order like pump; «تجهیز جدید» (`_newItem`) + column picker on generic pages; `CategorySettingsDialog` only
+  from methods page / estimator tabs / factors page. Field-def `source_ref` 'v8 ستون X' is used by the bank importer — keep it.
 - Search filters (user 1405/08/05, all equipment): no «شمارش در جمع»/«ارز»/«سال قیمت»/«سیال سرویس» filters and no «فقط دارای…»
   toggles; ranges use `RangeFilter` (common.dart: label next to compact from/to boxes, all ranges in one row); pump
   sub-category shown by full name (`SubCat` option label). The user rejected two visual redesigns (hero band, neon) on

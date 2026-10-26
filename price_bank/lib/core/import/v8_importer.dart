@@ -168,7 +168,7 @@ class V8Importer {
           values: values,
           projectId: projectId,
           documentId: documentId,
-          reason: 'انتقال از ${fileName ?? 'v8'} (ردیف ${rowNo.toInt()})',
+          reason: 'انتقال از ${fileName ?? 'بانک قیمت'} (ردیف ${rowNo.toInt()})',
           meta: meta,
           batch: batch,
         );
