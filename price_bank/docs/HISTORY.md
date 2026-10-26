@@ -225,3 +225,11 @@ structured fields parsed from MTO text, parametric filters with counts, size dri
   («X (2)») are matched too (previously re-import created duplicates). A document imported earlier with no items/prices
   can be imported again. `deleteDocument` also removes price-less items that came only from that document.
 - Tests: `test/doc_hide_revision_test.dart` (hide/unhide, newer/older revision, delete, migration backfill).
+
+## v0.9.10 (1405/08/05) — search filters
+- Two visual redesign samples (dark hero band; neon theme after the user's reference images) were rejected by the user and
+  not merged (kept on branch `wip/redesign`). Design skills ui-ux-pro-max etc. installed as project skills.
+- User: remove pump filters «شمارش در جمع», «ارز», «سال قیمت», «سیال سرویس» and the «فقط دارای قیمت تعدیل‌شده / هشدار» toggles;
+  sub-category full name (#11); range labels next to their boxes, boxes small, equal gaps, one row; same for all equipment
+  (generic page also lost «فقط دارای استعلام»). `RangeFilter` widget in common.dart.
+- Newer MTO revision replaces the item quantity (older one only reported). lottie and rive packages added (unused yet).

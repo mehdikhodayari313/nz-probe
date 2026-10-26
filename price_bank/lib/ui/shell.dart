@@ -233,7 +233,7 @@ class _Sidebar extends StatelessWidget {
                   Text(app.user.displayName,
                       overflow: TextOverflow.ellipsis,
                       style: t.textTheme.labelLarge?.copyWith(color: Colors.white)),
-                  Text('نسخه‌ی ۰٫۹٫۹ · آفلاین',
+                  Text('نسخه‌ی ۰٫۹٫۱۰ · آفلاین',
                       style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.55))),
                 ]),
               ),

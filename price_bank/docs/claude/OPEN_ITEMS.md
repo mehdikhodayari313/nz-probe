@@ -30,3 +30,4 @@
 11. APP_CHANGES sessions 1–2 done (v0.9.9). Next: session 3 (#2a–d, #3, #10, #13, #27, #28, #30 — equipment page layout,
     screenshots before applying). #5 open point: quantity of a newer revision is only reported, not applied — ask the user
     if newer quantities should replace old ones.
+12. v0.9.10: generic equipment page lost the «فقط دارای استعلام» toggle with the others — restore if the user asks.
