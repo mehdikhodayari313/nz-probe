@@ -332,7 +332,7 @@ class _AppearanceCard extends StatelessWidget {
     final app = AppScope.of(context);
     final t = Theme.of(context);
     final mode = app.settings.str('theme_mode', 'light');
-    final pal = app.settings.str('theme_palette', 'petrol');
+    final pal = app.settings.str('theme_palette', 'mist');
     return SectionCard(
       title: 'ظاهر برنامه',
       subtitle: 'حالت روز و شب و رنگ اصلی؛ بلافاصله اعمال و برای دفعه‌های بعد ذخیره می‌شود',

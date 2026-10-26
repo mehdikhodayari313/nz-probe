@@ -13,6 +13,7 @@ import '../shell.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/mto_import_dialog.dart';
+import '../widgets/trend_kpi_tile.dart';
 import 'equipment_page.dart';
 
 class DashboardPage extends StatelessWidget {
@@ -29,7 +30,28 @@ class DashboardPage extends StatelessWidget {
     final included = rows.where((r) => r.item.include).toList();
     final priced = included.where((r) => r.irrTarget != null).toList();
     final projects = app.pb.docs.projects();
-    final fxEur = app.pb.pumpEngine().eurRateTarget;
+    final engine = app.pb.pumpEngine();
+    final fxEur = engine.eurRateTarget;
+    // روند ۸ سال اخیر نرخ یورو و PPI (سال هدف و ۷ سال پیش از آن)
+    final eurTrend = <double>[], eurYears = <int>[], ppiTrend = <double>[], ppiYears = <int>[];
+    for (var y = s.targetYear - 7; y <= s.targetYear; y++) {
+      final e = engine.series.resolve(engine.settings.fxEurCode, y)?.value;
+      if (e != null && e > 0) {
+        eurTrend.add(unit == MoneyUnit.toman ? e / 10 : e);
+        eurYears.add(y);
+      }
+      final p = engine.ppi(y);
+      if (p != null) {
+        ppiTrend.add(p);
+        ppiYears.add(y);
+      }
+    }
+    // تغییر سال هدف نسبت به سال قبل (فقط وقتی هر دو سال مقدار دارند)
+    double? change(List<double> v, List<int> ys) => v.length >= 2 && ys.last == s.targetYear && ys[ys.length - 2] == s.targetYear - 1
+        ? (v.last / v[v.length - 2] - 1) * 100
+        : null;
+    final ppiNow = ppiYears.isNotEmpty && ppiYears.last == s.targetYear ? ppiTrend.last : null;
+    final quoted = rows.where((r) => r.item.observations.any((o) => o.kind == 'quote')).length;
     final method = methodByCode(s.escalationMethod);
     final catsUsed = rows.map((r) => r.categoryId).toSet().length;
     final quotes = rows.fold<int>(0, (a, r) => a + r.item.observations.where((o) => o.kind == 'quote').length);
@@ -61,45 +83,78 @@ class DashboardPage extends StatelessWidget {
       if (app.pumps.isEmpty) const SizedBox(height: 16),
       _StartSteps(hasData: rows.isNotEmpty, hasPumps: app.pumps.isNotEmpty, method: method.code),
       const SizedBox(height: 16),
-      Wrap(spacing: 12, runSpacing: 12, children: [
-        KpiTile(
-          label: 'تجهیزات ثبت‌شده',
-          value: fa(rows.length),
-          sub: '${fa(catsUsed)} رده · ${fa(included.length)} شمارش‌شده در جمع‌ها',
-          icon: Icons.precision_manufacturing_rounded,
-          onTap: () => AppShell.go(context, AppShell.equipment),
-        ),
-        KpiTile(
-          label: 'دارای قیمت تعدیل‌شده',
-          value: fa(priced.length),
-          sub: included.isEmpty ? null : '${fa((priced.length * 100 / included.length).round())}٪ از شمارش‌شده‌ها',
-          icon: Icons.price_check_rounded,
-          color: Tones.good(context),
-        ),
-        KpiTile(
-          label: 'نرخ یوروی سال ${fa(s.targetYear)}',
-          value: fxEur == null ? 'وارد نشده' : faNum(unit == MoneyUnit.toman ? fxEur / 10 : fxEur),
-          sub: '${unitLabel(unit)} به ازای هر یورو',
-          icon: Icons.euro_rounded,
-          color: fxEur == null ? Tones.bad(context) : AppColors.eur,
-          onTap: () => AppShell.go(context, AppShell.indices),
-        ),
-        KpiTile(
-          label: 'استعلام‌های فروشندگان',
-          value: fa(quotes),
-          sub: '${fa(rows.where((r) => r.item.observations.any((o) => o.kind == 'quote')).length)} قلم دارای استعلام',
-          icon: Icons.request_quote_outlined,
-          color: Tones.warn(context),
-        ),
-        KpiTile(
-          label: 'پروژه‌ها',
-          value: fa(projects.length),
-          sub: '${fa(app.pb.docs.sourceDocumentCount())} سند منبع',
-          icon: Icons.folder_rounded,
-          color: AppColors.teal,
-          onTap: () => AppShell.go(context, AppShell.documents),
-        ),
-      ]),
+      LayoutBuilder(builder: (context, cons) {
+        // همه‌ی کاشی‌ها در یک ردیف با پهنای برابر؛ در پنجره‌ی باریک سه‌تایی
+        final n = cons.maxWidth >= 1200 ? 6 : (cons.maxWidth >= 640 ? 3 : 2);
+        final w = ((cons.maxWidth - 12 * (n - 1)) / n).floorToDouble();
+        return Wrap(spacing: 12, runSpacing: 12, children: [
+          TrendKpiTile(
+            width: w,
+            label: 'تجهیزات ثبت‌شده',
+            value: fa(rows.length),
+            caption: '${fa(catsUsed)} رده · ${fa(included.length)} شمارش‌شده در جمع‌ها',
+            icon: Icons.precision_manufacturing_rounded,
+            progress: rows.isEmpty ? null : included.length / rows.length,
+            onTap: () => AppShell.go(context, AppShell.equipment),
+          ),
+          TrendKpiTile(
+            width: w,
+            label: 'دارای قیمت تعدیل‌شده',
+            value: fa(priced.length),
+            caption: included.isEmpty ? null : '${fa((priced.length * 100 / included.length).round())}٪ از شمارش‌شده‌ها',
+            icon: Icons.price_check_rounded,
+            color: Tones.good(context),
+            progress: included.isEmpty ? null : priced.length / included.length,
+          ),
+          TrendKpiTile(
+            width: w,
+            label: 'نرخ یوروی سال ${fa(s.targetYear)}',
+            value: fxEur == null ? 'وارد نشده' : faNum(unit == MoneyUnit.toman ? fxEur / 10 : fxEur),
+            caption: change(eurTrend, eurYears) == null
+                ? '${unitLabel(unit)} به ازای هر یورو'
+                : '${unitLabel(unit)} · نسبت به ${fa(s.targetYear - 1)}',
+            icon: Icons.euro_rounded,
+            color: fxEur == null ? Tones.bad(context) : AppColors.eur,
+            delta: change(eurTrend, eurYears),
+            lowerIsBetter: true,
+            trend: eurTrend,
+            trendLabels: [for (final y in eurYears) 'سال ${fa(y)} · ${unitLabel(unit)}'],
+            onTap: () => AppShell.go(context, AppShell.indices),
+          ),
+          TrendKpiTile(
+            width: w,
+            label: 'شاخص قیمت تولید (PPI)',
+            value: ppiNow == null ? 'وارد نشده' : faNum(ppiNow, decimals: 1),
+            caption: change(ppiTrend, ppiYears) == null ? null : 'نسبت به ${fa(s.targetYear - 1)}',
+            icon: Icons.show_chart_rounded,
+            color: ppiNow == null ? Tones.bad(context) : null,
+            delta: change(ppiTrend, ppiYears),
+            lowerIsBetter: true,
+            trend: ppiTrend,
+            trendLabels: [for (final y in ppiYears) 'سال ${fa(y)}'],
+            formatPoint: (v) => faNum(v, decimals: 1),
+            onTap: () => AppShell.go(context, AppShell.indices),
+          ),
+          TrendKpiTile(
+            width: w,
+            label: 'استعلام‌های فروشندگان',
+            value: fa(quotes),
+            caption: '${fa(quoted)} قلم دارای استعلام',
+            icon: Icons.request_quote_outlined,
+            color: Tones.warn(context),
+            progress: rows.isEmpty ? null : quoted / rows.length,
+          ),
+          TrendKpiTile(
+            width: w,
+            label: 'پروژه‌ها',
+            value: fa(projects.length),
+            caption: '${fa(app.pb.docs.sourceDocumentCount())} سند منبع',
+            icon: Icons.folder_rounded,
+            color: AppColors.teal,
+            onTap: () => AppShell.go(context, AppShell.documents),
+          ),
+        ]);
+      }),
       const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),

@@ -1,18 +1,24 @@
 import 'package:flutter/gestures.dart' show kBackMouseButton;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app/app_state.dart';
 import '../core/calc/methods.dart';
 import 'format.dart';
+import 'widgets/backdrop.dart';
+import 'widgets/data_grid.dart' show isNotStated;
+import 'widgets/command_palette.dart';
 import 'widgets/common.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/documents_page.dart';
 import 'pages/equipment_page.dart';
 import 'pages/estimator_page.dart';
 import 'pages/factors_page.dart';
+import 'pages/generic_item_page.dart';
 import 'pages/history_page.dart';
 import 'pages/indices_page.dart';
 import 'pages/methods_page.dart';
+import 'pages/pump_detail_page.dart';
 import 'pages/settings_page.dart';
 import 'pages/users_page.dart';
 import 'theme.dart';
@@ -39,7 +45,8 @@ final _destinations = <_Dest>[
   _Dest(Icons.query_stats_outlined, Icons.query_stats_rounded, 'شاخص‌ها و ارز', () => const IndicesPage(), step: 2),
   _Dest(Icons.science_outlined, Icons.science_rounded, 'روش‌های تعدیل', () => const MethodsPage(), step: 3),
   _Dest(Icons.precision_manufacturing_outlined, Icons.precision_manufacturing_rounded, 'تجهیزات',
-      () => const EquipmentPage(), step: 4),
+      () => const EquipmentPage(),
+      step: 4),
   _Dest(Icons.calculate_outlined, Icons.calculate_rounded, 'تخمین و تعدیل', () => const EstimatorPage(), step: 4),
   _Dest(Icons.tune_outlined, Icons.tune_rounded, 'ضرایب', () => const FactorsPage(), section: 'داده‌های پایه'),
   _Dest(Icons.folder_open_outlined, Icons.folder_rounded, 'پروژه‌ها و اسناد', () => const DocumentsPage()),
@@ -55,8 +62,16 @@ class AppShell extends StatefulWidget {
   /// تغییر صفحه از داخل صفحه‌های دیگر.
   static void go(BuildContext context, int index) => context.findAncestorStateOfType<_AppShellState>()?._go(index);
 
-  static const dashboard = 0, indices = 1, methods = 2, equipment = 3, estimator = 4, factors = 5, documents = 6,
-      history = 7, users = 8, settings = 9;
+  static const dashboard = 0,
+      indices = 1,
+      methods = 2,
+      equipment = 3,
+      estimator = 4,
+      factors = 5,
+      documents = 6,
+      history = 7,
+      users = 8,
+      settings = 9;
 
   static const sidebarKey = Key('sidebar');
   static const backKey = Key('shell-back');
@@ -94,57 +109,100 @@ class _AppShellState extends State<AppShell> {
     setState(() => _cur = _history.removeLast());
   }
 
+  /// جست‌وجوی سراسری (Ctrl+K): صفحه‌ها و همه‌ی اقلام همه‌ی رده‌ها.
+  Future<void> _search() async {
+    final app = AppScope.of(context);
+    final cats = {for (final c in app.pb.bankCategories()) c.id: c};
+    final rows = app.allRows;
+    final entries = <PaletteEntry>[
+      for (final d in _destinations) PaletteEntry(title: d.label, icon: d.icon, group: 'صفحه‌ها', subtitle: d.section),
+      for (final r in rows)
+        PaletteEntry(
+          title: r.item.name,
+          icon: Icons.precision_manufacturing_outlined,
+          tag: r.item.tag,
+          subtitle: [
+            cats[r.categoryId]?.nameFa ?? '',
+            if (r.item.projectName != null && !isNotStated(r.item.projectName)) r.item.projectName!,
+          ].where((x) => x.isNotEmpty).join(' · '),
+          keywords: cats[r.categoryId]?.code ?? '',
+        ),
+    ];
+    final i = await showCommandPalette(context, entries);
+    if (i == null || !mounted) return;
+    if (i < _destinations.length) {
+      _go(i);
+      return;
+    }
+    final r = rows[i - _destinations.length];
+    final pump = cats[r.categoryId]?.code == 'PUMP';
+    await Navigator.of(context).push(MaterialPageRoute<void>(
+        builder: (_) => pump ? PumpDetailPage(itemId: r.item.id) : GenericItemPage(itemId: r.item.id)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final alive = [..._history, _cur]..sort((a, b) => a.gen.compareTo(b.gen));
     final prev = _history.isEmpty ? null : _destinations[_history.last.index].label;
-    return Scaffold(
-      body: Listener(
-        // دکمه‌ی «بازگشت» ماوس هم کار می‌کند
-        onPointerDown: (e) {
-          if (e.buttons & kBackMouseButton != 0) _back();
-        },
-        child: LayoutBuilder(builder: (context, c) {
-          final compact = c.maxWidth < 1000;
-          return Row(children: [
-            _Sidebar(index: _cur.index, onSelect: _go, compact: compact),
-            Expanded(
-              child: Column(children: [
-                _TopBar(
-                  title: _destinations[_cur.index].label,
-                  icon: _destinations[_cur.index].selectedIcon,
-                  backTo: prev,
-                  onBack: _back,
-                ),
+    return CallbackShortcuts(
+      bindings: {
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): _search,
+        const SingleActivator(LogicalKeyboardKey.keyF, control: true, shift: true): _search,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          body: Listener(
+            // دکمه‌ی «بازگشت» ماوس هم کار می‌کند
+            onPointerDown: (e) {
+              if (e.buttons & kBackMouseButton != 0) _back();
+            },
+            child: LayoutBuilder(builder: (context, c) {
+              final compact = c.maxWidth < 1000;
+              return Row(children: [
+                _Sidebar(index: _cur.index, onSelect: _go, compact: compact),
                 Expanded(
-                  child: Stack(fit: StackFit.expand, children: [
-                    for (final v in alive)
-                      KeyedSubtree(
-                        key: ValueKey('page-${v.gen}'),
-                        child: Offstage(
-                          offstage: !identical(v, _cur),
-                          child: TickerMode(
-                            enabled: identical(v, _cur),
-                            child: FocusScope(
-                              canRequestFocus: identical(v, _cur),
-                              // هر صفحه کنترل‌گر اسکرول خودش را دارد (صفحه‌های زنده‌ی پشت صحنه با هم تداخل ندارند)
-                              child: PrimaryScrollController.none(child: _destinations[v.index].builder()),
+                  child: Column(children: [
+                    _TopBar(
+                      title: _destinations[_cur.index].label,
+                      icon: _destinations[_cur.index].selectedIcon,
+                      backTo: prev,
+                      onBack: _back,
+                      onSearch: _search,
+                    ),
+                    Expanded(
+                      child: DotGridBackdrop(
+                          child: Stack(fit: StackFit.expand, children: [
+                        for (final v in alive)
+                          KeyedSubtree(
+                            key: ValueKey('page-${v.gen}'),
+                            child: Offstage(
+                              offstage: !identical(v, _cur),
+                              child: TickerMode(
+                                enabled: identical(v, _cur),
+                                child: FocusScope(
+                                  canRequestFocus: identical(v, _cur),
+                                  // هر صفحه کنترل‌گر اسکرول خودش را دارد (صفحه‌های زنده‌ی پشت صحنه با هم تداخل ندارند)
+                                  child: PrimaryScrollController.none(child: _destinations[v.index].builder()),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
+                      ])),
+                    ),
                   ]),
                 ),
-              ]),
-            ),
-          ]);
-        }),
+              ]);
+            }),
+          ),
+        ),
       ),
     );
   }
 }
 
-/// نوار کناری: رنگ یکدست تیره، متن سفید، گزینه‌ی فعال با نوار کهربایی.
+/// نوار کناری روشن (الگو: Sidebar مجموعه‌ی Wensity در 21st.dev): زمینه‌ی هم‌رنگ صفحه با خط جداکننده،
+/// عنوان گروه‌ها کوچک و کم‌رنگ، گزینه‌ی فعال با قرص رنگی ملایم.
 /// در پنجره‌ی باریک، نام هر گزینه زیر آیکن نوشته می‌شود (هیچ‌وقت فقط آیکن نیست).
 class _Sidebar extends StatelessWidget {
   const _Sidebar({required this.index, required this.onSelect, required this.compact});
@@ -156,50 +214,55 @@ class _Sidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final t = Theme.of(context);
-    final w = compact ? 96.0 : 220.0;
+    final cs = t.colorScheme;
+    final w = compact ? 96.0 : 232.0;
     return Container(
       key: AppShell.sidebarKey,
       width: w,
-      color: AppColors.navy,
+      decoration: BoxDecoration(
+        color: AppColors.sidebar,
+        border: BorderDirectional(end: BorderSide(color: cs.outlineVariant)),
+      ),
       child: Column(children: [
         // نشان برنامه
-        Padding(
-          padding: EdgeInsets.fromLTRB(compact ? 0 : 16, 20, compact ? 0 : 16, 14),
-          child: Row(mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
-            Container(
-              width: 42,
-              height: 42,
-              decoration: BoxDecoration(
-                color: AppColors.amber,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: AppColors.amber.withValues(alpha: 0.45), blurRadius: 16)],
+        SizedBox(
+          height: 64,
+          child: Padding(
+            padding: EdgeInsetsDirectional.only(start: compact ? 0 : 18, end: compact ? 0 : 14),
+            child: Row(mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(color: AppColors.petrol, borderRadius: BorderRadius.circular(9)),
+                child: const Icon(Icons.water_drop_rounded, color: Colors.white, size: 19),
               ),
-              child: Icon(Icons.water_drop_rounded, color: AppColors.navy, size: 25),
-            ),
-            if (!compact) ...[
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('بانک قیمت',
-                      style: t.textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w800)),
-                  Text('تجهیزات نمک‌زدایی',
-                      style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.65))),
-                ]),
-              ),
-            ],
-          ]),
+              if (!compact) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child:
+                      Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('بانک قیمت',
+                        style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800, height: 1.3)),
+                    Text('تجهیزات نمک‌زدایی',
+                        style: t.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant, height: 1.3)),
+                  ]),
+                ),
+              ],
+            ]),
+          ),
         ),
+        Divider(height: 1, color: cs.outlineVariant),
         Expanded(
-          child: ListView(padding: const EdgeInsets.symmetric(horizontal: 8), children: [
+          child: ListView(padding: const EdgeInsets.fromLTRB(8, 6, 8, 8), children: [
             for (var i = 0; i < _destinations.length; i++) ...[
               if (_destinations[i].section != null)
                 Padding(
-                  padding: EdgeInsets.fromLTRB(compact ? 4 : 10, i == 0 ? 2 : 14, compact ? 4 : 10, 6),
+                  padding: EdgeInsets.fromLTRB(compact ? 6 : 10, i == 0 ? 8 : 16, compact ? 6 : 10, 6),
                   child: compact
-                      ? Divider(color: Colors.white.withValues(alpha: 0.15), height: 1)
+                      ? Divider(color: cs.outlineVariant, height: 1)
                       : Text(_destinations[i].section!,
                           style: t.textTheme.labelSmall?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.55), fontWeight: FontWeight.w700)),
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.85), fontWeight: FontWeight.w600)),
                 ),
               _NavItem(
                 key: ValueKey('nav-$i'),
@@ -213,18 +276,14 @@ class _Sidebar extends StatelessWidget {
         ),
         // کاربر جاری
         Container(
-          margin: const EdgeInsets.all(8),
-          padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 10, vertical: 10),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.07),
-            borderRadius: BorderRadius.circular(12),
-          ),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 0 : 16, vertical: 12),
+          decoration: BoxDecoration(border: Border(top: BorderSide(color: cs.outlineVariant))),
           child: Row(mainAxisAlignment: compact ? MainAxisAlignment.center : MainAxisAlignment.start, children: [
             CircleAvatar(
-              radius: 16,
-              backgroundColor: AppColors.teal,
+              radius: 15,
+              backgroundColor: AppColors.sidebarActive,
               child: Text(app.user.displayName.isEmpty ? '؟' : app.user.displayName.characters.first,
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                  style: TextStyle(color: AppColors.strong, fontWeight: FontWeight.w700, fontSize: 13)),
             ),
             if (!compact) ...[
               const SizedBox(width: 10),
@@ -232,9 +291,8 @@ class _Sidebar extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(app.user.displayName,
                       overflow: TextOverflow.ellipsis,
-                      style: t.textTheme.labelLarge?.copyWith(color: Colors.white)),
-                  Text('نسخه‌ی ۰٫۹٫۱۰ · آفلاین',
-                      style: t.textTheme.labelSmall?.copyWith(color: Colors.white.withValues(alpha: 0.55))),
+                      style: t.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600)),
+                  Text('نسخه‌ی ۰٫۹٫۱۰ · آفلاین', style: t.textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
                 ]),
               ),
             ],
@@ -261,23 +319,27 @@ class _NavItemState extends State<_NavItem> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final sel = widget.selected;
-    final fg = sel ? Colors.white : Colors.white.withValues(alpha: _hover ? 1 : 0.8);
+    final fg = sel ? AppColors.strong : cs.onSurface.withValues(alpha: _hover ? 0.95 : 0.74);
     final step = widget.dest.step;
-    final icon = Icon(sel ? widget.dest.selectedIcon : widget.dest.icon, color: sel ? AppColors.amber : fg, size: 21);
+    final icon = Icon(sel ? widget.dest.selectedIcon : widget.dest.icon,
+        color: sel ? AppColors.petrol : (_hover ? cs.onSurface : cs.onSurfaceVariant), size: 19);
+    // شماره‌ی گام: نشان کوچک خاکستری (فعال: رنگ اصلی)
     final badge = step == null
         ? null
         : Container(
-            width: 18,
-            height: 18,
-            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
-              color: sel ? AppColors.amber : Colors.white.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
+              color: sel ? AppColors.petrol : cs.onSurface.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(6),
             ),
             child: Text(fa(step),
                 style: TextStyle(
-                    fontSize: 10.5, fontWeight: FontWeight.w800, color: sel ? AppColors.navy : Colors.white, height: 1.1)),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: sel ? Colors.white : cs.onSurfaceVariant,
+                    height: 1.2)),
           );
     return MouseRegion(
       onEnter: (_) => setState(() => _hover = true),
@@ -286,59 +348,43 @@ class _NavItemState extends State<_NavItem> {
       child: GestureDetector(
         onTap: widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          height: widget.compact ? 50 : 44,
-          margin: const EdgeInsets.symmetric(vertical: 2),
+          duration: const Duration(milliseconds: 150),
+          height: widget.compact ? 52 : 38,
+          margin: const EdgeInsets.symmetric(vertical: 1),
           decoration: BoxDecoration(
-            color: sel
-                ? Colors.white.withValues(alpha: 0.14)
-                : (_hover ? Colors.white.withValues(alpha: 0.07) : Colors.transparent),
-            borderRadius: BorderRadius.circular(11),
+            color:
+                sel ? AppColors.sidebarActive : (_hover ? cs.onSurface.withValues(alpha: 0.045) : Colors.transparent),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Stack(children: [
-            PositionedDirectional(
-              start: 0,
-              top: 0,
-              bottom: 0,
-              child: Center(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  width: 4,
-                  height: sel ? 24 : 0,
-                  decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(4)),
-                ),
-              ),
-            ),
-            if (widget.compact)
-              Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Row(mainAxisSize: MainAxisSize.min, children: [
-                    icon,
-                    if (badge != null) ...[const SizedBox(width: 3), badge],
-                  ]),
-                  const SizedBox(height: 3),
-                  Text(widget.dest.label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: fg, fontSize: 10.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
-                ]),
-              )
-            else
-              Padding(
-                padding: const EdgeInsetsDirectional.only(start: 14, end: 10),
-                child: Row(children: [
-                  icon,
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(widget.dest.label,
+          child: widget.compact
+              ? Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Row(mainAxisSize: MainAxisSize.min, children: [
+                      icon,
+                      if (badge != null) ...[const SizedBox(width: 3), badge],
+                    ]),
+                    const SizedBox(height: 3),
+                    Text(widget.dest.label,
+                        maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(color: fg, fontSize: 13.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
-                  ),
-                  if (badge != null)
-                    Tooltip(message: 'گام ${fa(step)} از «شروع کار»', child: badge),
-                ]),
-              ),
-          ]),
+                        style:
+                            TextStyle(color: fg, fontSize: 10.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+                  ]),
+                )
+              : Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 12, end: 10),
+                  child: Row(children: [
+                    icon,
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(widget.dest.label,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: fg, fontSize: 13.5, fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
+                    ),
+                    if (badge != null) Tooltip(message: 'گام ${fa(step)} از «شروع کار»', child: badge),
+                  ]),
+                ),
         ),
       ),
     );
@@ -346,9 +392,11 @@ class _NavItemState extends State<_NavItem> {
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar({required this.title, required this.icon, required this.backTo, required this.onBack});
+  const _TopBar(
+      {required this.title, required this.icon, required this.backTo, required this.onBack, required this.onSearch});
   final String title;
   final IconData icon;
+  final VoidCallback onSearch;
 
   /// نام صفحه‌ی قبل (null = تاریخچه خالی است)
   final String? backTo;
@@ -362,13 +410,13 @@ class _TopBar extends StatelessWidget {
     final years = [for (var y = 1385; y <= 1410; y++) y];
     final fxTypes = app.pb.settingsRepo.fxRateTypes();
     final method = methodByCode(s.escalationMethod);
+    final wide = MediaQuery.sizeOf(context).width >= 1380;
     return Container(
       height: 62,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
         color: t.colorScheme.surface,
         border: Border(bottom: BorderSide(color: t.colorScheme.outlineVariant)),
-        boxShadow: softShadow(context),
       ),
       child: Row(children: [
         // دکمه‌ی بازگشت: همیشه در همین جای ثابت (هم‌جای دکمه‌ی بازگشت صفحه‌های جزئیات)
@@ -383,10 +431,13 @@ class _TopBar extends StatelessWidget {
         if (backTo != null)
           Padding(
             padding: const EdgeInsetsDirectional.only(start: 2, end: 6),
-            child: Text(backTo!,
-                style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
+            child: Text(backTo!, style: t.textTheme.labelSmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
           ),
-        Container(width: 1, height: 26, margin: const EdgeInsets.symmetric(horizontal: 8), color: t.colorScheme.outlineVariant),
+        Container(
+            width: 1,
+            height: 26,
+            margin: const EdgeInsets.symmetric(horizontal: 8),
+            color: t.colorScheme.outlineVariant),
         Icon(icon, size: 20, color: t.colorScheme.primary),
         const SizedBox(width: 8),
         Expanded(
@@ -395,10 +446,13 @@ class _TopBar extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
         ),
+        SearchLauncher(onTap: onSearch, compact: !wide),
+        const SizedBox(width: 12),
         _Control(
           label: 'سال هدف',
           tooltip: 'همه‌ی قیمت‌ها به این سال تعدیل می‌شوند (شاخص و نرخ ارز همین سال).',
-          child: DropdownButton<int>(itemHeight: null, 
+          child: DropdownButton<int>(
+            itemHeight: null,
             value: years.contains(s.targetYear) ? s.targetYear : null,
             underline: const SizedBox(),
             isDense: true,
@@ -415,7 +469,8 @@ class _TopBar extends StatelessWidget {
               '«جدول پیش‌فرض» همان نرخ‌های فایل اکسل است؛ جدول جدید را در «تنظیمات» بسازید و در «شاخص‌ها و ارز» تکمیل کنید.',
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 170),
-            child: DropdownButton<String>(itemHeight: null, 
+            child: DropdownButton<String>(
+              itemHeight: null,
               value: fxTypes.any((f) => f.code == s.fxRateType) ? s.fxRateType : null,
               underline: const SizedBox(),
               isDense: true,
@@ -442,8 +497,8 @@ class _TopBar extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(color: AppColors.amber, borderRadius: BorderRadius.circular(6)),
-              child: Text(method.code,
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppColors.navy)),
+              child:
+                  Text(method.code, style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppColors.navy)),
             ),
             const SizedBox(width: 4),
             Icon(Icons.chevron_left_rounded, size: 18, color: t.colorScheme.outline),
@@ -479,8 +534,8 @@ class _Control extends StatelessWidget {
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: t.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.isDark ? t.colorScheme.surfaceContainerLow : Colors.white,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: t.colorScheme.outlineVariant),
       ),
       child: Column(
@@ -499,7 +554,7 @@ class _Control extends StatelessWidget {
     if (onTap != null) {
       w = Material(
         type: MaterialType.transparency,
-        child: InkWell(borderRadius: BorderRadius.circular(10), onTap: onTap, child: w),
+        child: InkWell(borderRadius: BorderRadius.circular(8), onTap: onTap, child: w),
       );
     }
     return tooltip == null ? w : Tooltip(message: tooltip!, child: w);

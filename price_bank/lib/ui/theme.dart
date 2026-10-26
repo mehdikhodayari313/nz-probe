@@ -18,6 +18,8 @@ class AppPalette {
 }
 
 const appPalettes = <AppPalette>[
+  // الگو: تم «Teal Mist» از 21st.dev (فیروزه‌ای روشن، خنثی‌های سرد)
+  AppPalette('mist', 'فیروزه‌ای', Color(0xFF0D8077), Color(0xFF0B4F4A), Color(0xFF0E262A), Color(0xFF14B8A6)),
   AppPalette('petrol', 'نفتی', Color(0xFF0F5C6E), Color(0xFF0A3D4A), Color(0xFF0B2B36), Color(0xFF1C8C9E)),
   AppPalette('blue', 'آبی', Color(0xFF1F4E9C), Color(0xFF15356B), Color(0xFF0F1F3D), Color(0xFF3B7DD8)),
   AppPalette('green', 'سبز', Color(0xFF1E6B4E), Color(0xFF134734), Color(0xFF0D2A20), Color(0xFF2E9E72)),
@@ -48,19 +50,25 @@ class AppColors {
   static const usd = Color(0xFF1E8A4C);
   static const irr = Color(0xFFB5651D);
 
-  /// رنگ‌های وابسته به حالت روز/شب
-  static Color get bg => isDark ? const Color(0xFF0E1418) : const Color(0xFFF1F4F7);
-  static Color get surface => isDark ? const Color(0xFF162027) : Colors.white;
-  static Color get ink => isDark ? const Color(0xFFE6EDF1) : const Color(0xFF1D2939);
-  static Color get line => isDark ? const Color(0xFF2A3740) : const Color(0xFFE2E8EE);
+  /// رنگ‌های وابسته به حالت روز/شب (خنثی‌های سرد تم Teal Mist)
+  static Color get bg => isDark ? const Color(0xFF071112) : const Color(0xFFF4F8F9);
+  static Color get surface => isDark ? const Color(0xFF0C1A1C) : Colors.white;
+  static Color get ink => isDark ? const Color(0xFFE4EDEE) : const Color(0xFF0E262A);
+  static Color get line => isDark ? const Color(0xFF1C2D2F) : const Color(0xFFDAE3E4);
+
+  /// نوار کناری روشن (الگوی Sidebar مجموعه‌ی Wensity در 21st.dev)
+  static Color get sidebar => isDark ? const Color(0xFF061314) : const Color(0xFFF7FAFB);
+  static Color get sidebarActive =>
+      isDark ? _p.accent2.withValues(alpha: 0.16) : Color.lerp(_p.accent2, Colors.white, 0.80)!;
+  static Color get muted => isDark ? const Color(0xFF7A9596) : const Color(0xFF50686D);
   static Color get amberSoft => isDark ? const Color(0xFF3A2E17) : const Color(0xFFFFF3DE);
   static Color get amberText => isDark ? const Color(0xFFF2C46B) : const Color(0xFF8A5A00);
 
   /// پس‌زمینه‌ی سرستون جدول‌ها
-  static Color get headerBg => isDark ? const Color(0xFF1E2C34) : Color.lerp(_p.primary, Colors.white, 0.86)!;
+  static Color get headerBg => isDark ? const Color(0xFF102326) : Color.lerp(_p.primary, Colors.white, 0.88)!;
 
   /// ردیف‌های یک‌درمیان
-  static Color get zebra => isDark ? const Color(0xFF1A252C) : Color.lerp(_p.primary, Colors.white, 0.95)!;
+  static Color get zebra => isDark ? const Color(0xFF0A1719) : Color.lerp(_p.primary, Colors.white, 0.965)!;
 
   /// متن پررنگ هم‌رنگ پالت (عنوان جدول، تگ، …)
   static Color get strong => isDark ? Color.lerp(_p.primary, Colors.white, 0.62)! : _p.dark;
@@ -82,13 +90,16 @@ ThemeData buildTheme(Brightness b) {
           onSecondaryContainer: const Color(0xFF5A3A00),
           tertiary: AppColors.teal,
           surface: Colors.white,
-          onSurface: const Color(0xFF1D2939),
-          surfaceContainerLowest: const Color(0xFFFBFCFD),
-          surfaceContainerLow: const Color(0xFFF5F8FA),
-          surfaceContainer: const Color(0xFFEFF3F6),
-          surfaceContainerHigh: const Color(0xFFE8EEF2),
-          surfaceContainerHighest: const Color(0xFFE0E7EC),
-          outlineVariant: const Color(0xFFE2E8EE),
+          onSurface: const Color(0xFF0E262A),
+          onSurfaceVariant: const Color(0xFF50686D),
+          surfaceContainerLowest: const Color(0xFFFBFDFD),
+          surfaceContainerLow: const Color(0xFFF5F9FA),
+          surfaceContainer: const Color(0xFFEDF4F4),
+          surfaceContainerHigh: const Color(0xFFE5EFEF),
+          surfaceContainerHighest: const Color(0xFFDCE7E8),
+          outline: const Color(0xFF8A9EA2),
+          outlineVariant: const Color(0xFFDAE3E4),
+          error: const Color(0xFFCE514D),
         )
       : scheme.copyWith(
           primary: Color.lerp(p, Colors.white, 0.45),
@@ -97,20 +108,21 @@ ThemeData buildTheme(Brightness b) {
           onPrimaryContainer: Color.lerp(p, Colors.white, 0.8),
           secondary: AppColors.amber,
           tertiary: AppColors.teal,
-          surface: const Color(0xFF162027),
-          onSurface: const Color(0xFFE6EDF1),
-          onSurfaceVariant: const Color(0xFFA9B7C0),
-          surfaceContainerLowest: const Color(0xFF111A20),
-          surfaceContainerLow: const Color(0xFF1A252C),
-          surfaceContainer: const Color(0xFF1E2A32),
-          surfaceContainerHigh: const Color(0xFF243139),
-          surfaceContainerHighest: const Color(0xFF2B3942),
-          outline: const Color(0xFF7D8E99),
-          outlineVariant: const Color(0xFF2A3740),
+          surface: const Color(0xFF0C1A1C),
+          onSurface: const Color(0xFFE4EDEE),
+          onSurfaceVariant: const Color(0xFF9DB3B4),
+          surfaceContainerLowest: const Color(0xFF081315),
+          surfaceContainerLow: const Color(0xFF0F1F21),
+          surfaceContainer: const Color(0xFF132527),
+          surfaceContainerHigh: const Color(0xFF182C2E),
+          surfaceContainerHighest: const Color(0xFF1E3436),
+          outline: const Color(0xFF6F8A8C),
+          outlineVariant: const Color(0xFF1C2D2F),
         );
   final base = ThemeData(useMaterial3: true, colorScheme: scheme, fontFamily: 'Vazirmatn', brightness: b);
   final tt = base.textTheme.apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
-  final radius = BorderRadius.circular(10);
+  // گوشه‌ی ۸ برای دکمه و ورودی (shadcn/Teal Mist: radius 0.5rem)
+  final radius = BorderRadius.circular(8);
   return base.copyWith(
     scaffoldBackgroundColor: AppColors.bg,
     dividerColor: scheme.outlineVariant,
@@ -125,10 +137,10 @@ ThemeData buildTheme(Brightness b) {
     inputDecorationTheme: InputDecorationTheme(
       isDense: true,
       filled: true,
-      fillColor: light ? const Color(0xFFF8FAFB) : scheme.surfaceContainerLow,
+      fillColor: light ? Colors.white : scheme.surfaceContainerLow,
       border: OutlineInputBorder(borderRadius: radius),
       enabledBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: scheme.outlineVariant)),
-      focusedBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: scheme.primary, width: 1.6)),
+      focusedBorder: OutlineInputBorder(borderRadius: radius, borderSide: BorderSide(color: scheme.primary, width: 1.5)),
       contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       labelStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 13),
       hintStyle: TextStyle(color: scheme.outline, fontSize: 13),
@@ -136,15 +148,18 @@ ThemeData buildTheme(Brightness b) {
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: radius),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w700, fontSize: 13.5),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        elevation: 0,
+        textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600, fontSize: 13.5),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         shape: RoundedRectangleBorder(borderRadius: radius),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         side: BorderSide(color: scheme.outlineVariant),
+        backgroundColor: light ? Colors.white : scheme.surfaceContainerLow,
+        foregroundColor: scheme.onSurface,
         textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w600, fontSize: 13.5),
       ),
     ),
@@ -174,7 +189,7 @@ ThemeData buildTheme(Brightness b) {
     tabBarTheme: TabBarThemeData(
       labelColor: scheme.primary,
       unselectedLabelColor: scheme.onSurfaceVariant,
-      indicatorColor: AppColors.amber,
+      indicatorColor: scheme.primary,
       indicatorSize: TabBarIndicatorSize.label,
       dividerColor: scheme.outlineVariant,
       labelStyle: const TextStyle(fontFamily: 'Vazirmatn', fontWeight: FontWeight.w700, fontSize: 13.5),
@@ -187,19 +202,19 @@ ThemeData buildTheme(Brightness b) {
     ),
     tooltipTheme: TooltipThemeData(
       waitDuration: const Duration(milliseconds: 300),
-      decoration: BoxDecoration(color: AppColors.navy.withValues(alpha: 0.96), borderRadius: BorderRadius.circular(8)),
+      decoration: BoxDecoration(color: const Color(0xFF0E262A).withValues(alpha: 0.96), borderRadius: BorderRadius.circular(8)),
       textStyle: const TextStyle(fontFamily: 'Vazirmatn', fontSize: 12.5, color: Colors.white, height: 1.7),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
     ),
     snackBarTheme: SnackBarThemeData(
-      backgroundColor: AppColors.navy,
+      backgroundColor: const Color(0xFF0E262A),
       contentTextStyle: const TextStyle(fontFamily: 'Vazirmatn', color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     ),
     scrollbarTheme: ScrollbarThemeData(
       radius: const Radius.circular(8),
       thickness: const WidgetStatePropertyAll(8),
-      thumbColor: WidgetStatePropertyAll(scheme.primary.withValues(alpha: 0.35)),
+      thumbColor: WidgetStatePropertyAll(scheme.onSurface.withValues(alpha: 0.18)),
     ),
   );
 }
@@ -207,11 +222,11 @@ ThemeData buildTheme(Brightness b) {
 /// سایه‌ی نرم کارت‌ها.
 List<BoxShadow> softShadow(BuildContext c, {bool hover = false}) => AppColors.isDark
     ? [
-        if (hover) BoxShadow(color: AppColors.petrol.withValues(alpha: 0.35), blurRadius: 18, spreadRadius: 1),
+        if (hover) BoxShadow(color: AppColors.teal.withValues(alpha: 0.22), blurRadius: 16, spreadRadius: 0),
       ]
     : [
-        BoxShadow(color: const Color(0xFF101828).withValues(alpha: hover ? 0.12 : 0.06), blurRadius: hover ? 22 : 10, offset: Offset(0, hover ? 8 : 3)),
-        BoxShadow(color: const Color(0xFF101828).withValues(alpha: 0.03), blurRadius: 2, offset: const Offset(0, 1)),
+        BoxShadow(color: const Color(0xFF2D2D53).withValues(alpha: hover ? 0.10 : 0.05), blurRadius: hover ? 18 : 10, offset: Offset(0, hover ? 6 : 4)),
+        BoxShadow(color: const Color(0xFF2D2D53).withValues(alpha: 0.04), blurRadius: 1, offset: const Offset(0, 1)),
       ];
 
 /// رنگ‌های معنایی که در حالت روشن و تاریک خوانا هستند.

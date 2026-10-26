@@ -67,13 +67,13 @@ class PriceBankApp extends StatelessWidget {
       );
     }
 
-    if (state == null) return app('light', 'petrol');
+    if (state == null) return app('light', 'mist');
     return AppScope(
       state: state!,
       child: ListenableBuilder(
         listenable: state!,
         builder: (context, _) =>
-            app(state!.settings.str('theme_mode', 'light'), state!.settings.str('theme_palette', 'petrol')),
+            app(state!.settings.str('theme_mode', 'light'), state!.settings.str('theme_palette', 'mist')),
       ),
     );
   }
