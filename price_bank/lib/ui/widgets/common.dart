@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../format.dart';
 import '../theme.dart';
+import 'hero_band.dart';
 
 /// سرصفحه‌ی هر صفحه: نشان رنگی، عنوان، زیرعنوان و دکمه‌ها.
 class PageHeader extends StatelessWidget {
@@ -14,39 +15,46 @@ class PageHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 2, 2, 16),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            // نشان صفحه: دایره‌ی ابزار دقیق P&ID (هم‌خانواده‌ی نشان بخش‌ها)
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.petrol.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.petrol.withValues(alpha: 0.55), width: 1.6),
-              ),
-              child: Icon(icon, color: AppColors.strong, size: 22),
+    const fg = Colors.white;
+    // نوار سرصفحه‌ی تیره (هم‌خانواده‌ی سرصفحه‌ی تجهیز)، رنگ یکدست
+    final band = Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(color: heroBandColor(context), borderRadius: BorderRadius.circular(18)),
+      child: Row(children: [
+        if (icon != null) ...[
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: fg.withValues(alpha: 0.06),
+              border: Border.all(color: fg.withValues(alpha: 0.35), width: 1.4),
             ),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: t.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800)),
-              if (subtitle != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
-                ),
-            ]),
+            child: Icon(icon, color: fg, size: 21),
           ),
-          if (actions.isNotEmpty)
-            Flexible(child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.end, children: actions)),
+          const SizedBox(width: 14),
         ],
-      ),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(title, style: t.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, color: fg, height: 1.2)),
+            if (subtitle != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 3),
+                child: Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: fg.withValues(alpha: 0.68))),
+              ),
+          ]),
+        ),
+        if (actions.isNotEmpty)
+          Flexible(
+            child: Theme(
+              data: heroActionsTheme(t),
+              child: Wrap(spacing: 8, runSpacing: 8, alignment: WrapAlignment.end, children: actions),
+            ),
+          ),
+      ]),
     );
+    return FadeIn(child: band);
   }
 }
 

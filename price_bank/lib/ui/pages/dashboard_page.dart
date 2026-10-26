@@ -1,5 +1,7 @@
 import 'package:file_picker/file_picker.dart';
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/methods.dart';
@@ -12,6 +14,7 @@ import '../format.dart';
 import '../shell.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/hero_band.dart';
 import '../widgets/mto_import_dialog.dart';
 import 'equipment_page.dart';
 
@@ -51,55 +54,55 @@ class DashboardPage extends StatelessWidget {
             0;
 
     return ListView(padding: const EdgeInsets.fromLTRB(24, 20, 24, 28), children: [
-      PageHeader(
-        icon: Icons.space_dashboard_rounded,
-        title: 'داشبورد',
-        subtitle: 'سال هدف ${fa(s.targetYear)} · نرخ ارز «${_fxName(app)}» · روش تعدیل ${method.code}',
+      ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: HeroBand(
+          icon: LucideIcons.layoutDashboard,
+          title: 'داشبورد',
+          subtitle: 'سال هدف ${fa(s.targetYear)}  ·  نرخ ارز «${_fxName(app)}»  ·  روش تعدیل ${method.code}',
+          readouts: [
+            HeroReadout(
+              label: 'تجهیزات ثبت‌شده',
+              number: rows.length,
+              format: (v) => fa(v.round()),
+              sub: '${fa(catsUsed)} رده، ${fa(included.length)} در جمع‌ها',
+            ),
+            HeroReadout(
+              label: 'دارای قیمت تعدیل‌شده',
+              number: priced.length,
+              format: (v) => fa(v.round()),
+              sub: included.isEmpty ? null : '${fa((priced.length * 100 / included.length).round())}٪ از شمارش‌شده‌ها',
+            ),
+            HeroReadout(
+              label: 'جمع تعدیل‌شده (${fa(s.targetYear)})',
+              number: priced.fold<double>(0, (a, r) => a + r.irrTarget! * r.qty),
+              format: (v) => money(v.toDouble(), unit, compact: true, withUnit: false),
+              unit: unitLabel(unit),
+              primary: true,
+            ),
+            HeroReadout(
+              label: 'نرخ یوروی سال ${fa(s.targetYear)}',
+              number: fxEur == null ? null : (unit == MoneyUnit.toman ? fxEur / 10 : fxEur),
+              text: 'وارد نشده',
+              format: (v) => faNum(v),
+              unit: unitLabel(unit),
+            ),
+            HeroReadout(
+              label: 'استعلام فروشندگان',
+              number: quotes,
+              format: (v) => fa(v.round()),
+              sub: '${fa(projects.length)} پروژه، ${fa(app.pb.docs.sourceDocumentCount())} سند منبع',
+            ),
+          ],
+        ),
       ),
+      const SizedBox(height: 16),
+      _CategoryChart(rows: included, unit: unit, targetYear: s.targetYear),
+      const SizedBox(height: 16),
       if (app.pumps.isEmpty || !hasDesBank || !hasCmpBank)
         _ImportCard(pumps: app.pumps.isNotEmpty, desalters: hasDesBank, compressors: hasCmpBank),
       if (app.pumps.isEmpty) const SizedBox(height: 16),
       _StartSteps(hasData: rows.isNotEmpty, hasPumps: app.pumps.isNotEmpty, method: method.code),
-      const SizedBox(height: 16),
-      Wrap(spacing: 12, runSpacing: 12, children: [
-        KpiTile(
-          label: 'تجهیزات ثبت‌شده',
-          value: fa(rows.length),
-          sub: '${fa(catsUsed)} رده · ${fa(included.length)} شمارش‌شده در جمع‌ها',
-          icon: Icons.precision_manufacturing_rounded,
-          onTap: () => AppShell.go(context, AppShell.equipment),
-        ),
-        KpiTile(
-          label: 'دارای قیمت تعدیل‌شده',
-          value: fa(priced.length),
-          sub: included.isEmpty ? null : '${fa((priced.length * 100 / included.length).round())}٪ از شمارش‌شده‌ها',
-          icon: Icons.price_check_rounded,
-          color: Tones.good(context),
-        ),
-        KpiTile(
-          label: 'نرخ یوروی سال ${fa(s.targetYear)}',
-          value: fxEur == null ? 'وارد نشده' : faNum(unit == MoneyUnit.toman ? fxEur / 10 : fxEur),
-          sub: '${unitLabel(unit)} به ازای هر یورو',
-          icon: Icons.euro_rounded,
-          color: fxEur == null ? Tones.bad(context) : AppColors.eur,
-          onTap: () => AppShell.go(context, AppShell.indices),
-        ),
-        KpiTile(
-          label: 'استعلام‌های فروشندگان',
-          value: fa(quotes),
-          sub: '${fa(rows.where((r) => r.item.observations.any((o) => o.kind == 'quote')).length)} قلم دارای استعلام',
-          icon: Icons.request_quote_outlined,
-          color: Tones.warn(context),
-        ),
-        KpiTile(
-          label: 'پروژه‌ها',
-          value: fa(projects.length),
-          sub: '${fa(app.pb.docs.sourceDocumentCount())} سند منبع',
-          icon: Icons.folder_rounded,
-          color: AppColors.teal,
-          onTap: () => AppShell.go(context, AppShell.documents),
-        ),
-      ]),
       const SizedBox(height: 16),
       _ProjectTotals(rows: included, unit: unit, targetYear: s.targetYear),
       const SizedBox(height: 16),
@@ -756,6 +759,95 @@ class _CategoriesCard extends StatelessWidget {
                 ]),
               ),
             ),
+          ),
+      ]),
+    );
+  }
+}
+
+/// نمودار میله‌ای افقی جمع قیمت تعدیل‌شده‌ی هر رده (برچسب و مقدار کنار هر میله؛ رنگ تنها نشانه نیست)
+class _CategoryChart extends StatelessWidget {
+  const _CategoryChart({required this.rows, required this.unit, required this.targetYear});
+  final List<EquipRow> rows;
+  final MoneyUnit unit;
+  final int targetYear;
+
+  @override
+  Widget build(BuildContext context) {
+    final app = AppScope.of(context);
+    final t = Theme.of(context);
+    final names = {for (final c in app.pb.catalog.categories()) c.id: c.nameFa};
+    final agg = <int, double>{};
+    for (final r in rows) {
+      if (r.irrTarget == null) continue;
+      agg[r.categoryId] = (agg[r.categoryId] ?? 0) + r.irrTarget! * r.qty;
+    }
+    final list = agg.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    final top = list.take(8).toList();
+    if (top.isEmpty) return const SizedBox();
+    final max = top.first.value;
+    final total = list.fold<double>(0, (a, e) => a + e.value);
+    final still = MediaQuery.of(context).disableAnimations;
+    return SectionCard(
+      title: 'سهم هر رده از جمع قیمت (${fa(targetYear)})',
+      subtitle: 'قیمت واحد تعدیل‌شده × تعداد؛ فقط اقلام شمارش‌شده در جمع‌ها',
+      icon: LucideIcons.chartBar,
+      child: Column(children: [
+        for (final (i, e) in top.indexed)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            child: Row(children: [
+              SizedBox(
+                width: 230,
+                child: Text(names[e.key] ?? '', overflow: TextOverflow.ellipsis, style: t.textTheme.bodyMedium),
+              ),
+              Expanded(
+                child: SizedBox(
+                  height: 22,
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: still ? 1 : 0, end: 1),
+                    duration: Duration(milliseconds: 700 + i * 80),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, k, _) => BarChart(
+                      BarChartData(
+                        rotationQuarterTurns: 3,
+                        alignment: BarChartAlignment.start,
+                        maxY: max,
+                        minY: 0,
+                        gridData: const FlGridData(show: false),
+                        borderData: FlBorderData(show: false),
+                        titlesData: const FlTitlesData(show: false),
+                        barTouchData: BarTouchData(enabled: false),
+                        barGroups: [
+                          BarChartGroupData(x: 0, barRods: [
+                            BarChartRodData(
+                              toY: e.value * k,
+                              width: 16,
+                              color: i == 0 ? AppColors.amber : AppColors.petrol.withValues(alpha: 0.75 - i * 0.05),
+                              borderRadius: BorderRadius.circular(4),
+                              backDrawRodData: BackgroundBarChartRodData(
+                                show: true,
+                                toY: max,
+                                color: t.colorScheme.surfaceContainerHigh,
+                              ),
+                            ),
+                          ]),
+                        ],
+                      ),
+                      duration: Duration.zero,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(
+                width: 150,
+                child: Text(
+                  '${money(e.value, unit, compact: true, withUnit: false)}  (${fa((e.value * 100 / total).round())}٪)',
+                  textAlign: TextAlign.end,
+                  style: t.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()]),
+                ),
+              ),
+            ]),
           ),
       ]),
     );

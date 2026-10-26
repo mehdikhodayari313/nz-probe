@@ -2,6 +2,7 @@
 // انتخاب قیمت مبنا، محاسبه‌ی گام‌به‌گام و تاریخچه.
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/compressor.dart';
@@ -16,6 +17,7 @@ import '../../core/repo/items_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/hero_band.dart';
 import '../widgets/data_grid.dart' show gridNotStated, isNotStated;
 import '../widgets/field_editor.dart';
 
@@ -57,67 +59,61 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
         cat.code == 'COMPRESSOR' ? app.genericRows(cat.id).where((r) => r.item.id == item.id).firstOrNull?.cmp : null;
     final canEdit = app.canEdit(cat.disciplineCode);
 
+    final actions = <Widget>[
+      if (!_editing && canEdit) ...[
+        OutlinedButton.icon(
+          onPressed: () => _archive(context, item),
+          icon: Icon(item.status == 'active' ? LucideIcons.archive : LucideIcons.archiveRestore, size: 18),
+          label: Text(item.status == 'active' ? 'بایگانی' : 'بازگرداندن'),
+        ),
+        FilledButton.icon(
+          onPressed: () => setState(() {
+            _draft.clear();
+            _editing = true;
+            _tabs.index = 0;
+          }),
+          icon: const Icon(LucideIcons.pencil, size: 18),
+          label: const Text('ویرایش'),
+        ),
+      ],
+      if (_editing) ...[
+        TextButton(
+          onPressed: () => setState(() {
+            _draft.clear();
+            _editing = false;
+          }),
+          child: const Text('انصراف'),
+        ),
+        FilledButton.icon(
+          onPressed: () => _save(context, item, fields),
+          icon: const Icon(LucideIcons.save, size: 18),
+          label: Text('ذخیره‌ی تغییرات${_draft.isEmpty ? '' : ' (${fa(_draft.length)})'}'),
+        ),
+      ],
+    ];
+    final tabs = TabBar(
+      controller: _tabs,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      tabs: [
+        heroTab(LucideIcons.fileText, 'مشخصات'),
+        heroTab(LucideIcons.receipt, 'قیمت‌ها و استعلام‌ها (${fa(item.observations.length)})'),
+        heroTab(LucideIcons.calculator, 'محاسبه‌ی قیمت'),
+        heroTab(LucideIcons.history, 'تاریخچه'),
+      ],
+    );
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        toolbarHeight: 68,
-        title: ItemTitle(
-          tag: isNotStated(item.tag) ? gridNotStated : item.tag!,
-          muted: isNotStated(item.tag),
-          name: item.name,
-          sub: cat.nameFa,
-        ),
-        actions: [
-          if (!_editing && canEdit) ...[
-            OutlinedButton.icon(
-              onPressed: () => _archive(context, item),
-              icon: Icon(item.status == 'active' ? Icons.archive_outlined : Icons.unarchive_outlined),
-              label: Text(item.status == 'active' ? 'بایگانی' : 'بازگرداندن'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: () => setState(() {
-                _draft.clear();
-                _editing = true;
-                _tabs.index = 0;
-              }),
-              icon: const Icon(Icons.edit_rounded),
-              label: const Text('ویرایش'),
-            ),
-          ],
-          if (_editing) ...[
-            TextButton(
-              onPressed: () => setState(() {
-                _draft.clear();
-                _editing = false;
-              }),
-              child: const Text('انصراف'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: () => _save(context, item, fields),
-              icon: const Icon(Icons.save_rounded),
-              label: Text('ذخیره‌ی تغییرات${_draft.isEmpty ? '' : ' (${fa(_draft.length)})'}'),
-            ),
-          ],
-          const SizedBox(width: 16),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: [
-            const Tab(icon: Icon(Icons.description_outlined), text: 'مشخصات'),
-            Tab(
-                icon: const Icon(Icons.request_quote_outlined),
-                text: 'قیمت‌ها و استعلام‌ها (${fa(item.observations.length)})'),
-            const Tab(icon: Icon(Icons.calculate_outlined), text: 'محاسبه‌ی قیمت'),
-            const Tab(icon: Icon(Icons.history_rounded), text: 'تاریخچه'),
-          ],
-        ),
-      ),
       body: Column(children: [
-        _Strip(item: item, result: result, engine: engine, profile: profile),
+        _Strip(
+          item: item,
+          result: result,
+          engine: engine,
+          profile: profile,
+          category: cat,
+          fields: fields,
+          actions: actions,
+          tabs: tabs,
+        ),
         Expanded(
           child: TabBarView(controller: _tabs, children: [
             _specTab(context, fields, item),
@@ -213,11 +209,37 @@ class _GenericItemPageState extends State<GenericItemPage> with SingleTickerProv
 }
 
 class _Strip extends StatelessWidget {
-  const _Strip({required this.item, required this.result, required this.engine, this.profile});
+  const _Strip({
+    required this.item,
+    required this.result,
+    required this.engine,
+    this.profile,
+    required this.category,
+    required this.fields,
+    required this.actions,
+    required this.tabs,
+  });
   final ItemRecord item;
   final GenericCalcResult result;
   final GenericEngine engine;
   final EquipmentProfile? profile;
+  final Category category;
+  final List<FieldDef> fields;
+  final List<Widget> actions;
+  final TabBar tabs;
+
+  static IconData categoryIcon(String code) => switch (code) {
+        'VESSEL' || 'DESALTER' || 'DEAERATOR' => LucideIcons.cylinder,
+        'TANK' => LucideIcons.container,
+        'HEX' || 'HEATER' => LucideIcons.thermometer,
+        'COMPRESSOR' || 'AIR_DRYER' => LucideIcons.wind,
+        'FLARE' => LucideIcons.flame,
+        'ELEC_EQ' => LucideIcons.zap,
+        'INSTR' => LucideIcons.gauge,
+        'PIPING' || 'VALVES' => LucideIcons.waypoints,
+        'SERVICES' => LucideIcons.hardHat,
+        _ => LucideIcons.package,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -230,65 +252,81 @@ class _Strip extends StatelessWidget {
     ];
     quotes.sort();
     final size = profile?.sizeOf(item.values);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-      child: FadeIn(
-        child: ReadoutStrip(items: [
-          Readout(
-            label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
-            value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
-            unit: '€',
-            sub: result.eurTarget.isNumber ? 'روش ${result.methodCode}، از قیمت مبنا' : 'قیمت مبنا قابل تعدیل نیست',
-            color: AppColors.eur,
-            primary: true,
+    // مشخصات کلیدی عددی ثبت‌شده (تا چهار مورد) به شکل برچسب
+    final chips = <HeroChip>[
+      for (final f in fields.where((f) => f.groupKey == 'key_specs' && f.type == FieldType.number))
+        if (item.valueOf(f.key) case final num v) HeroChip(LucideIcons.ruler, '${f.labelFa} ${faSmart(v)}${f.unit == null ? '' : ' ${f.unit}'}'),
+    ].take(4).toList();
+    return HeroBand(
+      onBack: () => Navigator.maybePop(context),
+      icon: categoryIcon(category.code),
+      tag: isNotStated(item.tag) ? gridNotStated : item.tag!,
+      tagMuted: isNotStated(item.tag),
+      title: item.name,
+      subtitle: [
+        category.nameFa,
+        if (item.projectName != null) isNotStated(item.projectName) ? 'پروژه $gridNotStated' : item.projectName!,
+      ].join('  ·  '),
+      chips: chips,
+      actions: actions,
+      readouts: [
+        HeroReadout(
+          label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
+          number: result.eurTarget.isNumber ? result.eurTarget.number : null,
+          format: (v) => faNum(v),
+          unit: '€',
+          sub: result.eurTarget.isNumber ? 'روش ${result.methodCode}، از قیمت مبنا' : 'قیمت مبنا قابل تعدیل نیست',
+          primary: true,
+        ),
+        HeroReadout(
+          label: 'قیمت واحد',
+          number: result.irrTarget.number,
+          format: (v) => money(v.toDouble(), unit, withUnit: false),
+          unit: unitLabel(unit),
+          sub: result.eurRateTarget == null
+              ? 'نرخ یوروی سال هدف وارد نشده'
+              : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
+        ),
+        HeroReadout(
+          label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
+          number: result.irrTarget.isNumber ? result.irrTarget.number! * qty : null,
+          format: (v) => money(v.toDouble(), unit, compact: true, withUnit: false),
+          unit: unitLabel(unit),
+        ),
+        if (profile != null)
+          HeroReadout(
+            label: profile!.driver.labelFa,
+            number: size,
+            format: (v) => faSmart(v),
+            unit: size == null ? null : profile!.driver.unit,
+            sub: size == null ? 'ابعاد/ظرفیت ثبت نشده' : 'پارامتر اندازه برای تخمین',
           ),
-          Readout(
-            label: 'قیمت واحد',
-            value: money(result.irrTarget.number, unit, withUnit: false),
-            unit: unitLabel(unit),
-            sub: result.eurRateTarget == null
-                ? 'نرخ یوروی سال هدف وارد نشده'
-                : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
-            color: AppColors.irr,
-          ),
-          Readout(
-            label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
-            value: money(result.irrTarget.isNumber ? result.irrTarget.number! * qty : null, unit,
-                compact: true, withUnit: false),
-            unit: unitLabel(unit),
-          ),
-          if (profile != null)
-            Readout(
-              label: profile!.driver.labelFa,
-              value: size == null ? '—' : faSmart(size),
-              unit: size == null ? null : profile!.driver.unit,
-              sub: size == null ? 'ابعاد/ظرفیت ثبت نشده' : 'پارامتر اندازه برای تخمین',
-            ),
-          if (profile?.weightKey != null) _weightReadout(context, app),
-          Readout(
-            label: 'بازه‌ی استعلام‌ها (یورو، سال هدف)',
-            value: quotes.isEmpty ? '—' : '${compactNum(quotes.first)} تا ${compactNum(quotes.last)}',
-            sub: quotes.isEmpty
-                ? 'استعلام عددی ندارد'
-                : '${fa(quotes.length)} استعلام، میانگین ${compactNum(quotes.reduce((a, b) => a + b) / quotes.length)}',
-          ),
-        ]),
-      ),
+        if (profile?.weightKey != null) _weightReadout(context, app),
+        HeroReadout(
+          label: 'بازه‌ی استعلام‌ها (یورو)',
+          text: quotes.isEmpty ? '—' : '${compactNum(quotes.first)} تا ${compactNum(quotes.last)}',
+          sub: quotes.isEmpty
+              ? 'استعلام عددی ندارد'
+              : '${fa(quotes.length)} استعلام، میانگین ${compactNum(quotes.reduce((a, b) => a + b) / quotes.length)}',
+        ),
+      ],
+      tabs: tabs,
     );
   }
 }
 
 extension on _Strip {
   /// وزن خالی و ضریب وزن (بی‌اثر تا وقتی وزن ثبت نشده)
-  Readout _weightReadout(BuildContext context, AppState app) {
+  HeroReadout _weightReadout(BuildContext context, AppState app) {
     final p = profile!;
     final w = item.values[p.weightKey];
-    final cat = app.pb.catalog.categories().firstWhere((c) => c.id == item.categoryId);
-    final est = app.pb.genericEstimator(cat.code);
+    final est = app.pb.genericEstimator(category.code);
     final wf = est.weightFactor(item.values);
-    return Readout(
+    return HeroReadout(
       label: 'وزن خالی',
-      value: w is num ? faSmart(w) : 'ثبت نشده',
+      number: w is num ? w : null,
+      text: 'ثبت نشده',
+      format: (v) => faSmart(v),
       unit: w is num ? 'kg' : null,
       sub: w is! num
           ? 'اختیاری؛ فعلاً بی‌اثر در محاسبه'

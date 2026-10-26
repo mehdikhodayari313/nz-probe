@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart' show kBackMouseButton;
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../app/app_state.dart';
 import '../core/calc/methods.dart';
@@ -34,18 +35,18 @@ class _Dest {
 // ترتیب منوها = ترتیب گام‌های «شروع کار» داشبورد:
 // ۱ داده‌ها (داشبورد) ← ۲ شاخص‌ها و ارز ← ۳ روش تعدیل ← ۴ تجهیزات و تخمین
 final _destinations = <_Dest>[
-  _Dest(Icons.space_dashboard_outlined, Icons.space_dashboard_rounded, 'داشبورد', () => const DashboardPage(),
+  _Dest(LucideIcons.layoutDashboard, LucideIcons.layoutDashboard, 'داشبورد', () => const DashboardPage(),
       section: 'گام‌های کار', step: 1),
-  _Dest(Icons.query_stats_outlined, Icons.query_stats_rounded, 'شاخص‌ها و ارز', () => const IndicesPage(), step: 2),
-  _Dest(Icons.science_outlined, Icons.science_rounded, 'روش‌های تعدیل', () => const MethodsPage(), step: 3),
-  _Dest(Icons.precision_manufacturing_outlined, Icons.precision_manufacturing_rounded, 'تجهیزات',
-      () => const EquipmentPage(), step: 4),
-  _Dest(Icons.calculate_outlined, Icons.calculate_rounded, 'تخمین و تعدیل', () => const EstimatorPage(), step: 4),
-  _Dest(Icons.tune_outlined, Icons.tune_rounded, 'ضرایب', () => const FactorsPage(), section: 'داده‌های پایه'),
-  _Dest(Icons.folder_open_outlined, Icons.folder_rounded, 'پروژه‌ها و اسناد', () => const DocumentsPage()),
-  _Dest(Icons.history_outlined, Icons.history_rounded, 'تاریخچه', () => const HistoryPage(), section: 'مدیریت'),
-  _Dest(Icons.group_outlined, Icons.group_rounded, 'کاربران', () => const UsersPage()),
-  _Dest(Icons.settings_outlined, Icons.settings_rounded, 'تنظیمات', () => const SettingsPage()),
+  _Dest(LucideIcons.chartLine, LucideIcons.chartLine, 'شاخص‌ها و ارز', () => const IndicesPage(), step: 2),
+  _Dest(LucideIcons.flaskConical, LucideIcons.flaskConical, 'روش‌های تعدیل', () => const MethodsPage(), step: 3),
+  _Dest(LucideIcons.factory, LucideIcons.factory, 'تجهیزات', () => const EquipmentPage(), step: 4),
+  _Dest(LucideIcons.calculator, LucideIcons.calculator, 'تخمین و تعدیل', () => const EstimatorPage(), step: 4),
+  _Dest(LucideIcons.slidersHorizontal, LucideIcons.slidersHorizontal, 'ضرایب', () => const FactorsPage(),
+      section: 'داده‌های پایه'),
+  _Dest(LucideIcons.folderOpen, LucideIcons.folderOpen, 'پروژه‌ها و اسناد', () => const DocumentsPage()),
+  _Dest(LucideIcons.history, LucideIcons.history, 'تاریخچه', () => const HistoryPage(), section: 'مدیریت'),
+  _Dest(LucideIcons.users, LucideIcons.users, 'کاربران', () => const UsersPage()),
+  _Dest(LucideIcons.settings, LucideIcons.settings, 'تنظیمات', () => const SettingsPage()),
 ];
 
 /// قاب اصلی: نوار کناری تیره + نوار بالا (سال هدف، جدول نرخ ارز، روش تعدیل، ریال/تومان).
@@ -172,9 +173,8 @@ class _Sidebar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.amber,
                 borderRadius: BorderRadius.circular(12),
-                boxShadow: [BoxShadow(color: AppColors.amber.withValues(alpha: 0.45), blurRadius: 16)],
               ),
-              child: Icon(Icons.water_drop_rounded, color: AppColors.navy, size: 25),
+              child: Icon(LucideIcons.droplets, color: AppColors.navy, size: 23),
             ),
             if (!compact) ...[
               const SizedBox(width: 12),

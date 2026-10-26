@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../app/app_state.dart';
 import '../../core/calc/pump_engine.dart';
@@ -9,6 +10,7 @@ import '../../core/repo/items_repo.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/hero_band.dart';
 import '../widgets/data_grid.dart' show gridNotStated, isNotStated;
 import '../widgets/field_editor.dart';
 
@@ -51,74 +53,58 @@ class _PumpDetailPageState extends State<PumpDetailPage> with SingleTickerProvid
     final result = item == null ? null : engine.calculate(PriceBank.inputFor(item));
     final canEdit = app.canEdit('MECH');
 
-    return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        toolbarHeight: 68,
-        title: item == null
-            ? const Text('پمپ جدید', style: TextStyle(fontWeight: FontWeight.w700))
-            : ItemTitle(
-                tag: isNotStated(item.tag) ? gridNotStated : item.tag!,
-                muted: isNotStated(item.tag),
-                name: item.name,
-                sub:
-                    'پمپ${(item.values['sub_category'] ?? '').toString().isEmpty ? '' : ' · ${item.values['sub_category']}'}',
-              ),
-        actions: [
-          if (item != null && !_editing && canEdit) ...[
-            OutlinedButton.icon(
-              onPressed: () => _archive(context, item),
-              icon: Icon(item.status == 'active' ? Icons.archive_outlined : Icons.unarchive_outlined),
-              label: Text(item.status == 'active' ? 'بایگانی' : 'بازگرداندن'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: () => setState(() {
-                _draft.clear();
-                _editing = true;
-                _tabs.index = 0;
-              }),
-              icon: const Icon(Icons.edit_rounded),
-              label: const Text('ویرایش'),
-            ),
-          ],
-          if (_editing) ...[
-            TextButton(
-              onPressed: () {
-                if (_id == null) {
-                  Navigator.pop(context);
-                } else {
-                  setState(() {
-                    _draft.clear();
-                    _editing = false;
-                  });
-                }
-              },
-              child: const Text('انصراف'),
-            ),
-            const SizedBox(width: 8),
-            FilledButton.icon(
-              onPressed: () => _save(context, item, fields),
-              icon: const Icon(Icons.save_rounded),
-              label: Text(_id == null ? 'ایجاد' : 'ذخیره‌ی تغییرات${_draft.isEmpty ? '' : ' (${fa(_draft.length)})'}'),
-            ),
-          ],
-          const SizedBox(width: 16),
-        ],
-        bottom: TabBar(
-          controller: _tabs,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(icon: Icon(Icons.description_outlined), text: 'مشخصات'),
-            Tab(icon: Icon(Icons.calculate_outlined), text: 'محاسبه‌ی قیمت'),
-            Tab(icon: Icon(Icons.request_quote_outlined), text: 'قیمت‌ها و استعلام‌ها'),
-            Tab(icon: Icon(Icons.history_rounded), text: 'تاریخچه'),
-          ],
+    final actions = <Widget>[
+      if (item != null && !_editing && canEdit) ...[
+        OutlinedButton.icon(
+          onPressed: () => _archive(context, item),
+          icon: Icon(item.status == 'active' ? LucideIcons.archive : LucideIcons.archiveRestore, size: 18),
+          label: Text(item.status == 'active' ? 'بایگانی' : 'بازگرداندن'),
         ),
-      ),
+        FilledButton.icon(
+          onPressed: () => setState(() {
+            _draft.clear();
+            _editing = true;
+            _tabs.index = 0;
+          }),
+          icon: const Icon(LucideIcons.pencil, size: 18),
+          label: const Text('ویرایش'),
+        ),
+      ],
+      if (_editing) ...[
+        TextButton(
+          onPressed: () {
+            if (_id == null) {
+              Navigator.pop(context);
+            } else {
+              setState(() {
+                _draft.clear();
+                _editing = false;
+              });
+            }
+          },
+          child: const Text('انصراف'),
+        ),
+        FilledButton.icon(
+          onPressed: () => _save(context, item, fields),
+          icon: const Icon(LucideIcons.save, size: 18),
+          label: Text(_id == null ? 'ایجاد' : 'ذخیره‌ی تغییرات${_draft.isEmpty ? '' : ' (${fa(_draft.length)})'}'),
+        ),
+      ],
+    ];
+    final tabs = TabBar(
+      controller: _tabs,
+      isScrollable: true,
+      tabAlignment: TabAlignment.start,
+      tabs: [
+        heroTab(LucideIcons.fileText, 'مشخصات'),
+        heroTab(LucideIcons.calculator, 'محاسبه‌ی قیمت'),
+        heroTab(LucideIcons.receipt, 'قیمت‌ها و استعلام‌ها'),
+        heroTab(LucideIcons.history, 'تاریخچه'),
+      ],
+    );
+    return Scaffold(
       body: Column(children: [
-        if (item != null && result != null) _PriceStrip(item: item, result: result),
+        _PumpHero(item: item, result: result, actions: actions, tabs: tabs),
         Expanded(
           child: TabBarView(controller: _tabs, children: [
             _SpecTab(
@@ -213,66 +199,87 @@ class _PumpDetailPageState extends State<PumpDetailPage> with SingleTickerProvid
 
 // -----------------------------------------------------------------------------
 
-class _PriceStrip extends StatelessWidget {
-  const _PriceStrip({required this.item, required this.result});
-  final ItemRecord item;
-  final PumpCalcResult result;
+class _PumpHero extends StatelessWidget {
+  const _PumpHero({required this.item, required this.result, required this.actions, required this.tabs});
+  final ItemRecord? item;
+  final PumpCalcResult? result;
+  final List<Widget> actions;
+  final TabBar tabs;
 
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     final unit = app.unit;
-    final t = Theme.of(context);
-    final qty = item.quantity ?? 1;
-    final flags = qaFlagsFa(result.qaFlags);
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-      child: FadeIn(
-        child: ReadoutStrip(
-          items: [
-            Readout(
-              label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
-              value: result.eurTarget.isNumber ? faNum(result.eurTarget.number) : '—',
-              unit: '€',
-              sub: !result.eurTarget.isNumber
-                  ? calcMessageFa(result.eurTarget.text)
-                  : (result.floorBinding ? 'کف قیمت API 610 اعمال شد' : 'روش ${result.methodCode}'),
-              color: AppColors.eur,
-              primary: true,
-            ),
-            Readout(
-              label: 'قیمت واحد',
-              value: money(result.irrTarget.number, unit, withUnit: false),
-              unit: unitLabel(unit),
-              sub: result.eurRateTarget == null
-                  ? 'نرخ یوروی سال هدف وارد نشده'
-                  : 'نرخ یورو: ${faNum(result.eurRateTarget)} ریال',
-              color: AppColors.irr,
-            ),
-            Readout(
-              label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
-              value: money(result.irrTarget.isNumber ? result.irrTarget.number! * qty : null, unit,
-                  compact: true, withUnit: false),
-              unit: unitLabel(unit),
-            ),
-            Readout(
-              label: 'ضریب هزینه (یورو/kWⁿ)',
-              value: faSmart(result.costCoef.number),
-              sub: 'ضریب پیکربندی: ${faSmart(result.allF)}',
-            ),
-          ],
-          footer: Wrap(spacing: 6, runSpacing: 6, children: [
-            if (item.projectName != null)
-              isNotStated(item.projectName)
-                  ? Pill('پروژه $gridNotStated', icon: Icons.folder_outlined, tooltip: item.projectName)
-                  : Pill(item.projectName!, icon: Icons.folder_outlined),
-            if (!item.include) Pill('خارج از جمع‌ها', color: t.colorScheme.outline),
-            if (item.status != 'active') Pill('بایگانی‌شده', color: Tones.bad(context)),
-            for (final f in flags) Pill(f, color: Tones.warn(context), icon: Icons.warning_amber_rounded),
-            if (flags.isEmpty) Pill('داده‌ی کامل', color: Tones.good(context), icon: Icons.check_circle_outline),
-          ]),
+    final it = item;
+    final r = result;
+    void back() => Navigator.maybePop(context);
+    if (it == null || r == null) {
+      return HeroBand(title: 'پمپ جدید', icon: LucideIcons.fuel, actions: actions, tabs: tabs, onBack: back);
+    }
+    final qty = it.quantity ?? 1;
+    final flags = qaFlagsFa(r.qaFlags);
+    String? spec(String key, String unitText) {
+      final v = it.valueOf(key);
+      return v is num ? '${faSmart(v)} $unitText' : null;
+    }
+
+    final sub = it.values['sub_category']?.toString();
+    return HeroBand(
+      onBack: back,
+      tag: isNotStated(it.tag) ? gridNotStated : it.tag!,
+      tagMuted: isNotStated(it.tag),
+      title: it.name,
+      subtitle: [
+        'پمپ',
+        if (sub != null && sub.isNotEmpty) sub,
+        if (it.projectName != null) isNotStated(it.projectName) ? 'پروژه $gridNotStated' : it.projectName!,
+      ].join('  ·  '),
+      chips: [
+        if (spec('capacity_m3h', 'm³/h') case final s?) HeroChip(LucideIcons.waves, 'دبی $s'),
+        if (spec('diff_head_m', 'm') case final s?) HeroChip(LucideIcons.arrowUpFromLine, 'هد $s'),
+        if (spec('power_kw', 'kW') case final s?) HeroChip(LucideIcons.zap, 'توان $s'),
+        if (it.valueOf('material_class') case final String m when m.isNotEmpty && !isNotStated(m))
+          HeroChip(LucideIcons.layers, 'متریال $m'),
+      ],
+      actions: actions,
+      readouts: [
+        HeroReadout(
+          label: 'یورو تعدیل‌شده (${fa(app.settings.targetYear)})',
+          number: r.eurTarget.isNumber ? r.eurTarget.number : null,
+          format: (v) => faNum(v),
+          unit: '€',
+          sub: !r.eurTarget.isNumber
+              ? calcMessageFa(r.eurTarget.text)
+              : (r.floorBinding ? 'کف قیمت API 610 اعمال شد' : 'روش ${r.methodCode}'),
+          primary: true,
         ),
-      ),
+        HeroReadout(
+          label: 'قیمت واحد',
+          number: r.irrTarget.number,
+          format: (v) => money(v.toDouble(), unit, withUnit: false),
+          unit: unitLabel(unit),
+          sub: r.eurRateTarget == null ? 'نرخ یوروی سال هدف وارد نشده' : 'نرخ یورو: ${faNum(r.eurRateTarget)} ریال',
+        ),
+        HeroReadout(
+          label: 'جمع برای ${fa(faSmart(qty))} دستگاه',
+          number: r.irrTarget.isNumber ? r.irrTarget.number! * qty : null,
+          format: (v) => money(v.toDouble(), unit, compact: true, withUnit: false),
+          unit: unitLabel(unit),
+        ),
+        HeroReadout(
+          label: 'ضریب هزینه (یورو/kWⁿ)',
+          number: r.costCoef.number,
+          format: (v) => faSmart(v),
+          sub: 'ضریب پیکربندی: ${faSmart(r.allF)}',
+        ),
+      ],
+      footer: Wrap(spacing: 6, runSpacing: 6, children: [
+        if (!it.include) const HeroStatus('خارج از جمع‌ها'),
+        if (it.status != 'active') HeroStatus('بایگانی‌شده', color: Tones.bad(context)),
+        for (final f in flags) HeroStatus(f, icon: LucideIcons.triangleAlert, color: const Color(0xFFF6C35B)),
+        if (flags.isEmpty) const HeroStatus('داده‌ی کامل', icon: LucideIcons.circleCheck, color: Color(0xFF7BE0A6)),
+      ]),
+      tabs: tabs,
     );
   }
 }
