@@ -152,7 +152,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Project skills in `.claude/skills/` from github.com/nextlevelbuilder/ui-ux-pro-max-skill v2.15.0 (MIT): `ui-ux-pro-max`
   (searchable styles/palettes/fonts/UX rules/Flutter stack: `python3 -E -s .claude/skills/ui-ux-pro-max/scripts/search.py
   "<query>" --design-system` or `--stack flutter`; `-I` breaks its local imports), `design-system`, `ui-styling`, `brand`,
-  `design`, `banner-design`, `slides`. Also installed by the user: frontend-design, vectorlab-ux-skills, Magic Patterns,
+  `design`, `banner-design`, `slides`; `shadcn-ui-flutter` (docs for the `shadcn_ui` package — package itself not added;
+  installed with `npx skills add nank1ro/flutter-shadcn-ui`, lock in `skills-lock.json`). Also installed by the user: frontend-design, vectorlab-ux-skills, Magic Patterns,
   Mobbin (Figma connector failed to connect from this environment). For UI work use them, but the no-gradient rule and
   «screenshot before applying» still hold; fonts stay Vazirmatn (bundled, offline).
 
