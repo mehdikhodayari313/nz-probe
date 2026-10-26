@@ -14,3 +14,6 @@ dist/
 # فایل‌های واقعی پروژه‌ها محرمانه‌اند و نباید در مخزن کد قرار بگیرند
 test/fixtures/*.xlsx
 test/fixtures/*.xlsm
+
+__pycache__/
+*.pyc
