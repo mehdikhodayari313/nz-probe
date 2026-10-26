@@ -121,7 +121,8 @@ UI (Vazirmatn), Rial/Toman toggle, light/dark + 6 palettes.
 - Hidden documents (#1, schema v3 `documents.hidden`, `items.source_document_id`): every item list/count must go through
   `ItemsRepo.loadCategory`/`count` or add `ItemsRepo.visibleSql` (alias `i`); `ItemRecord.observations` = visible only,
   `hiddenObservations` for display. MTO revision (#5): `MtoImporter._revisionOf` (newer by issue date, unknown → later import
-  newer, bank items stay reference), `_fillFromRevision` (empty fields only).
+  newer, bank items stay reference), `_fillFromRevision` (empty fields only; quantity of a newer revision replaces the old one,
+  user 1405/08/05).
 - Missing tag/project («Not stated…», «(نام پروژه در فایل قید نشده است) – …», empty) → «(قید نشده)» (`isNotStated`,
   `notStatedCell`, `GridColumn.notStated`) in tables, detail fields and headers (user 1405/08/04, all equipment).
 - Dart regex `\b` is ASCII-only; Persian word boundaries need `(^|\s)…(\s|$)`.

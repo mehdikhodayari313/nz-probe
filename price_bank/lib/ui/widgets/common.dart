@@ -721,3 +721,42 @@ class CategoryChip extends StatelessWidget {
   }
 }
 
+
+/// فیلتر بازه‌ی جمع‌وجور: عنوان چسبیده به دو کادر «از» و «تا» با فاصله‌ی کم و یکسان (کاربر ۱۴۰۵/۰۸/۰۵)
+class RangeFilter extends StatelessWidget {
+  const RangeFilter({super.key, required this.label, required this.from, required this.to, required this.onChanged});
+  final String label;
+  final TextEditingController from;
+  final TextEditingController to;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    final active = from.text.isNotEmpty || to.text.isNotEmpty;
+    Widget box(TextEditingController c, String hint) => SizedBox(
+          width: 78,
+          child: TextField(
+            controller: c,
+            textDirection: TextDirection.ltr,
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              hintText: hint,
+              isDense: true,
+              filled: true,
+              fillColor: c.text.isNotEmpty ? t.colorScheme.primaryContainer : null,
+            ),
+            onChanged: (_) => onChanged(),
+          ),
+        );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Text(label,
+          style: t.textTheme.labelLarge?.copyWith(
+              fontWeight: FontWeight.w600, color: active ? t.colorScheme.primary : t.colorScheme.onSurfaceVariant)),
+      const SizedBox(width: 6),
+      box(from, 'از'),
+      const SizedBox(width: 6),
+      box(to, 'تا'),
+    ]);
+  }
+}

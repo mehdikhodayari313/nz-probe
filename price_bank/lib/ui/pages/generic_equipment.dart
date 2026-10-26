@@ -33,7 +33,6 @@ class GenericCategoryView extends StatefulWidget {
 class _GenericCategoryViewState extends State<GenericCategoryView> {
   final _search = TextEditingController();
   String? _project;
-  bool _onlyPriced = false;
   bool _onlyQuoted = false;
   bool _showFilters = true;
   final Map<String, String?> _enumF = {};
@@ -59,7 +58,6 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
   void _clear() => setState(() {
         _search.clear();
         _project = null;
-        _onlyPriced = false;
         _onlyQuoted = false;
         _enumF.clear();
         for (final r in _rangeF.values) {
@@ -82,7 +80,6 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
       final pn = r.item.projectName ?? '';
       if (_project == kEmptyOption ? pn.isNotEmpty : pn != _project) return false;
     }
-    if (_onlyPriced && !r.result.eurTarget.isNumber) return false;
     if (_onlyQuoted && r.quoteCount == 0) return false;
     for (final e in _enumF.entries) {
       if (e.value == null || e.key == except) continue;
@@ -241,24 +238,17 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
                 if (_profile != null)
                   for (final f in _profile!.enumFields)
                     _enumFilter(context, all.where((r) => _match(r, except: f.key)).toList(), f.key, f.labelFa, f.list),
-                if (_profile != null)
+              ]),
+              if (_profile != null) ...[
+                const SizedBox(height: 10),
+                // بازه‌ها در یک سطر، عنوان چسبیده به کادرها (مثل پمپ‌ها)
+                Wrap(spacing: 24, runSpacing: 8, children: [
                   _rangeFilter(context, '_size', '${_profile!.driver.labelFa} (${_profile!.driver.unit})'),
-                if (_profile != null)
                   for (final k in _profile!.rangeKeys)
                     if (_profile!.field(k) case final f?)
                       _rangeFilter(context, k, '${f.labelFa}${f.unit == null ? '' : ' (${f.unit})'}'),
-                ToggleChip(
-                  label: 'فقط دارای قیمت تعدیل‌شده',
-                  selected: _onlyPriced,
-                  color: Tones.good(context),
-                  onChanged: (v) => setState(() => _onlyPriced = v),
-                ),
-                ToggleChip(
-                  label: 'فقط دارای استعلام',
-                  selected: _onlyQuoted,
-                  onChanged: (v) => setState(() => _onlyQuoted = v),
-                ),
-              ]),
+                ]),
+              ],
             ],
           ]),
         ),
@@ -461,16 +451,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
 
   Widget _rangeFilter(BuildContext context, String key, String label) {
     final c = _range(key);
-    InputDecoration dec(String h) => InputDecoration(hintText: h, isDense: true);
-    return SizedBox(
-      width: 300,
-      child: Row(children: [
-        SizedBox(width: 120, child: Text(label, style: Theme.of(context).textTheme.labelMedium)),
-        Expanded(child: TextField(controller: c.$1, textDirection: TextDirection.ltr, decoration: dec('از'), onChanged: (_) => setState(() {}))),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('تا')),
-        Expanded(child: TextField(controller: c.$2, textDirection: TextDirection.ltr, decoration: dec('تا'), onChanged: (_) => setState(() {}))),
-      ]),
-    );
+    return RangeFilter(label: label, from: c.$1, to: c.$2, onChanged: () => setState(() {}));
   }
 
   Future<void> _exportCsv(

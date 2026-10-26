@@ -36,11 +36,7 @@ const _enumFilters = <String, String>{
   'material_class': 'کلاس متریال',
   'seal_arrangement': 'آب‌بند',
   'driver_type': 'محرک',
-  'service_fluid': 'سیال سرویس',
   'nace': 'NACE',
-  'cost_year': 'سال قیمت',
-  'currency': 'ارز',
-  'include_in_totals': 'شمارش در جمع',
 };
 
 class _EquipmentPageState extends State<EquipmentPage> {
@@ -54,8 +50,6 @@ class _EquipmentPageState extends State<EquipmentPage> {
     'diff_head_m': (TextEditingController(), TextEditingController()),
     'size_kw': (TextEditingController(), TextEditingController()),
   };
-  bool _onlyPriced = false;
-  bool _onlyIssues = false;
   bool _showFilters = true;
 
   /// ستون‌های قابل نمایش (بین اجراهای صفحه حفظ می‌شود)
@@ -114,8 +108,6 @@ class _EquipmentPageState extends State<EquipmentPage> {
       if (lo != null && v < lo) return false;
       if (hi != null && v > hi) return false;
     }
-    if (_onlyPriced && !r.result.eurTarget.isNumber) return false;
-    if (_onlyIssues && r.result.qaFlags.isEmpty) return false;
     return true;
   }
 
@@ -126,8 +118,6 @@ class _EquipmentPageState extends State<EquipmentPage> {
           r.$1.clear();
           r.$2.clear();
         }
-        _onlyPriced = false;
-        _onlyIssues = false;
       });
 
   Future<void> _open(BuildContext context, int? itemId) async {
@@ -277,6 +267,12 @@ class _EquipmentPageState extends State<EquipmentPage> {
         ));
   }
 
+  /// نام کامل زیرگروه‌ها (کد ← نام)
+  Map<String, String> get _subName => {
+        for (final o in AppScope.read(context).pb.catalog.options('SubCat'))
+          if (o.labelFa != null) o.value: o.labelFa!,
+      };
+
   List<(String, GridColumn<PumpRow>)> _columns(MoneyUnit unit) => [
         (
           'qa',
@@ -319,7 +315,17 @@ class _EquipmentPageState extends State<EquipmentPage> {
           )
         ),
         ('project', GridColumn(label: 'پروژه', width: 120, notStated: true, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? '')),
-        ('sub', GridColumn(label: 'زیرگروه', width: 84, ltr: true, text: (r) => _val(r, 'sub_category'), sortKey: (r) => _val(r, 'sub_category'))),
+        (
+          'sub',
+          GridColumn(
+            label: 'زیرگروه',
+            width: 150,
+            fitMax: 260,
+            ltr: true,
+            text: (r) => _subName[_val(r, 'sub_category')] ?? _val(r, 'sub_category'),
+            sortKey: (r) => _val(r, 'sub_category'),
+          )
+        ),
         ('type', GridColumn(label: 'نوع', width: 58, ltr: true, text: (r) => _val(r, 'api610_type'), sortKey: (r) => _val(r, 'api610_type'))),
         ('mat', GridColumn(label: 'متریال', width: 62, ltr: true, text: (r) => _val(r, 'material_class'), sortKey: (r) => _val(r, 'material_class'))),
         (
@@ -427,9 +433,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
   Widget _filtersBar(BuildContext context, List<PumpRow> all, List<PumpRow> rows) {
     final t = Theme.of(context);
     final active = _filters.values.whereType<String>().length +
-        _ranges.values.where((r) => r.$1.text.isNotEmpty || r.$2.text.isNotEmpty).length +
-        (_onlyPriced ? 1 : 0) +
-        (_onlyIssues ? 1 : 0);
+        _ranges.values.where((r) => r.$1.text.isNotEmpty || r.$2.text.isNotEmpty).length;
     final priced = rows.where((r) => r.result.eurTarget.isNumber).length;
     final fields = {for (final f in AppScope.read(context).pb.catalog.fields(AppScope.read(context).pb.pumpCategory.id)) f.key: f};
     return SectionCard(
@@ -481,25 +485,17 @@ class _EquipmentPageState extends State<EquipmentPage> {
         ]),
         if (_showFilters) ...[
           const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 8, crossAxisAlignment: WrapCrossAlignment.center, children: [
+          Wrap(spacing: 8, runSpacing: 8, children: [
             for (final e in _enumFilters.entries)
               _enumFilter(context, [
                 for (final r in all)
                   if (_match(r, _search.text.trim().toLowerCase(), except: e.key)) r,
               ], e.key, e.value, fields[e.key]?.listKey),
+          ]),
+          const SizedBox(height: 10),
+          // بازه‌ها در یک سطر، عنوان چسبیده به کادرها
+          Wrap(spacing: 24, runSpacing: 8, children: [
             for (final e in _ranges.entries) _rangeFilter(context, e.key, e.value),
-            ToggleChip(
-              label: 'فقط دارای قیمت تعدیل‌شده',
-              selected: _onlyPriced,
-              color: Tones.good(context),
-              onChanged: (v) => setState(() => _onlyPriced = v),
-            ),
-            ToggleChip(
-              label: 'فقط دارای هشدار داده',
-              selected: _onlyIssues,
-              color: Tones.warn(context),
-              onChanged: (v) => setState(() => _onlyIssues = v),
-            ),
           ]),
         ],
       ]),
@@ -526,6 +522,8 @@ class _EquipmentPageState extends State<EquipmentPage> {
       if (v == kEmptyOption) return kEmptyOptionLabel;
       if (key == 'cost_year') return fa(v);
       if (listKey == 'YN' || listKey == 'YNS') return labels[v] ?? v;
+      // زیرگروه: نام کامل به جای کد کوتاه (ROT-CRU ← Crude Oil & Main Transfer Pumps)
+      if (listKey == 'SubCat') return labels[v] ?? v;
       return v;
     }
 
@@ -582,17 +580,12 @@ class _EquipmentPageState extends State<EquipmentPage> {
   }
 
   Widget _rangeFilter(BuildContext context, String key, (TextEditingController, TextEditingController) c) {
-    final label = switch (key) { 'capacity_m3h' => 'دبی m³/h', 'diff_head_m' => 'هد اختلافی m', _ => 'توان kW' };
-    InputDecoration dec(String h) => InputDecoration(hintText: h, isDense: true);
-    return SizedBox(
-      width: 220,
-      child: Row(children: [
-        SizedBox(width: 62, child: Text(label, style: Theme.of(context).textTheme.labelMedium)),
-        Expanded(child: TextField(controller: c.$1, decoration: dec('از'), onChanged: (_) => setState(() {}))),
-        const Padding(padding: EdgeInsets.symmetric(horizontal: 4), child: Text('تا')),
-        Expanded(child: TextField(controller: c.$2, decoration: dec('تا'), onChanged: (_) => setState(() {}))),
-      ]),
-    );
+    final label = switch (key) {
+      'capacity_m3h' => 'دبی (m³/h)',
+      'diff_head_m' => 'هد اختلافی (m)',
+      _ => 'توان (kW)',
+    };
+    return RangeFilter(label: label, from: c.$1, to: c.$2, onChanged: () => setState(() {}));
   }
 
   Future<void> _exportCsv(BuildContext context, List<PumpRow> rows, MoneyUnit unit) async {
