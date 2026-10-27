@@ -6,10 +6,14 @@ import 'generic_equipment.dart' show CategorySettingsDialog;
 import '../../app/app_state.dart';
 import '../../core/calc/generic_estimator.dart';
 import '../../core/catalog/profiles.dart';
+import '../../core/repo/catalog_repo.dart' show FieldType;
 import '../../core/price_bank.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/data_grid.dart';
+import '../widgets/equipment_columns.dart';
+import '../widgets/item_picker.dart';
 import '../widgets/factor_dialog.dart';
 import 'estimator_page.dart';
 
@@ -89,6 +93,54 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
     _qty.text = (r.item.quantity ?? 1).toStringAsFixed(0);
   }
 
+  /// ستون‌های جدول اقلام این رده (انتخاب قلم و همتاها) با سرستون مشخصات کلیدی
+  List<GridColumn<T>> _columns<T>(AppState app, int catId, GenericRow? Function(T) rowOf, {List<GridColumn<T>> extra = const []}) {
+    final fields = {for (final f in app.pb.catalog.fields(catId)) f.key: f};
+    String txt(Object? v) => v is num ? faSmart(v) : (v?.toString() ?? '');
+    return [
+      GridColumn<T>(label: 'تگ', width: 100, ltr: true, notStated: true, text: (r) => rowOf(r)?.item.tag ?? '', sortKey: (r) => rowOf(r)?.item.tag ?? ''),
+      GridColumn<T>(label: 'نام / سرویس', width: 190, fitMax: 300, align: TextAlign.start, ltr: true, text: (r) => rowOf(r)?.item.name ?? '', sortKey: (r) => rowOf(r)?.item.name ?? ''),
+      GridColumn<T>(label: 'پروژه', width: 110, notStated: true, text: (r) => rowOf(r)?.item.projectName ?? '', sortKey: (r) => rowOf(r)?.item.projectName ?? ''),
+      for (final k in _p.gridKeys)
+        if (fields[k] case final f?)
+          GridColumn<T>(
+            label: '${f.labelFa}${f.unit == null ? '' : '\n${f.unit}'}',
+            width: 92,
+            numeric: f.type == FieldType.number,
+            ltr: f.type != FieldType.number,
+            text: (r) => txt(rowOf(r)?.item.values[k]),
+            sortKey: (r) {
+              final v = rowOf(r)?.item.values[k];
+              if (f.type == FieldType.number) return v is num ? v.toDouble() : double.negativeInfinity;
+              return v?.toString() ?? '';
+            },
+          ),
+      GridColumn<T>(
+          label: '${_p.driver.labelFa}\n${_p.driver.unit}', width: 92, numeric: true,
+          text: (r) => faSmart(rowOf(r)?.size), sortKey: (r) => rowOf(r)?.size),
+      costYearColumn<T>((r) => rowOf(r)!.item),
+      ...extra,
+    ];
+  }
+
+  Future<void> _pick(BuildContext context, AppState app, int catId, List<GenericRow> rows) async {
+    final r = await showItemPicker<GenericRow>(
+      context,
+      title: 'انتخاب قلم از بانک (${app.pb.catalog.categoryByCode(_code)?.nameFa ?? ''})',
+      rows: rows,
+      columns: _columns<GenericRow>(app, catId, (r) => r, extra: [
+        GridColumn<GenericRow>(
+            label: 'یورو\nتعدیل‌شده', width: 100, numeric: true,
+            text: (r) => faNum(r.result.eurTarget.number), sortKey: (r) => r.result.eurTarget.number),
+      ]),
+      searchText: (r) => [r.item.tag, r.item.name, r.item.projectName, ...r.item.values.values.map((v) => v?.toString())]
+          .whereType<String>()
+          .join(' '),
+    );
+    if (r == null || !mounted) return;
+    setState(() => _fill(r));
+  }
+
   static String _plain(double v) {
     if (v == v.roundToDouble()) return v.toStringAsFixed(0);
     return v.toStringAsFixed(3).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
@@ -115,6 +167,8 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
     );
     final unit = app.unit;
     final setCode = factorSetOf(_code);
+    final pe = app.pb.pumpEngine();
+    final fx = (pe.eurRateTarget, pe.usdRateTarget);
 
     final inputs = SectionCard(
       title: 'مشخصات تجهیز مورد نظر',
@@ -132,19 +186,13 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
         _row(
           context,
           'پر کردن از یک قلم بانک (اختیاری)',
-          DropdownButtonFormField<int?>(itemHeight: null, 
-            value: rows.any((r) => r.item.id == _fromItem) ? _fromItem : null,
-            isExpanded: true,
-            items: [
-              const DropdownMenuItem<int?>(value: null, child: DdText('—')),
-              for (final r in rows)
-                DropdownMenuItem<int?>(
-                    value: r.item.id, child: DdText('${r.item.tag ?? ''} · ${r.item.name}', overflow: TextOverflow.ellipsis)),
-            ],
-            onChanged: (v) => setState(() {
-              final r = rows.where((r) => r.item.id == v).firstOrNull;
-              if (r != null) _fill(r);
-            }),
+          PickButton(
+            key: const Key('estimator-pick'),
+            label: () {
+              final r = rows.where((r) => r.item.id == _fromItem).firstOrNull;
+              return r == null ? null : '${r.item.tag ?? ''} · ${r.item.name}';
+            }(),
+            onTap: () => _pick(context, app, cat.id, rows),
           ),
           help: 'مشخصات یک قلم موجود را به عنوان نقطه‌ی شروع وارد می‌کند؛ سپس هر مقدار را تغییر دهید.',
         ),
@@ -241,40 +289,50 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
       ),
       const SizedBox(height: 14),
       SectionCard(
+        title: 'جزئیات محاسبه',
+        icon: Icons.functions_rounded,
+        child: Column(children: [
+          _line(context, 'پارامتر اندازه', e.size == null ? '—' : '${_p.driver.labelFa} = ${faSmart(e.size)} ${_p.driver.unit}'),
+          _line(context, 'ضریب کل پیکربندی', () {
+            final parts = [
+              for (final g in e.factors.entries)
+                if (g.value.$1 != null) '${_factorLabel[g.key] ?? g.key} ${faSmart(g.value.$2)}',
+            ].join(' × ');
+            return parts.isEmpty ? faSmart(e.allF) : '$parts = ${faSmart(e.allF)}';
+          }()),
+          _line(context, 'ضریب هزینه‌ی همتاها (یورو/${_p.driver.unit}ⁿ)',
+              e.res.coefAvg == null ? '—' : 'میانگین ${faSmart(e.res.coefAvg)} · کمینه ${faSmart(e.res.coefMin)} · بیشینه ${faSmart(e.res.coefMax)}'),
+          _line(context, 'فرمول', 'ضریب هزینه × ${_p.driver.labelFa}^${faSmart(est.n)} × ضریب پیکربندی'),
+          _line(context, 'نرخ یوروی سال هدف', fx.$1 == null ? 'وارد نشده' : '${faNum(fx.$1)} ریال'),
+          _line(context, 'نرخ دلار سال هدف', fx.$2 == null ? 'وارد نشده' : '${faNum(fx.$2)} ریال'),
+        ]),
+      ),
+    ]);
+    // جدول همتاها تمام‌عرض زیر ورودی‌ها و نتیجه (ستون‌های مشخصات فنی جا شوند)
+    final peersCard = SectionCard(
         title: 'همتاها',
-        subtitle: 'یورو نرمال‌شده = یوروی تعدیل‌شده ÷ ضریب پیکربندی · ضریب هزینه = یورو نرمال‌شده ÷ اندازه^n',
+        subtitle: 'یورو نرمال‌شده = یوروی تعدیل‌شده ÷ ضریب پیکربندی · ضریب هزینه = یورو نرمال‌شده ÷ اندازه^n · روی ستون‌ها بزنید تا مرتب شود',
         icon: Icons.people_alt_outlined,
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
         child: e.peers.isEmpty
             ? const Padding(padding: EdgeInsets.all(8), child: Text('همتایی با اندازه و قیمت معتبر در این رده نیست.'))
-            : Column(children: [
-                for (var i = 0; i < e.peers.length; i++)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: e.nearest?.itemId == e.peers[i].itemId
-                          ? AppColors.amberSoft
-                          : (i.isOdd ? AppColors.zebra : null),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(children: [
-                      SizedBox(
-                        width: 100,
-                        child: Text(e.peers[i].tag,
-                            textDirection: TextDirection.ltr,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.strong)),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text('${e.peers[i].name} · ${e.peers[i].project}', overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5))),
-                      SizedBox(width: 110, child: Text('${faSmart(e.peers[i].size)} ${_p.driver.unit}', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
-                      SizedBox(width: 110, child: Text('${compactNum(e.peers[i].normEur)} €', textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.eur))),
-                      SizedBox(width: 90, child: Text(faSmart(e.peers[i].coef), textAlign: TextAlign.end, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-                    ]),
-                  ),
-              ]),
-      ),
-    ]);
+            : () {
+                final byId = {for (final r in rows) r.item.id: r};
+                final list = [for (final p in e.peers) (p, byId[p.itemId])];
+                return PeerTable<(GenericPeer, GenericRow?)>(
+                  rows: list,
+                  highlight: (x) => e.nearest?.itemId == x.$1.itemId,
+                  columns: _columns<(GenericPeer, GenericRow?)>(app, cat.id, (x) => x.$2, extra: [
+                    GridColumn(
+                        label: 'یورو\nنرمال‌شده', width: 100, numeric: true,
+                        text: (x) => compactNum(x.$1.normEur), sortKey: (x) => x.$1.normEur),
+                    GridColumn(
+                        label: 'ضریب\nهزینه', width: 84, numeric: true,
+                        text: (x) => faSmart(x.$1.coef), sortKey: (x) => x.$1.coef),
+                  ]),
+                );
+              }(),
+      );
 
     return ListView(padding: const EdgeInsets.all(20), children: [
       HelpPanel(
@@ -299,6 +357,8 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
           Expanded(child: results),
         ]);
       }),
+      const SizedBox(height: 14),
+      peersCard,
     ]);
   }
 
@@ -377,6 +437,14 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
       ),
     );
   }
+
+  Widget _line(BuildContext context, String k, String v) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          SizedBox(width: 200, child: Text(k, style: Theme.of(context).textTheme.bodySmall)),
+          Expanded(child: Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700))),
+        ]),
+      );
 
   Widget _row(BuildContext context, String label, Widget field, {Widget? trailing, String? help}) => Padding(
         padding: const EdgeInsets.only(bottom: 8),

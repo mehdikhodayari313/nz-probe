@@ -4,9 +4,13 @@ import '../../app/app_state.dart';
 import '../../core/calc/estimator.dart';
 import '../../core/calc/methods.dart';
 import '../../core/calc/pump_engine.dart';
+import '../../core/price_bank.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/data_grid.dart';
+import '../widgets/equipment_columns.dart';
+import '../widgets/item_picker.dart';
 import '../widgets/factor_dialog.dart';
 import '../widgets/category_picker.dart';
 import 'equipment_page.dart';
@@ -114,6 +118,9 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
   /// راندمان پمپ برای برآورد توان از دبی و هد (خالی = مقدار تنظیمات)
   final _eta = TextEditingController();
 
+  /// پمپ بانک که مشخصاتش نقطه‌ی شروع این تخمین است (اختیاری)
+  int? _fromItem;
+
   static const _params = <(String, String, String)>[
     ('sub_category', 'زیرگروه', 'SubCat'),
     ('match', 'فقط همتاهای همین زیرگروه؟', 'YN'),
@@ -173,6 +180,64 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
     });
   }
 
+  static String _plain(double? v) {
+    if (v == null) return '';
+    if (v == v.roundToDouble()) return v.toStringAsFixed(0);
+    return v.toStringAsFixed(2).replaceFirst(RegExp(r'0+$'), '').replaceFirst(RegExp(r'\.$'), '');
+  }
+
+  /// مشخصات یک پمپ بانک در فرم (گزینه‌هایی که در فهرست‌ها هست؛ دبی، هد، توان و تعداد)
+  void _fill(AppState app, PumpRow r) {
+    _fromItem = r.item.id;
+    for (final (key, _, list) in _params) {
+      if (key == 'match') continue;
+      final v = asText(r.item.values[key]);
+      if (app.pb.catalog.options(list).any((o) => o.value == v)) _p[key] = v;
+    }
+    final head = asNumber(r.item.values['diff_head_m']) ??
+        (asNumber(r.item.values['diff_pressure_bar']) == null ? null : asNumber(r.item.values['diff_pressure_bar'])! * 10.2);
+    _q.text = _plain(asNumber(r.item.values['capacity_m3h']));
+    _h.text = _plain(head);
+    _kw.text = _plain(asNumber(r.item.values['power_kw']));
+    _qty.text = _plain(r.item.quantity ?? 1);
+  }
+
+  /// ستون‌های جدول پمپ‌ها (انتخاب قلم و همتاها) با سرستون مشخصات فنی
+  List<GridColumn<PumpRow>> _pumpColumns(AppState app, {bool coef = true}) {
+    final sub = {for (final o in app.pb.catalog.options('SubCat')) o.value: o.labelFa ?? o.value};
+    String v(PumpRow r, String k) => asText(r.item.values[k]);
+    double? n(PumpRow r, String k) => asNumber(r.item.values[k]);
+    return [
+      GridColumn(label: 'تگ', width: 100, ltr: true, notStated: true, text: (r) => r.item.tag ?? '', sortKey: (r) => r.item.tag ?? ''),
+      GridColumn(label: 'نام / سرویس', width: 190, fitMax: 300, align: TextAlign.start, text: (r) => r.item.name, sortKey: (r) => r.item.name),
+      GridColumn(label: 'پروژه', width: 110, notStated: true, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
+      GridColumn(label: 'زیرگروه', width: 150, fitMax: 230, ltr: true, text: (r) => sub[v(r, 'sub_category')] ?? v(r, 'sub_category'), sortKey: (r) => v(r, 'sub_category')),
+      GridColumn(label: 'نوع', width: 58, ltr: true, text: (r) => v(r, 'api610_type'), sortKey: (r) => v(r, 'api610_type')),
+      GridColumn(label: 'متریال', width: 62, ltr: true, text: (r) => v(r, 'material_class'), sortKey: (r) => v(r, 'material_class')),
+      GridColumn(label: 'دبی\nm³/h', width: 64, numeric: true, text: (r) => faSmart(n(r, 'capacity_m3h')), sortKey: (r) => n(r, 'capacity_m3h')),
+      GridColumn(label: 'هد\n(m)', width: 64, numeric: true, text: (r) => faSmart(n(r, 'diff_head_m')), sortKey: (r) => n(r, 'diff_head_m')),
+      GridColumn(label: 'توان\nkW', width: 64, numeric: true, text: (r) => faSmart(r.result.sizeKw.number), sortKey: (r) => r.result.sizeKw.number),
+      costYearColumn<PumpRow>((r) => r.item),
+      GridColumn(label: 'یورو\nتعدیل‌شده', width: 100, numeric: true, text: (r) => faNum(r.result.eurTarget.number), sortKey: (r) => r.result.eurTarget.number),
+      if (coef)
+        GridColumn(label: 'ضریب هزینه\n(یورو/kWⁿ)', width: 96, numeric: true, text: (r) => faSmart(r.result.costCoef.number), sortKey: (r) => r.result.costCoef.number),
+    ];
+  }
+
+  Future<void> _pick(BuildContext context, AppState app) async {
+    final r = await showItemPicker<PumpRow>(
+      context,
+      title: 'انتخاب پمپ از بانک',
+      rows: app.pumps,
+      columns: _pumpColumns(app, coef: false),
+      searchText: (r) => [r.item.tag, r.item.name, r.item.projectName, ...r.item.values.values.map((v) => v?.toString())]
+          .whereType<String>()
+          .join(' '),
+    );
+    if (r == null || !mounted) return;
+    setState(() => _fill(app, r));
+  }
+
   @override
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
@@ -230,6 +295,23 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
           child: Row(children: [
             SizedBox(width: 170, child: Text('رده‌ی تجهیز', style: t.textTheme.bodySmall)),
             Expanded(child: widget.picker),
+            const SizedBox(width: 104),
+          ]),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Row(children: [
+            SizedBox(width: 170, child: Text('پر کردن از یک پمپ بانک (اختیاری)', style: t.textTheme.bodySmall)),
+            Expanded(
+              child: PickButton(
+                key: const Key('estimator-pick'),
+                label: () {
+                  final r = app.pumps.where((r) => r.item.id == _fromItem).firstOrNull;
+                  return r == null ? null : '${r.item.tag ?? ''} · ${r.item.name}';
+                }(),
+                onTap: () => _pick(context, app),
+              ),
+            ),
             const SizedBox(width: 104),
           ]),
         ),
@@ -318,38 +400,21 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
           _line(context, 'نرخ دلار سال هدف', r.usdRate == null ? 'وارد نشده' : '${faNum(r.usdRate)} ریال'),
         ]),
       ),
-      const SizedBox(height: 14),
-      SectionCard(
+    ]);
+    // جدول همتاها تمام‌عرض زیر ورودی‌ها و نتیجه (ستون‌های مشخصات فنی جا شوند)
+    final peersCard = SectionCard(
         title: 'پمپ‌های همتا',
-        subtitle: 'مبنای میانگین ضریب هزینه',
+        subtitle: 'مبنای میانگین ضریب هزینه · روی هر ستون بزنید تا مرتب شود',
         icon: Icons.people_alt_outlined,
         padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
         child: r.peers.isEmpty
             ? const Padding(padding: EdgeInsets.all(8), child: Text('—'))
-            : Column(children: [
-                for (var i = 0; i < r.peers.length; i++)
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: i.isOdd ? AppColors.zebra : null,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(children: [
-                      SizedBox(
-                        width: 120,
-                        child: Text(r.peers[i].tag,
-                            textDirection: TextDirection.ltr,
-                            textAlign: TextAlign.right,
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12.5, color: AppColors.petrolDark)),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(child: Text(r.peers[i].name, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5))),
-                      Text(faSmart(r.peers[i].costCoef), style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
-                    ]),
-                  ),
-              ]),
-      ),
-    ]);
+            : () {
+                final byId = {for (final p in app.pumps) p.item.id: p};
+                final rows = [for (final p in r.peers) if (byId[p.itemId] != null) byId[p.itemId]!];
+                return PeerTable<PumpRow>(rows: rows, columns: _pumpColumns(app));
+              }(),
+      );
 
     return ListView(padding: const EdgeInsets.all(20), children: [
       const HelpPanel(
@@ -373,6 +438,8 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
           Expanded(child: results),
         ]);
       }),
+      const SizedBox(height: 14),
+      peersCard,
     ]);
   }
 
@@ -998,3 +1065,58 @@ class _TransferResults extends StatelessWidget {
     ]);
   }
 }
+
+/// دکمه‌ی انتخاب قلم از جدول (نام قلم انتخاب‌شده یا «انتخاب از جدول…»)
+class PickButton extends StatelessWidget {
+  const PickButton({super.key, required this.label, required this.onTap});
+  final String? label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context);
+    return OutlinedButton(
+      onPressed: onTap,
+      style: OutlinedButton.styleFrom(
+        alignment: AlignmentDirectional.centerStart,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      ),
+      child: Row(children: [
+        Icon(Icons.manage_search_rounded, size: 18, color: AppColors.petrol),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(label ?? 'انتخاب از جدول اقلام بانک…',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              // تگ و نام لاتین: از چپ خوانده شود تا تگ کامل دیده شود
+              textDirection: label == null ? null : TextDirection.ltr,
+              textAlign: TextAlign.right,
+              style: t.textTheme.bodyMedium?.copyWith(color: label == null ? t.colorScheme.onSurfaceVariant : null)),
+        ),
+      ]),
+    );
+  }
+}
+
+/// جدول همتاها با سرستون مشخصات فنی (ارتفاع به اندازه‌ی ردیف‌ها، حداکثر ۴۴۰)
+class PeerTable<T> extends StatelessWidget {
+  const PeerTable({super.key, required this.rows, required this.columns, this.highlight});
+  final List<T> rows;
+  final List<GridColumn<T>> columns;
+  final bool Function(T row)? highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    final h = (58 + rows.length * 40 + 14).clamp(120, 440).toDouble();
+    return SizedBox(
+      height: h,
+      child: DataGrid<T>(
+        rows: rows,
+        columns: columns,
+        rowHeight: 40,
+        rowColor: highlight == null ? null : (c, r) => highlight!(r) ? AppColors.amberSoft : null,
+      ),
+    );
+  }
+}
+
