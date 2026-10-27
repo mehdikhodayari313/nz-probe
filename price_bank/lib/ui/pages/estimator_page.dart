@@ -11,6 +11,8 @@ import '../widgets/common.dart';
 import '../widgets/data_grid.dart';
 import '../widgets/equipment_columns.dart';
 import '../widgets/item_picker.dart';
+import '../widgets/help_info.dart';
+import '../help/topics.dart';
 import '../widgets/factor_dialog.dart';
 import '../widgets/category_picker.dart';
 import 'equipment_page.dart';
@@ -36,14 +38,24 @@ class _EstimatorPageState extends State<EstimatorPage> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final s = AppScope.of(context).settings;
+    // هر زبانه ⓘ دارد: این بخش چیست و چه فرقی با زبانه‌ی دیگر دارد (کلیک = توضیح کامل)
+    Widget tab(IconData icon, String text, HelpTopic help, String key) => Tab(
+          icon: Icon(icon),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            Text(text),
+            const SizedBox(width: 2),
+            InfoButton(help, key: ValueKey(key)),
+          ]),
+        );
     return Column(children: [
       Material(
         color: Theme.of(context).colorScheme.surface,
         child: TabBar(
           controller: _tabs,
-          tabs: const [
-            Tab(icon: Icon(Icons.auto_graph_rounded), text: 'تخمین تجهیزات'),
-            Tab(icon: Icon(Icons.trending_up_rounded), text: 'انتقال قیمت قدیم به سال هدف'),
+          tabs: [
+            tab(Icons.auto_graph_rounded, 'تخمین تجهیز جدید', estimatorTopic(s.targetYear), 'help-estimator'),
+            tab(Icons.trending_up_rounded, 'انتقال قیمت قدیم به سال هدف', transferTopic(s.targetYear, s.floorBaseYear), 'help-transfer'),
           ],
         ),
       ),
@@ -398,6 +410,9 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
           _line(context, 'کف قیمت API 610', r.floorApplies ? '${faNum(r.floorEur)} یورو (اعمال می‌شود)' : 'مشمول نیست'),
           _line(context, 'نرخ یوروی سال هدف', r.eurRate == null ? 'وارد نشده' : '${faNum(r.eurRate)} ریال'),
           _line(context, 'نرخ دلار سال هدف', r.usdRate == null ? 'وارد نشده' : '${faNum(r.usdRate)} ریال'),
+          _line(context, 'تعدیل قیمت همتاها',
+              'با روش ${engine.settings.method} به سال ${fa(app.settings.targetYear)} — روی هر همتا در جدول بزنید تا گام‌هایش را ببینید',
+              help: peerEscalationTopic(engine.settings.method, app.settings.targetYear)),
         ]),
       ),
     ]);
@@ -412,7 +427,15 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
             : () {
                 final byId = {for (final p in app.pumps) p.item.id: p};
                 final rows = [for (final p in r.peers) if (byId[p.itemId] != null) byId[p.itemId]!];
-                return PeerTable<PumpRow>(rows: rows, columns: _pumpColumns(app));
+                return PeerTable<PumpRow>(
+                  rows: rows,
+                  columns: _pumpColumns(app),
+                  onTap: (p) => showCalcSteps(context,
+                      title: '${p.item.tag ?? ''} · ${p.item.name}',
+                      subtitle: 'گام‌های تعدیل قیمت این همتا به سال ${fa(app.settings.targetYear)} با روش ${engine.settings.method}؛ '
+                          'ضریب هزینه = یوروی نرمال‌شده‌ی تعدیل‌شده ÷ kWⁿ = ${faSmart(p.result.costCoef.number)}',
+                      steps: p.result.steps),
+                );
               }(),
       );
 
@@ -450,14 +473,7 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
             width: 170,
             child: Row(children: [
               Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
-              if (help != null)
-                Tooltip(
-                  message: help,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 4),
-                    child: Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.outline),
-                  ),
-                ),
+              if (help != null) InfoButton.text(label, help),
             ]),
           ),
           Expanded(
@@ -472,10 +488,16 @@ class _NewPumpEstimatorState extends State<_NewPumpEstimator> {
         ]),
       );
 
-  Widget _line(BuildContext context, String k, String v) => Padding(
+  Widget _line(BuildContext context, String k, String v, {HelpTopic? help}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 220, child: Text(k, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600))),
+          SizedBox(
+            width: 220,
+            child: Row(children: [
+              Flexible(child: Text(k, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600))),
+              if (help != null) InfoButton(help, size: 14),
+            ]),
+          ),
           Expanded(child: Text(v, style: Theme.of(context).textTheme.bodySmall)),
         ]),
       );
@@ -724,6 +746,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
       LayoutBuilder(builder: (context, c) {
         final res = SectionCard(
             title: 'محاسبه‌ی گام‌به‌گام',
+            help: transferTopic(s.targetYear, s.floorBaseYear),
             subtitle: '$catName · ${methodLabelFor(method, pump: isPump, ppiName: ppiName, usPpiName: usName)}',
             icon: Icons.stairs_outlined,
             child: steps);
@@ -770,11 +793,7 @@ class _TransferCalculatorState extends State<_TransferCalculator> {
     final t = Theme.of(context);
     return Row(children: [
       Flexible(child: Text(label, style: t.textTheme.bodySmall)),
-      if (help != null)
-        Tooltip(message: help, child: Padding(
-          padding: const EdgeInsetsDirectional.only(start: 4),
-          child: Icon(Icons.info_outline_rounded, size: 14, color: t.colorScheme.outline),
-        )),
+      if (help != null) InfoButton.text(label, help),
     ]);
   }
 
@@ -1100,10 +1119,13 @@ class PickButton extends StatelessWidget {
 
 /// جدول همتاها با سرستون مشخصات فنی (ارتفاع به اندازه‌ی ردیف‌ها، حداکثر ۴۴۰)
 class PeerTable<T> extends StatelessWidget {
-  const PeerTable({super.key, required this.rows, required this.columns, this.highlight});
+  const PeerTable({super.key, required this.rows, required this.columns, this.highlight, this.onTap});
   final List<T> rows;
   final List<GridColumn<T>> columns;
   final bool Function(T row)? highlight;
+
+  /// زدن روی ردیف (گام‌های تعدیل همان همتا)
+  final void Function(T row)? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -1114,6 +1136,7 @@ class PeerTable<T> extends StatelessWidget {
         rows: rows,
         columns: columns,
         rowHeight: 40,
+        onTap: onTap,
         rowColor: highlight == null ? null : (c, r) => highlight!(r) ? AppColors.amberSoft : null,
       ),
     );

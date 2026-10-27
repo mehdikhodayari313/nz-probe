@@ -12,6 +12,11 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/factor_dialog.dart';
+import '../widgets/data_grid.dart';
+import '../widgets/help_info.dart';
+import '../widgets/item_picker.dart';
+import '../widgets/profile_columns.dart';
+import '../help/topics.dart';
 import 'generic_equipment.dart' show CategorySettingsDialog;
 import 'estimator_page.dart';
 
@@ -164,22 +169,24 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
         _row(
           context,
           'پر کردن از یک قلم بانک (اختیاری)',
-          DropdownButtonFormField<int?>(
-            itemHeight: null,
-            value: rows.any((r) => r.item.id == _fromItem) ? _fromItem : null,
-            isExpanded: true,
-            items: [
-              const DropdownMenuItem<int?>(value: null, child: DdText('—')),
-              for (final r in rows)
-                DropdownMenuItem<int?>(
-                    value: r.item.id,
-                    child: DdText('${r.item.projectName ?? ''} · ${r.item.tag ?? ''} · ${r.item.name}', overflow: TextOverflow.ellipsis)),
-            ],
-            onChanged: (v) => setState(() {
-              final r = rows.where((r) => r.item.id == v).firstOrNull;
-              if (r != null) _fill(r);
-            }),
+          PickButton(
+            key: const Key('estimator-pick'),
+            label: () {
+              final r = rows.where((r) => r.item.id == _fromItem).firstOrNull;
+              return r == null ? null : '${r.item.legacyRef ?? r.item.tag ?? ''} · ${r.item.name}';
+            }(),
+            onTap: () async {
+              final r = await showItemPicker<GenericRow>(
+                context,
+                title: 'انتخاب دیسالتر از بانک',
+                rows: rows,
+                columns: profileColumns<GenericRow>(app, 'DESALTER', (r) => r, legacyRef: true, extra: [adjustedEurColumn()]),
+                searchText: rowSearchText,
+              );
+              if (r != null && mounted) setState(() => _fill(r));
+            },
           ),
+          help: 'مشخصات یک دیسالتر موجود را به عنوان نقطه‌ی شروع وارد می‌کند؛ سپس هر مقدار را تغییر دهید.',
         ),
         const Divider(height: 20),
         for (final (k, label, list, g) in _enums) ...[
@@ -343,8 +350,6 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
         ),
         const SizedBox(height: 14),
         _methodsCard(context, e),
-        const SizedBox(height: 14),
-        _peersCard(context, e),
       ]);
     }
 
@@ -371,6 +376,8 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
           Expanded(child: results),
         ]);
       }),
+      // جدول همتاها تمام‌عرض (ستون‌های مشخصات فنی جا شوند)
+      if (e != null) ...[const SizedBox(height: 14), _peersCard(context, e, rows)],
     ]);
   }
 
@@ -480,55 +487,56 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
             padding: const EdgeInsets.only(top: 6),
             child: Text('⚠ ${desalterWarningFa[w] ?? w}', style: TextStyle(color: Tones.warn(context), fontSize: 12.5)),
           ),
+        _escalationNote(context, 'DESALTER'),
         ]);
       }),
     );
   }
 
-  Widget _peersCard(BuildContext context, DesalterEstimate e) {
-    final t = Theme.of(context);
-    final head = t.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w800, color: AppColors.strong);
+  Widget _peersCard(BuildContext context, DesalterEstimate e, List<GenericRow> rows) {
+    final app = AppScope.of(context);
+    final byId = {for (final r in rows) r.item.id: r};
+    final list = [for (final p in e.peers) (p, byId[p.record.id])];
+    String n(double? v) => v == null ? '—' : faNum(v);
     return SectionCard(
       title: 'همتاها (${fa(e.peers.length)})',
-      subtitle: 'یورو نرمال‌شده = یوروی تعدیل‌شده ÷ ALL_F · Coef A = NormEsc ÷ STAGE_F ÷ BPD^n · Coef B = NormEsc ÷ m³^n',
+      subtitle: 'یورو نرمال‌شده = یوروی تعدیل‌شده ÷ ALL_F · Coef A = NormEsc ÷ STAGE_F ÷ BPD^n · Coef B = NormEsc ÷ m³^n · '
+          'روی هر ردیف بزنید تا گام‌های تعدیل همان همتا را ببینید',
       icon: Icons.people_alt_outlined,
       padding: const EdgeInsets.fromLTRB(8, 8, 8, 10),
-      child: _minWidth(760, Column(children: [
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-          color: AppColors.headerBg,
-          child: Row(children: [
-            SizedBox(width: 70, child: Text('شناسه', style: head)),
-            Expanded(child: Text('پروژه · تگ', style: head)),
-            SizedBox(width: 80, child: Text('BPD', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 70, child: Text('m³', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 100, child: Text('NormEsc €', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 80, child: Text('Coef A', textAlign: TextAlign.center, style: head)),
-            SizedBox(width: 80, child: Text('Coef B', textAlign: TextAlign.end, style: head)),
-          ]),
+      child: PeerTable<(DesalterCalc, GenericRow?)>(
+        rows: list,
+        highlight: (x) => e.reference?.record.id == x.$1.record.id,
+        onTap: (x) => showCalcSteps(context,
+            title: '${x.$2?.item.legacyRef ?? ''} · ${x.$1.record.label}',
+            subtitle: 'گام‌های تعدیل قیمت این همتا به سال ${fa(app.settings.targetYear)} با روش ${app.settings.methodFor('DESALTER')}',
+            steps: x.$1.price.steps),
+        columns: profileColumns<(DesalterCalc, GenericRow?)>(app, 'DESALTER', (x) => x.$2, legacyRef: true, extra: [
+          GridColumn(label: 'حجم کل\nm³', width: 76, numeric: true, text: (x) => n(x.$1.totalVolume), sortKey: (x) => x.$1.totalVolume),
+          GridColumn(label: 'یورو\nنرمال‌شده', width: 100, numeric: true,
+              text: (x) => x.$1.normEsc == null ? '—' : compactNum(x.$1.normEsc!), sortKey: (x) => x.$1.normEsc),
+          GridColumn(label: 'Coef A', width: 80, numeric: true, text: (x) => faSmart(x.$1.coefA), sortKey: (x) => x.$1.coefA),
+          GridColumn(label: 'Coef B', width: 80, numeric: true, text: (x) => faSmart(x.$1.coefB), sortKey: (x) => x.$1.coefB),
+        ]),
+      ),
+    );
+  }
+
+  /// سطر «قیمت همتاها با روش … به سال هدف تعدیل شده‌اند» با ⓘ
+  Widget _escalationNote(BuildContext context, String code) {
+    final app = AppScope.of(context);
+    final m = app.settings.methodFor(code);
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Row(children: [
+        Icon(Icons.stairs_outlined, size: 16, color: AppColors.petrol),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text('قیمت همتاها با روش $m به سال ${fa(app.settings.targetYear)} تعدیل شده است — روی هر همتا در جدول زیر بزنید تا گام‌هایش را ببینید.',
+              style: Theme.of(context).textTheme.bodySmall),
         ),
-        for (var i = 0; i < e.peers.length; i++)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-            decoration: BoxDecoration(
-              color: e.reference?.record.id == e.peers[i].record.id ? AppColors.amberSoft : (i.isOdd ? AppColors.zebra : null),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Row(children: [
-              SizedBox(
-                width: 70,
-                child: Text(AppScope.of(context).pb.items.get(e.peers[i].record.id)?.legacyRef ?? '',
-                    textDirection: TextDirection.ltr, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-              Expanded(child: Text(e.peers[i].record.label, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5))),
-              SizedBox(width: 80, child: Text(e.peers[i].bpd == null ? '—' : faNum(e.peers[i].bpd), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
-              SizedBox(width: 70, child: Text(e.peers[i].totalVolume == null ? '—' : faNum(e.peers[i].totalVolume), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
-              SizedBox(width: 100, child: Text(e.peers[i].normEsc == null ? '—' : compactNum(e.peers[i].normEsc!), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12, color: AppColors.eur))),
-              SizedBox(width: 80, child: Text(e.peers[i].coefA == null ? '—' : faSmart(e.peers[i].coefA), textAlign: TextAlign.center, style: const TextStyle(fontSize: 12))),
-              SizedBox(width: 80, child: Text(e.peers[i].coefB == null ? '—' : faSmart(e.peers[i].coefB), textAlign: TextAlign.end, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700))),
-            ]),
-          ),
-      ])),
+        InfoButton(peerEscalationTopic(m, app.settings.targetYear), size: 14),
+      ]),
     );
   }
 
@@ -592,14 +600,7 @@ class _DesalterEstimatorTabState extends State<DesalterEstimatorTab> {
             width: 170,
             child: Row(children: [
               Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
-              if (help != null)
-                Tooltip(
-                  message: help,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 4),
-                    child: Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.outline),
-                  ),
-                ),
+              if (help != null) InfoButton.text(label, help),
             ]),
           ),
           Expanded(child: field),

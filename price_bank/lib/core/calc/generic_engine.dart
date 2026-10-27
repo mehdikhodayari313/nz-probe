@@ -97,7 +97,7 @@ class GenericEngine {
         rateSrc = 'قیمت یورویی است';
       case 'IRR':
         rate = inp.sourceFxRate ?? eurY;
-        rateSrc = inp.sourceFxRate != null ? 'نرخ تسعیر منبع (سند)' : 'نرخ یوروی سال $y از جدول «${settings.fxType}»';
+        rateSrc = inp.sourceFxRate != null ? 'نرخ تسعیر منبع (سند)' : 'نرخ یوروی سال $y از جدول «${settings.fxTypeLabel}»';
       case 'USD':
         rate = (usdY != null && eurY != null) ? eurY / usdY : null;
         rateSrc = 'نسبت یورو/دلار سال $y';

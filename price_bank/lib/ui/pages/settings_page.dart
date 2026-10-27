@@ -8,6 +8,7 @@ import '../format.dart';
 import '../shell.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/help_info.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -125,10 +126,7 @@ class _ParamRowState extends State<_ParamRow> {
             width: 300,
             child: Row(children: [
               Flexible(child: Text(widget.label)),
-              Tooltip(message: widget.help, child: const Padding(
-                padding: EdgeInsetsDirectional.only(start: 4),
-                child: Icon(Icons.info_outline_rounded, size: 15),
-              )),
+              InfoButton.text(widget.label, widget.help),
             ]),
           ),
           Expanded(

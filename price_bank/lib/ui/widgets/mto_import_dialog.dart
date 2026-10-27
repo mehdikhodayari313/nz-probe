@@ -12,6 +12,7 @@ import '../../core/xlsx/xlsx_reader.dart';
 import '../format.dart';
 import '../theme.dart';
 import 'common.dart';
+import 'help_info.dart';
 
 Future<void> showMtoImportDialog(BuildContext context) async {
   final res = await FilePicker.platform.pickFiles(
@@ -396,10 +397,8 @@ class MtoPreviewDialogState extends State<MtoPreviewDialog> {
                     if (s.categoryCode == 'PUMP')
                       Padding(
                         padding: const EdgeInsetsDirectional.only(start: 6),
-                        child: Tooltip(
-                          message: 'پمپ‌هایی که همان تگ را در همان پروژه دارند (مثلاً از بانک قیمت) دوباره وارد نمی‌شوند.',
-                          child: Icon(Icons.info_outline_rounded, size: 18, color: t.colorScheme.outline),
-                        ),
+                        child: InfoButton.text('پمپ‌های تکراری',
+                            'پمپ‌هایی که همان تگ را در همان پروژه دارند (مثلاً از بانک قیمت) دوباره وارد نمی‌شوند.', size: 18),
                       ),
                   ]),
                 ),

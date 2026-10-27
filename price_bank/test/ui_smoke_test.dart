@@ -242,7 +242,7 @@ void main() {
 
     // تخمین تجهیزات: انتخاب رده‌ی ظرف از همان فهرست (پمپ هم در آن است)
     await go(tester, nEstimator);
-    expect(find.text('تخمین تجهیزات'), findsOneWidget);
+    expect(find.text('تخمین تجهیز جدید'), findsOneWidget);
     expect(find.text('مشخصات پمپ مورد نظر'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('category-picker')));
     await tester.pumpAndSettle();

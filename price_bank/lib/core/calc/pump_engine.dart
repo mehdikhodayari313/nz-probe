@@ -35,6 +35,12 @@ class CalcCell {
 }
 
 class PumpCalcSettings {
+  /// نام نمایشی جدول‌های نرخ ارز (کد ← نام)؛ از دیتابیس پر می‌شود. کد داخلی «V8» در متن‌ها دیده نشود.
+  static Map<String, String> fxTypeNames = {'V8': 'جدول پیش‌فرض'};
+
+  /// نام جدول نرخ ارز برای متن گام‌های محاسبه
+  String get fxTypeLabel => fxTypeNames[fxType] ?? fxType;
+
   const PumpCalcSettings({
     required this.targetYear,
     this.targetMonth,
@@ -312,10 +318,10 @@ class PumpEngine {
         r.baseConversionRate = inp.sourceFxRate ?? eurY;
         r.baseConversionSource = inp.sourceFxRate != null
             ? 'نرخ تسعیر منبع (سند)'
-            : 'نرخ یوروی سال $y از جدول نرخ ارز «${settings.fxType}»';
+            : 'نرخ یوروی سال $y از جدول نرخ ارز «${settings.fxTypeLabel}»';
       } else if (z == 'USD') {
         r.baseConversionRate = (usdY != null && eurY != null) ? eurY / usdY : null;
-        r.baseConversionSource = 'نسبت یورو/دلار سال $y از جدول نرخ ارز «${settings.fxType}»';
+        r.baseConversionSource = 'نسبت یورو/دلار سال $y از جدول نرخ ارز «${settings.fxTypeLabel}»';
       }
       r.steps.add(CalcStep(
         '۱. تبدیل قیمت منبع به یورو (سال $y)',
@@ -416,7 +422,7 @@ class PumpEngine {
     }
     r.steps.add(CalcStep(
       '۵. تبدیل به ریال با نرخ یوروی سال هدف',
-      'یورو × ${eurT == null ? '؟' : _g(eurT)} (${settings.eurTargetOverride != null ? 'نرخ دستی' : 'جدول «${settings.fxType}»'})',
+      'یورو × ${eurT == null ? '؟' : _g(eurT)} (${settings.eurTargetOverride != null ? 'نرخ دستی' : 'جدول «${settings.fxTypeLabel}»'})',
       r.irrTarget.isNumber ? _f(r.irrTarget.number!, 'ریال') : 'محاسبه نشد',
       warning: !r.irrTarget.isNumber,
     ));

@@ -21,6 +21,7 @@ import '../widgets/data_grid.dart';
 import '../widgets/equipment_columns.dart';
 import '../widgets/mto_import_dialog.dart';
 import 'generic_item_page.dart';
+import '../widgets/help_info.dart';
 
 class GenericCategoryView extends StatefulWidget {
   const GenericCategoryView({super.key, required this.code, this.onShowCategories});
@@ -745,14 +746,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
               width: 170,
               child: Row(children: [
                 Flexible(child: Text(label, style: t.textTheme.bodySmall)),
-                if (help != null)
-                  Tooltip(
-                    message: help,
-                    child: Padding(
-                      padding: const EdgeInsetsDirectional.only(start: 4),
-                      child: Icon(Icons.info_outline_rounded, size: 14, color: t.colorScheme.outline),
-                    ),
-                  ),
+                if (help != null) InfoButton.text(label, help),
               ]),
             ),
             Expanded(child: w),
@@ -851,14 +845,7 @@ class _CategorySettingsDialogState extends State<CategorySettingsDialog> {
         width: 170,
         child: Row(children: [
           Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
-          if (help != null)
-            Tooltip(
-              message: help,
-              child: Padding(
-                padding: const EdgeInsetsDirectional.only(start: 4),
-                child: Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.outline),
-              ),
-            ),
+          if (help != null) InfoButton.text(label, help),
         ]),
       );
 

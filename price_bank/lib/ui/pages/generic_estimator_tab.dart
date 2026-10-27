@@ -6,14 +6,15 @@ import 'generic_equipment.dart' show CategorySettingsDialog;
 import '../../app/app_state.dart';
 import '../../core/calc/generic_estimator.dart';
 import '../../core/catalog/profiles.dart';
-import '../../core/repo/catalog_repo.dart' show FieldType;
 import '../../core/price_bank.dart';
 import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_grid.dart';
-import '../widgets/equipment_columns.dart';
 import '../widgets/item_picker.dart';
+import '../widgets/profile_columns.dart';
+import '../widgets/help_info.dart';
+import '../help/topics.dart';
 import '../widgets/factor_dialog.dart';
 import 'estimator_page.dart';
 
@@ -93,49 +94,16 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
     _qty.text = (r.item.quantity ?? 1).toStringAsFixed(0);
   }
 
-  /// ستون‌های جدول اقلام این رده (انتخاب قلم و همتاها) با سرستون مشخصات کلیدی
-  List<GridColumn<T>> _columns<T>(AppState app, int catId, GenericRow? Function(T) rowOf, {List<GridColumn<T>> extra = const []}) {
-    final fields = {for (final f in app.pb.catalog.fields(catId)) f.key: f};
-    String txt(Object? v) => v is num ? faSmart(v) : (v?.toString() ?? '');
-    return [
-      GridColumn<T>(label: 'تگ', width: 100, ltr: true, notStated: true, text: (r) => rowOf(r)?.item.tag ?? '', sortKey: (r) => rowOf(r)?.item.tag ?? ''),
-      GridColumn<T>(label: 'نام / سرویس', width: 190, fitMax: 300, align: TextAlign.start, ltr: true, text: (r) => rowOf(r)?.item.name ?? '', sortKey: (r) => rowOf(r)?.item.name ?? ''),
-      GridColumn<T>(label: 'پروژه', width: 110, notStated: true, text: (r) => rowOf(r)?.item.projectName ?? '', sortKey: (r) => rowOf(r)?.item.projectName ?? ''),
-      for (final k in _p.gridKeys)
-        if (fields[k] case final f?)
-          GridColumn<T>(
-            label: '${f.labelFa}${f.unit == null ? '' : '\n${f.unit}'}',
-            width: 92,
-            numeric: f.type == FieldType.number,
-            ltr: f.type != FieldType.number,
-            text: (r) => txt(rowOf(r)?.item.values[k]),
-            sortKey: (r) {
-              final v = rowOf(r)?.item.values[k];
-              if (f.type == FieldType.number) return v is num ? v.toDouble() : double.negativeInfinity;
-              return v?.toString() ?? '';
-            },
-          ),
-      GridColumn<T>(
-          label: '${_p.driver.labelFa}\n${_p.driver.unit}', width: 92, numeric: true,
-          text: (r) => faSmart(rowOf(r)?.size), sortKey: (r) => rowOf(r)?.size),
-      costYearColumn<T>((r) => rowOf(r)!.item),
-      ...extra,
-    ];
-  }
+  List<GridColumn<T>> _columns<T>(AppState app, int catId, GenericRow? Function(T) rowOf, {List<GridColumn<T>> extra = const []}) =>
+      profileColumns<T>(app, _code, rowOf, extra: extra);
 
   Future<void> _pick(BuildContext context, AppState app, int catId, List<GenericRow> rows) async {
     final r = await showItemPicker<GenericRow>(
       context,
       title: 'انتخاب قلم از بانک (${app.pb.catalog.categoryByCode(_code)?.nameFa ?? ''})',
       rows: rows,
-      columns: _columns<GenericRow>(app, catId, (r) => r, extra: [
-        GridColumn<GenericRow>(
-            label: 'یورو\nتعدیل‌شده', width: 100, numeric: true,
-            text: (r) => faNum(r.result.eurTarget.number), sortKey: (r) => r.result.eurTarget.number),
-      ]),
-      searchText: (r) => [r.item.tag, r.item.name, r.item.projectName, ...r.item.values.values.map((v) => v?.toString())]
-          .whereType<String>()
-          .join(' '),
+      columns: _columns<GenericRow>(app, catId, (r) => r, extra: [adjustedEurColumn()]),
+      searchText: rowSearchText,
     );
     if (r == null || !mounted) return;
     setState(() => _fill(r));
@@ -305,6 +273,9 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
           _line(context, 'فرمول', 'ضریب هزینه × ${_p.driver.labelFa}^${faSmart(est.n)} × ضریب پیکربندی'),
           _line(context, 'نرخ یوروی سال هدف', fx.$1 == null ? 'وارد نشده' : '${faNum(fx.$1)} ریال'),
           _line(context, 'نرخ دلار سال هدف', fx.$2 == null ? 'وارد نشده' : '${faNum(fx.$2)} ریال'),
+          _line(context, 'تعدیل قیمت همتاها',
+              'با روش ${app.settings.methodFor(_code)} به سال ${fa(app.settings.targetYear)} — روی هر همتا در جدول بزنید تا گام‌هایش را ببینید',
+              help: peerEscalationTopic(app.settings.methodFor(_code), app.settings.targetYear)),
         ]),
       ),
     ]);
@@ -321,6 +292,11 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
                 final list = [for (final p in e.peers) (p, byId[p.itemId])];
                 return PeerTable<(GenericPeer, GenericRow?)>(
                   rows: list,
+                  onTap: (x) => showCalcSteps(context,
+                      title: '${x.$1.tag} · ${x.$1.name}',
+                      subtitle: 'گام‌های تعدیل قیمت این همتا به سال ${fa(app.settings.targetYear)} با روش ${app.settings.methodFor(_code)}؛ '
+                          'ضریب هزینه = یوروی نرمال‌شده ÷ اندازه^n = ${faSmart(x.$1.coef)}',
+                      steps: x.$2?.result.steps ?? const []),
                   highlight: (x) => e.nearest?.itemId == x.$1.itemId,
                   columns: _columns<(GenericPeer, GenericRow?)>(app, cat.id, (x) => x.$2, extra: [
                     GridColumn(
@@ -438,10 +414,16 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
     );
   }
 
-  Widget _line(BuildContext context, String k, String v) => Padding(
+  Widget _line(BuildContext context, String k, String v, {HelpTopic? help}) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SizedBox(width: 200, child: Text(k, style: Theme.of(context).textTheme.bodySmall)),
+          SizedBox(
+            width: 200,
+            child: Row(children: [
+              Flexible(child: Text(k, style: Theme.of(context).textTheme.bodySmall)),
+              if (help != null) InfoButton(help, size: 14),
+            ]),
+          ),
           Expanded(child: Text(v, style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700))),
         ]),
       );
@@ -453,14 +435,7 @@ class _GenericEstimatorTabState extends State<GenericEstimatorTab> {
             width: 170,
             child: Row(children: [
               Flexible(child: Text(label, style: Theme.of(context).textTheme.bodySmall)),
-              if (help != null)
-                Tooltip(
-                  message: help,
-                  child: Padding(
-                    padding: const EdgeInsetsDirectional.only(start: 4),
-                    child: Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.outline),
-                  ),
-                ),
+              if (help != null) InfoButton.text(label, help),
             ]),
           ),
           Expanded(child: field),

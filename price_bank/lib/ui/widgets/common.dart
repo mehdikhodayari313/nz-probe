@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../format.dart';
 import '../theme.dart';
+import 'help_info.dart';
 
 /// سرصفحه‌ی هر صفحه: نشان رنگی، عنوان، زیرعنوان و دکمه‌ها.
 class PageHeader extends StatelessWidget {
@@ -62,8 +63,12 @@ class SectionCard extends StatelessWidget {
     this.padding = const EdgeInsets.all(16),
     this.icon,
     this.accent,
+    this.help,
   });
   final String? title;
+
+  /// ⓘ کنار عنوان: راهنمای شناور و با کلیک پنجره‌ی توضیح کامل
+  final HelpTopic? help;
   final String? subtitle;
   final Widget? trailing;
   final Widget child;
@@ -104,7 +109,10 @@ class SectionCard extends StatelessWidget {
                   ],
                   Expanded(
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(title!, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800)),
+                      Row(children: [
+                        Flexible(child: Text(title!, style: t.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800))),
+                        if (help != null) InfoButton(help!),
+                      ]),
                       if (subtitle != null)
                         Text(subtitle!, style: t.textTheme.bodySmall?.copyWith(color: t.colorScheme.onSurfaceVariant)),
                     ]),

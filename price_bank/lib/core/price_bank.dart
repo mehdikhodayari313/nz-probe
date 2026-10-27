@@ -126,16 +126,25 @@ class PriceBank {
   MemorySeries get seriesSnapshot => _seriesCache ??= indices.snapshot();
   FactorTable get factorTable => _factorCache ??= indices.factorTable(pumpFactorSet);
 
-  PumpEngine pumpEngine({String? fxType, int? targetYear, String? method}) => PumpEngine(
+  /// نام جدول‌های نرخ ارز برای متن گام‌های محاسبه (به جای کد داخلی)
+  void _refreshFxNames() => PumpCalcSettings.fxTypeNames = {
+        for (final f in settingsRepo.fxRateTypes()) f.code: f.nameFa,
+      };
+
+  PumpEngine pumpEngine({String? fxType, int? targetYear, String? method}) {
+    _refreshFxNames();
+    return PumpEngine(
         seriesSnapshot,
         settingsRepo
             .load()
             .toPumpSettings(fxTypeOverride: fxType, targetYearOverride: targetYear, methodOverride: method),
         factorTable,
       );
+  }
 
   /// موتور تعدیل غیرپمپ؛ با [categoryCode] روش و شاخص اختصاصی همان رده اعمال می‌شود.
   GenericEngine genericEngine({String? fxType, int? targetYear, String? method, String? categoryCode}) {
+    _refreshFxNames();
     final st = settingsRepo.load();
     return GenericEngine(
       seriesSnapshot,

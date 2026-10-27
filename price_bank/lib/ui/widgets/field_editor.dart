@@ -8,6 +8,7 @@ import '../format.dart';
 import '../theme.dart';
 import 'common.dart';
 import 'data_grid.dart' show gridNotStated, isNotStated;
+import 'help_info.dart';
 
 /// نمایش یا ویرایش یک فیلد قالب، با توضیح فیلد و برچسب «استنباطی».
 class FieldTile extends StatelessWidget {
@@ -56,14 +57,7 @@ class FieldTile extends StatelessWidget {
           style: t.textTheme.labelMedium?.copyWith(color: t.colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600),
         ),
       ),
-      if (help.isNotEmpty)
-        Tooltip(
-          message: help,
-          child: Padding(
-            padding: const EdgeInsetsDirectional.only(start: 4),
-            child: Icon(Icons.info_outline_rounded, size: 15, color: t.colorScheme.outline),
-          ),
-        ),
+      if (help.isNotEmpty) InfoButton.text(field.labelFa, help, size: 15),
       if (inferred)
         Padding(
           padding: const EdgeInsetsDirectional.only(start: 6),
