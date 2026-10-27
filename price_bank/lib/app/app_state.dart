@@ -105,6 +105,20 @@ class AppState extends ChangeNotifier {
     return _all;
   }
 
+  // ظرفیت واحد (BPD) هر پروژه برای ستون و فیلتر «ظرفیت واحد» جدول تجهیزات
+  int _capRev = -1;
+  Map<int, double> _caps = const {};
+  double? projectCapacity(int? projectId) {
+    if (_capRev != revision) {
+      _caps = {
+        for (final p in pb.docs.projects())
+          if ((p.capacityBpd ?? 0) > 0) p.id: p.capacityBpd!,
+      };
+      _capRev = revision;
+    }
+    return projectId == null ? null : _caps[projectId];
+  }
+
   // کش محاسبه‌ی پمپ‌ها برای همان revision
   int _pumpRev = -1;
   List<PumpRow> _pumps = const [];

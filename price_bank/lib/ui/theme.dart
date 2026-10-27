@@ -43,7 +43,8 @@ class AppColors {
   }
 
   static Color get petrol => _p.primary;
-  static Color get petrolDark => _p.dark;
+  // متن پررنگ هم‌رنگ پالت؛ در حالت شب روشن‌تر تا روی زمینه‌ی تیره خوانا باشد
+  static Color get petrolDark => isDark ? Color.lerp(_p.primary, Colors.white, 0.62)! : _p.dark;
   static Color get navy => _p.navy;
   static Color get teal => _p.accent2;
 

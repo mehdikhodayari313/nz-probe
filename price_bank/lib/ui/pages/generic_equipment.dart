@@ -18,6 +18,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_grid.dart';
+import '../widgets/equipment_columns.dart';
 import '../widgets/mto_import_dialog.dart';
 import 'generic_item_page.dart';
 
@@ -89,6 +90,10 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     for (final e in _rangeF.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
       if (lo == null && hi == null) continue;
+      if (e.key == '_cap') {
+        if (!capacityInRange(AppScope.read(context).projectCapacity(r.item.projectId), lo, hi)) return false;
+        continue;
+      }
       final v = e.key == '_size' ? r.size : _numOf(r.item.values[e.key]);
       if (v == null) return false;
       if (lo != null && v < lo) return false;
@@ -245,12 +250,16 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
               if (_profile != null) ...[
                 const SizedBox(height: 10),
                 // بازه‌ها در یک سطر، عنوان چسبیده به کادرها (مثل پمپ‌ها)
-                Wrap(spacing: 24, runSpacing: 8, children: [
+                Wrap(spacing: 20, runSpacing: 8, children: [
                   _rangeFilter(context, '_size', '${_profile!.driver.labelFa} (${_profile!.driver.unit})'),
                   for (final k in _profile!.rangeKeys)
                     if (_profile!.field(k) case final f?)
                       _rangeFilter(context, k, '${f.labelFa}${f.unit == null ? '' : ' (${f.unit})'}'),
+                  _rangeFilter(context, '_cap', capacityRangeLabel),
                 ]),
+              ] else ...[
+                const SizedBox(height: 10),
+                _rangeFilter(context, '_cap', capacityRangeLabel),
               ],
             ],
           ]),
@@ -314,6 +323,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
         ),
         GridColumn(label: 'نام / سرویس', width: 200, fitMax: 330, align: TextAlign.start, ltr: true, text: (r) => r.item.name, sortKey: (r) => r.item.name),
         GridColumn(label: 'پروژه', width: 110, notStated: true, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? ''),
+        capacityColumn<GenericRow>((r) => AppScope.read(context).projectCapacity(r.item.projectId)),
         for (final f in keySpecs)
           GridColumn(
             label: '${f.labelFa}${f.unit == null ? '' : '\n${f.unit}'}',
@@ -342,6 +352,7 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
             sortKey: (r) => r.size,
           ),
         GridColumn(label: 'تعداد', width: 54, numeric: true, text: (r) => r.item.quantity == null ? '' : faSmart(r.item.quantity), sortKey: (r) => r.item.quantity),
+        costYearColumn<GenericRow>((r) => r.item),
         GridColumn(
           label: 'قیمت مبنا',
           width: 150,
@@ -533,13 +544,14 @@ class _GenericCategoryViewState extends State<GenericCategoryView> {
     String esc(String s) => '"${s.replaceAll('"', '""')}"';
     final b = StringBuffer('﻿');
     b.writeln([
-      'تگ', 'نام', 'پروژه', for (final f in keySpecs) f.labelFa, 'تعداد', 'قیمت مبنا', 'ارز', 'سال',
+      'تگ', 'نام', 'پروژه', capacityRangeLabel, for (final f in keySpecs) f.labelFa, 'تعداد', 'قیمت مبنا', 'ارز', 'سال',
       'تعداد استعلام', 'یورو تعدیل‌شده', '${unitLabel(unit)} تعدیل‌شده (واحد)',
     ].map(esc).join(','));
     for (final r in rows) {
       final o = r.item.primary;
       b.writeln([
         esc(r.item.tag ?? ''), esc(r.item.name), esc(r.item.projectName ?? ''),
+        capacityColumn<GenericRow>((r) => AppScope.read(context).projectCapacity(r.item.projectId)).text(r),
         for (final f in keySpecs) esc(r.item.values[f.key]?.toString() ?? ''),
         r.item.quantity?.toString() ?? '', o?.amount?.toStringAsFixed(2) ?? '', o?.currency ?? '',
         '${o?.costYearValue ?? ''}', '${r.quoteCount}',

@@ -13,6 +13,7 @@ import '../format.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
 import '../widgets/data_grid.dart';
+import '../widgets/equipment_columns.dart';
 import '../widgets/mto_import_dialog.dart';
 import 'generic_equipment.dart';
 import 'pump_detail_page.dart';
@@ -50,6 +51,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
     'capacity_m3h': (TextEditingController(), TextEditingController()),
     'diff_head_m': (TextEditingController(), TextEditingController()),
     'size_kw': (TextEditingController(), TextEditingController()),
+    '_cap': (TextEditingController(), TextEditingController()),
   };
   bool _showFilters = true;
 
@@ -104,6 +106,10 @@ class _EquipmentPageState extends State<EquipmentPage> {
     for (final e in _ranges.entries) {
       final lo = parseUserNumber(e.value.$1.text), hi = parseUserNumber(e.value.$2.text);
       if (lo == null && hi == null) continue;
+      if (e.key == '_cap') {
+        if (!capacityInRange(AppScope.read(context).projectCapacity(r.item.projectId), lo, hi)) return false;
+        continue;
+      }
       final v = e.key == 'size_kw' ? r.result.sizeKw.number : (e.key == 'diff_head_m' ? _headM(r) : asNumber(r.item.values[e.key]));
       if (v == null) return false;
       if (lo != null && v < lo) return false;
@@ -237,7 +243,9 @@ class _EquipmentPageState extends State<EquipmentPage> {
     ]);
   }
 
-  static const _optionalCols = {'sub': 'زیرگروه', 'qty': 'تعداد', 'coef': 'ضریب هزینه', 'project': 'پروژه', 'src': 'قیمت منبع'};
+  static const _optionalCols = {
+    'sub': 'زیرگروه', 'qty': 'تعداد', 'coef': 'ضریب هزینه', 'project': 'پروژه', 'cap': 'ظرفیت واحد', 'src': 'قیمت منبع',
+  };
 
   Widget _columnsMenu(BuildContext context) => MenuAnchor(
         menuChildren: [
@@ -322,6 +330,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
           )
         ),
         ('project', GridColumn(label: 'پروژه', width: 120, notStated: true, text: (r) => r.item.projectName ?? '', sortKey: (r) => r.item.projectName ?? '')),
+        ('cap', capacityColumn<PumpRow>((r) => AppScope.read(context).projectCapacity(r.item.projectId))),
         (
           'sub',
           GridColumn(
@@ -502,7 +511,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
           ]),
           const SizedBox(height: 10),
           // بازه‌ها در یک سطر، عنوان چسبیده به کادرها
-          Wrap(spacing: 24, runSpacing: 8, children: [
+          Wrap(spacing: 20, runSpacing: 8, children: [
             for (final e in _ranges.entries) _rangeFilter(context, e.key, e.value),
           ]),
         ],
@@ -591,6 +600,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
     final label = switch (key) {
       'capacity_m3h' => 'دبی (m³/h)',
       'diff_head_m' => 'هد اختلافی (m)',
+      '_cap' => capacityRangeLabel,
       _ => 'توان (kW)',
     };
     return RangeFilter(label: label, from: c.$1, to: c.$2, onChanged: () => setState(() {}));
@@ -606,6 +616,7 @@ class _EquipmentPageState extends State<EquipmentPage> {
         esc(r.item.tag ?? ''),
         esc(r.item.name),
         esc(r.item.projectName ?? ''),
+        capacityColumn<PumpRow>((r) => AppScope.read(context).projectCapacity(r.item.projectId)).text(r),
         esc(_val(r, 'sub_category')),
         esc(_val(r, 'api610_type')),
         esc(_val(r, 'material_class')),

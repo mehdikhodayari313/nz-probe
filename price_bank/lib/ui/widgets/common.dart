@@ -737,7 +737,7 @@ class RangeFilter extends StatelessWidget {
     final t = Theme.of(context);
     final active = from.text.isNotEmpty || to.text.isNotEmpty;
     Widget box(TextEditingController c, String hint) => SizedBox(
-          width: 78,
+          width: 60,
           child: TextField(
             controller: c,
             textDirection: TextDirection.ltr,
